@@ -1,0 +1,470 @@
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Claus
+
+from __future__ import annotations
+
+import gymnasium as gym
+import torch
+
+import isaaclab.sim as sim_utils
+from isaaclab.assets import Articulation, ArticulationCfg
+from isaaclab.envs import DirectRLEnv, DirectRLEnvCfg
+from isaaclab.envs.ui import BaseEnvWindow
+from isaaclab.markers import VisualizationMarkers
+from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sim import SimulationCfg
+from isaaclab.terrains import TerrainImporterCfg
+from isaaclab.utils import configclass
+from isaaclab.utils.math import subtract_frame_transforms
+
+##
+# Pre-defined configs
+##
+from isaaclab_assets import CRAZYFLIE_CFG  # isort: skip
+from isaaclab.markers import CUBOID_MARKER_CFG  # isort: skip
+
+
+# Guiding path generation
+import matplotlib.pyplot as plt
+from scipy.interpolate import CubicSpline
+from isaacsim.util.debug_draw import _debug_draw
+#
+
+class QuadcopterEnvWindow(BaseEnvWindow):
+    """Window manager for the Quadcopter environment."""
+
+    def __init__(self, env: QuadcopterEnv, window_name: str = "IsaacLab"):
+        """Initialize the window.
+
+        Args:
+            env: The environment object.
+            window_name: The name of the window. Defaults to "IsaacLab".
+        """
+        # initialize base window
+        super().__init__(env, window_name)
+        # add custom UI elements
+        with self.ui_window_elements["main_vstack"]:
+            with self.ui_window_elements["debug_frame"]:
+                with self.ui_window_elements["debug_vstack"]:
+                    # add command manager visualization
+                    self._create_debug_vis_ui_element("targets", self.env)
+
+
+@configclass
+class QuadcopterEnvCfg(DirectRLEnvCfg):
+    # env
+    episode_length_s = 10.0
+    decimation = 2
+    action_space = 4
+    observation_space = 12
+    state_space = 0
+    debug_vis = True
+
+    ui_window_class_type = QuadcopterEnvWindow
+
+    # simulation
+    sim: SimulationCfg = SimulationCfg(
+        dt=1 / 100,
+        render_interval=decimation,
+        physics_material=sim_utils.RigidBodyMaterialCfg(
+            friction_combine_mode="multiply",
+            restitution_combine_mode="multiply",
+            static_friction=1.0,
+            dynamic_friction=1.0,
+            restitution=0.0,
+        ),
+    )
+    terrain = TerrainImporterCfg(
+        prim_path="/World/ground",
+        terrain_type="plane",
+        collision_group=-1,
+        physics_material=sim_utils.RigidBodyMaterialCfg(
+            friction_combine_mode="multiply",
+            restitution_combine_mode="multiply",
+            static_friction=1.0,
+            dynamic_friction=1.0,
+            restitution=0.0,
+        ),
+        debug_vis=False,
+    )
+
+    # scene
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=2.5, replicate_physics=True)
+
+    # robot
+    robot: ArticulationCfg = CRAZYFLIE_CFG.replace(prim_path="/World/envs/env_.*/Robot")
+    thrust_to_weight = 1.9
+    moment_scale = 0.01
+
+    # reward scales
+    lin_vel_reward_scale = -0.05
+    ang_vel_reward_scale = -0.01
+    distance_to_goal_reward_scale = 15.0
+
+
+    
+
+
+class QuadcopterEnv(DirectRLEnv):
+    cfg: QuadcopterEnvCfg
+
+    def __init__(self, cfg: QuadcopterEnvCfg, render_mode: str | None = None, **kwargs):
+        super().__init__(cfg, render_mode, **kwargs)
+
+        # Total thrust and moment applied to the base of the quadcopter
+        self._actions = torch.zeros(self.num_envs, gym.spaces.flatdim(self.single_action_space), device=self.device)
+        self._thrust = torch.zeros(self.num_envs, 1, 3, device=self.device)
+        self._moment = torch.zeros(self.num_envs, 1, 3, device=self.device)
+        # Goal position
+        self._desired_pos_w = torch.zeros(self.num_envs, 3, device=self.device)
+
+        # Logging
+        self._episode_sums = {
+            key: torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
+            for key in [
+                "lin_vel",
+                "ang_vel",
+                "distance_to_goal",
+            ]
+        }
+        # Get specific body indices
+        self._body_id = self._robot.find_bodies("body")[0]
+        self._robot_mass = self._robot.root_physx_view.get_masses()[0].sum()
+        self._gravity_magnitude = torch.tensor(self.sim.cfg.gravity, device=self.device).norm()
+        self._robot_weight = (self._robot_mass * self._gravity_magnitude).item()
+
+        # add handle for debug visualization (this is set to a valid handle inside set_debug_vis)
+        self.set_debug_vis(self.cfg.debug_vis)
+
+        
+
+        ## Guiding path generation
+        self.future_traj_step = 4
+        self.target_pos = torch.zeros(self.num_envs, self.future_traj_step, 3, device=self.device)
+
+        self.guilding_planner = PotentialFieldPlanner(env_origins=self._terrain.env_origins, num_envs = self.num_envs, device=self.device)
+        self.target_path = self.guilding_planner.run(start=(0, 0), goal=(-6.0, 18.0))
+
+    def _setup_scene(self):
+        self._robot = Articulation(self.cfg.robot)
+        self.scene.articulations["robot"] = self._robot
+
+        self.cfg.terrain.num_envs = self.scene.cfg.num_envs
+        self.cfg.terrain.env_spacing = self.scene.cfg.env_spacing
+        self._terrain = self.cfg.terrain.class_type(self.cfg.terrain)
+        # clone and replicate
+        self.scene.clone_environments(copy_from_source=False)
+        # add lights
+        light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
+        light_cfg.func("/World/Light", light_cfg)
+
+    def _pre_physics_step(self, actions: torch.Tensor):
+        self._actions = actions.clone().clamp(-1.0, 1.0)
+        self._thrust[:, 0, 2] = self.cfg.thrust_to_weight * self._robot_weight * (self._actions[:, 0] + 1.0) / 2.0
+        self._moment[:, 0, :] = self.cfg.moment_scale * self._actions[:, 1:]
+
+    def _apply_action(self):
+        self._robot.set_external_force_and_torque(self._thrust, self._moment, body_ids=self._body_id)
+
+    def _get_observations(self) -> dict:
+        # self.target_pos = self.guilding_planner.compute_shortest_traj(input_path = self.target_path, eps_pro=self.episode_length_buf , steps = self.future_traj_step, step_size = 5)
+        self.target_pos = self.guilding_planner.compute_shortest_traj(input_path=self.target_path, eps_pro=self.episode_length_buf , steps=self.future_traj_step, step_size=5)
+        print("target_pos_0 = ", self.target_pos[0, :, :].shape)
+
+        desired_pos_b, _ = subtract_frame_transforms(
+            self._robot.data.root_state_w[:, :3], self._robot.data.root_state_w[:, 3:7], self._desired_pos_w
+        )
+        obs = torch.cat(
+            [
+                self._robot.data.root_lin_vel_b,
+                self._robot.data.root_ang_vel_b,
+                self._robot.data.projected_gravity_b,
+                desired_pos_b,
+            ],
+            dim=-1,
+        )
+        observations = {"policy": obs}
+        return observations
+
+    def _get_rewards(self) -> torch.Tensor:
+        lin_vel = torch.sum(torch.square(self._robot.data.root_lin_vel_b), dim=1)
+        ang_vel = torch.sum(torch.square(self._robot.data.root_ang_vel_b), dim=1)
+        distance_to_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1)
+        distance_to_goal_mapped = 1 - torch.tanh(distance_to_goal / 0.8)
+        rewards = {
+            "lin_vel": lin_vel * self.cfg.lin_vel_reward_scale * self.step_dt,
+            "ang_vel": ang_vel * self.cfg.ang_vel_reward_scale * self.step_dt,
+            "distance_to_goal": distance_to_goal_mapped * self.cfg.distance_to_goal_reward_scale * self.step_dt,
+        }
+        reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
+        # Logging
+        for key, value in rewards.items():
+            self._episode_sums[key] += value
+        return reward
+
+    def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
+        time_out = self.episode_length_buf >= self.max_episode_length - 1
+        died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.1, self._robot.data.root_pos_w[:, 2] > 2.0)
+        return died, time_out
+
+    def _reset_idx(self, env_ids: torch.Tensor | None):
+        if env_ids is None or len(env_ids) == self.num_envs:
+            env_ids = self._robot._ALL_INDICES
+
+        # Logging
+        final_distance_to_goal = torch.linalg.norm(
+            self._desired_pos_w[env_ids] - self._robot.data.root_pos_w[env_ids], dim=1
+        ).mean()
+        extras = dict()
+        for key in self._episode_sums.keys():
+            episodic_sum_avg = torch.mean(self._episode_sums[key][env_ids])
+            extras["Episode_Reward/" + key] = episodic_sum_avg / self.max_episode_length_s
+            self._episode_sums[key][env_ids] = 0.0
+        self.extras["log"] = dict()
+        self.extras["log"].update(extras)
+        extras = dict()
+        extras["Episode_Termination/died"] = torch.count_nonzero(self.reset_terminated[env_ids]).item()
+        extras["Episode_Termination/time_out"] = torch.count_nonzero(self.reset_time_outs[env_ids]).item()
+        extras["Metrics/final_distance_to_goal"] = final_distance_to_goal.item()
+        self.extras["log"].update(extras)
+
+        self._robot.reset(env_ids)
+        super()._reset_idx(env_ids)
+        if len(env_ids) == self.num_envs:
+            # Spread out the resets to avoid spikes in training when many environments reset at a similar time
+            self.episode_length_buf = torch.randint_like(self.episode_length_buf, high=int(self.max_episode_length))
+
+        self._actions[env_ids] = 0.0
+        # Sample new commands
+        self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-2.0, 2.0)
+        self._desired_pos_w[env_ids, :2] += self._terrain.env_origins[env_ids, :2]
+        self._desired_pos_w[env_ids, 2] = torch.zeros_like(self._desired_pos_w[env_ids, 2]).uniform_(0.5, 1.5)
+        # Reset robot state
+        joint_pos = self._robot.data.default_joint_pos[env_ids]
+        joint_vel = self._robot.data.default_joint_vel[env_ids]
+        default_root_state = self._robot.data.default_root_state[env_ids]
+        default_root_state[:, :3] += self._terrain.env_origins[env_ids]
+        self._robot.write_root_pose_to_sim(default_root_state[:, :7], env_ids)
+        self._robot.write_root_velocity_to_sim(default_root_state[:, 7:], env_ids)
+        self._robot.write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
+
+    def _set_debug_vis_impl(self, debug_vis: bool):
+        # create markers if necessary for the first tome
+        if debug_vis:
+            if not hasattr(self, "goal_pos_visualizer"):
+                marker_cfg = CUBOID_MARKER_CFG.copy()
+                marker_cfg.markers["cuboid"].size = (0.05, 0.05, 0.05)
+                marker_cfg.markers["cuboid"].visual_material.diffuse_color = (0.0, 1.0, 0.0)
+                # -- goal pose
+                marker_cfg.prim_path = "/Visuals/Command/goal_position"
+                self.goal_pos_visualizer = VisualizationMarkers(marker_cfg)  
+
+                targer_cfg = CUBOID_MARKER_CFG.copy()
+                targer_cfg.markers["cuboid"].size = (0.05, 0.05, 0.05)
+                targer_cfg.markers["cuboid"].visual_material.diffuse_color = (1.0, 0.0, 0.0)
+                # -- goal pose
+                targer_cfg.prim_path = "/Visuals/Command/target_position"
+                self.target_visualizer = VisualizationMarkers(targer_cfg)
+            # set their visibility to true
+            self.target_visualizer.set_visibility(True)
+
+            # set their visibility to true
+            self.goal_pos_visualizer.set_visibility(True)
+        else:
+            if hasattr(self, "goal_pos_visualizer"):
+                self.goal_pos_visualizer.set_visibility(False)
+                self.target_visualizer.set_visibility(False)
+
+    def _debug_vis_callback(self, event):
+        # update the markers
+        self.goal_pos_visualizer.visualize(self._desired_pos_w)
+        self.target_visualizer.visualize(self.target_pos[:, 0, :])
+
+
+
+class PotentialFieldPlanner:
+    def __init__(self, map_size=(-10, 10), obstacles=[(0, 4.5), (-3, 8), (2, 10), (-5, 12)], obstacle_radius=1.5,
+                 attractive_gain=0.7, repulsive_gain=3000.0, step_size=0.1, max_iters=5000, num_envs = 4096, env_origins = None, device = 'cuda', progress_buf=None):
+        self.map_size = map_size
+        self.obstacles = [torch.tensor(obs, dtype=torch.float32) for obs in obstacles]
+        self.obstacle_radius = obstacle_radius
+        self.attractive_gain = attractive_gain
+        self.repulsive_gain = repulsive_gain
+        self.step_size = step_size
+        self.max_iters = max_iters
+        self.goal = torch.tensor((0.5, 15.5), dtype=torch.float32)  # Default goal
+        self.device = device
+
+        self.future_traj_steps = 4
+
+
+        self.draw = _debug_draw.acquire_debug_draw_interface()
+        self.draw.clear_lines()
+
+        # env information
+        # self.progress_buf = progress_buf
+        self.num_envs = num_envs
+        self.env_origin_pos = env_origins  
+        self.central_env_idx = self.env_origin_pos.norm(dim=-1).argmin()  
+        self.origin = torch.tensor([0.0, 0.0, 0.0], device=self.device) 
+
+    def set_goal(self, goal):
+        self.goal = torch.tensor(goal, dtype=torch.float32)
+
+    def _compute_potential_gradient(self, pos):
+        pos = torch.tensor(pos, dtype=torch.float32)
+        att_grad = self.attractive_gain * (pos - self.goal)
+        rep_grad = torch.zeros(2, dtype=torch.float32)
+
+        for obs in self.obstacles:
+            d = torch.norm(pos - obs)
+            if d < self.obstacle_radius:
+                rep_grad += self.repulsive_gain * (1.0 / d**2 - 1.0 / self.obstacle_radius**2) * (pos - obs) / d**3
+
+        total_grad = att_grad - rep_grad
+        return total_grad
+    
+    def _apply_low_pass_filter(self, path, alpha=0.1):
+        filtered_path = torch.clone(path)
+        for i in range(1, len(path)):
+            filtered_path[i] = alpha * path[i] + (1 - alpha) * filtered_path[i - 1]
+        return filtered_path
+    
+    def find_path(self, start):
+        path = [torch.tensor(start, dtype=torch.float32)]
+        pos = torch.tensor(start, dtype=torch.float32)
+
+        for _ in range(self.max_iters):
+            grad = self._compute_potential_gradient(pos)
+            grad_norm = torch.norm(grad)
+            if grad_norm < 1e-3:
+                break
+            next_pos = pos - self.step_size * grad / grad_norm
+            
+            if torch.norm(next_pos - self.goal) < self.step_size:
+                path.append(self.goal)
+                break
+
+            next_pos[0] = torch.clamp(next_pos[0], self.map_size[0], self.map_size[1])
+            next_pos[1] = torch.clamp(next_pos[1], 0, self.map_size[1] * 2)
+            
+            path.append(next_pos)
+            pos = next_pos
+
+        # path = torch.stack(path).numpy()
+        path = torch.stack(path)
+        path_filter = self._apply_low_pass_filter(path).to(device=self.device)
+        # return self.smooth_path(path)
+        return path_filter
+
+    # def smooth_path(self, path):
+    #     if len(path) < 3:
+    #         return path  # Not enough points to smooth
+        
+    #     x, y = path[:, 0], path[:, 1]
+    #     cs_x = CubicSpline(range(len(x)), x)
+    #     cs_y = CubicSpline(range(len(y)), y)
+    #     t_smooth = np.linspace(0, len(x) - 1, num=len(x) * 5)
+    #     smooth_x = cs_x(t_smooth)
+    #     smooth_y = cs_y(t_smooth)
+    #     return np.vstack((smooth_x, smooth_y)).T
+
+    def plot(self, start, path):
+        plt.figure(figsize=(8, 8))
+        for obs in self.obstacles:
+            obstacle_circle = plt.Circle(obs.numpy(), self.obstacle_radius, color='red', alpha=0.5)
+            plt.gca().add_patch(obstacle_circle)
+        
+        plt.scatter(start[0], start[1], color='green', s=100, label='Start')
+        plt.scatter(self.goal[0].item(), self.goal[1].item(), color='orange', s=100, label='Goal')
+        plt.plot(path[:, 0], path[:, 1], color='blue', linewidth=2, label='Smooth Path')
+
+        plt.xlim(self.map_size[0], self.map_size[1])
+        plt.ylim(0, self.map_size[1] * 2)
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+    
+    def compute_shortest_traj(self, input_path, eps_pro , steps: int, env_ids=None, step_size=1):
+        if env_ids is None:
+            env_ids = ...
+        # print("progress ",eps_pro[0])
+        # self.t = eps_pro[env_ids]
+        # print("t = ", eps_pro[env_ids].unsqueeze(-1).long())
+        # print("t = ", self.t)
+        # self.t = eps_pro[env_ids].unsqueeze(-1).long() * 5 + step_size * torch.arange(steps, device=self.device, dtype=torch.long)
+        # self.traj_target = input_path[torch.arange(input_path.size(0)).unsqueeze(1), self.t]
+        # ----------------------------------------------
+        device = input_path.device  # Ensure compatibility with GPU if needed
+        # Get initial indices from eps_pro[env_ids] and reshape to match batch size
+        start_indices = eps_pro[env_ids].unsqueeze(-1).long()  # Shape [4096, 1]
+
+        # Compute sliding window indices
+        sliding_indices = start_indices + step_size * torch.arange(steps, device=device).unsqueeze(0)  # Shape [4096, 4]
+
+        # Clip indices to avoid out-of-bounds errors (ensure they are within [0, 299])
+        sliding_indices = sliding_indices.clamp(0, input_path.size(1) - 1)
+
+        # Extract trajectory slices
+        self.traj_target = input_path[torch.arange(input_path.size(0)).unsqueeze(1), sliding_indices]  # Shape [4096, 4, 3]
+
+        print("traj_target shape = ", self.traj_target.shape)
+        print("self.env_origin_pos shape = ", self.env_origin_pos.shape)
+        return self.env_origin_pos[:, None, :] + self.traj_target
+    
+    def run(self, start, goal=None):
+        if goal is not None:
+            self.set_goal(goal)
+        path = self.find_path(start)
+        if path is not None:
+            print("Path found!")
+            print("path shape = ", path.shape)
+            path_x = path[:, 0]
+            path_y = path[:, 1]
+            path_z = torch.ones_like(path_x)
+
+            self.path_xyz = torch.stack((path_x, path_y, path_z), dim=1)   # Combine x, y, z into a single tensor   -- > #size [path point,3]    
+            self.duplicated_path_xyz = self.path_xyz.unsqueeze(0).repeat(self.num_envs, 1, 1)   #[num_env,length_bspline,xyz]    
+            self.path_xyz = self.path_xyz.to(self.device) + self.env_origin_pos[self.central_env_idx]
+            point_list_0 = self.path_xyz[:-1].tolist()   # cut the endding point to make a line ex. whose line is 1,2,3,4; point_list_0 = 1,2,3  
+            point_list_1 = self.path_xyz[1:].tolist()    # cut the starting point to make a line ex. whose line is 1,2,3,4; point_list_1 = 2,3,4   then the line is 1-2, 2-3, 3-4
+
+            debug_plot = True
+            if debug_plot == True:
+                colors = [(1.0, 1.0, 0.0, 1.0) for _ in range(len(point_list_0))]
+                sizes = [2 for _ in range(len(point_list_0))]
+                self.draw.draw_lines(point_list_0, point_list_1, colors, sizes) #draw the line
+            
+            return self.duplicated_path_xyz
+            # while(True):
+            #     pass
+            # self.plot(start, path)
+        else:
+            print("Failed to find a path.")
+            return None
+    
+    
+    # def plot_shortest_path(self):
+    #     traj_vis =  self.duplicated_spline_xyz[:,:,:] + self.origin    # !!!! must edit to max length of traj_target_spline
+    #     # traj_vis = self._compute_shortest_traj(steps = 1000, env_ids = self.central_env_idx)
+    #     traj_vis = traj_vis + self.env_origin_pos[self.central_env_idx]
+    #     # self._terrain.env_origins
+
+
+    #     plot_point_list_0 = traj_vis[self.central_env_idx ,:-1 ,:]
+    #     plot_point_list_1 = traj_vis[self.central_env_idx ,1:  ,:]
+    #     # print(plot_point_list_0.shape)
+
+    #     plot_point_list_0 = plot_point_list_0.tolist()
+    #     plot_point_list_1 = plot_point_list_1.tolist()
+
+    #     colors = [(1.0, 0.0, 0.0, 1.0) for _ in range(len(plot_point_list_0))]
+    #     sizes = [2 for _ in range(len(plot_point_list_1))]
+    #     self.draw.draw_lines(plot_point_list_0, plot_point_list_1, colors, sizes) #draw the line
+
+# if __name__ == "__main__":
+#     planner = PotentialFieldPlanner()
+#     planner.run(start=(0, 0), goal=(-6.0, 18.0))  # Example of setting a new goal
+

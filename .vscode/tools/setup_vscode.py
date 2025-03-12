@@ -20,6 +20,7 @@ import re
 import sys
 
 PROJECT_DIR = pathlib.Path(__file__).parents[2]
+
 """Path to the the project directory."""
 
 try:

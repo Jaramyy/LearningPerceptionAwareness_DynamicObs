@@ -17,7 +17,7 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sim import SimulationCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
-from isaaclab.utils.math import subtract_frame_transforms
+from isaaclab.utils.math import subtract_frame_transforms, quat_apply_yaw
 
 ##
 # Pre-defined configs
@@ -55,7 +55,7 @@ class QuadcopterEnvWindow(BaseEnvWindow):
 @configclass
 class QuadcopterEnvCfg(DirectRLEnvCfg):
     # env
-    episode_length_s = 10.0
+    episode_length_s = 60.0
     decimation = 2
     action_space = 4
     observation_space = 12
@@ -145,7 +145,7 @@ class QuadcopterEnv(DirectRLEnv):
         self.target_pos = torch.zeros(self.num_envs, self.future_traj_step, 3, device=self.device)
 
         self.guilding_planner = PotentialFieldPlanner(env_origins=self._terrain.env_origins, num_envs = self.num_envs, device=self.device)
-        self.target_path = self.guilding_planner.run(start=(0, 0), goal=(-6.0, 18.0))
+        self.target_path = self.guilding_planner.run(start=(0, 0, 1), goal=(-6.0, 18.0, 1.0))
 
     def _setup_scene(self):
         self._robot = Articulation(self.cfg.robot)
@@ -171,7 +171,7 @@ class QuadcopterEnv(DirectRLEnv):
     def _get_observations(self) -> dict:
         # self.target_pos = self.guilding_planner.compute_shortest_traj(input_path = self.target_path, eps_pro=self.episode_length_buf , steps = self.future_traj_step, step_size = 5)
         self.target_pos = self.guilding_planner.compute_shortest_traj(input_path=self.target_path, eps_pro=self.episode_length_buf , steps=self.future_traj_step, step_size=5)
-        print("target_pos_0 = ", self.target_pos[0, :, :].shape)
+        # print("target_pos_0 = ", self.target_pos[0, :, :].shape)
 
         desired_pos_b, _ = subtract_frame_transforms(
             self._robot.data.root_state_w[:, :3], self._robot.data.root_state_w[:, 3:7], self._desired_pos_w
@@ -193,6 +193,11 @@ class QuadcopterEnv(DirectRLEnv):
         ang_vel = torch.sum(torch.square(self._robot.data.root_ang_vel_b), dim=1)
         distance_to_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1)
         distance_to_goal_mapped = 1 - torch.tanh(distance_to_goal / 0.8)
+
+        robot_heading_vector = quat_apply_yaw(self._robot.data.root_state_w[:, 3:7].to(torch.float32), torch.tensor([1, 0, 0], device=self.device, dtype=torch.float32).repeat(self.num_envs, 1))
+        # print("robot heading vec shape = ", robot_heading_vector[:5])
+        potential = self.guilding_planner.potentialReward(robot_pos=self._robot.data.root_pos_w, robot_heading_vec=robot_heading_vector)
+
         rewards = {
             "lin_vel": lin_vel * self.cfg.lin_vel_reward_scale * self.step_dt,
             "ang_vel": ang_vel * self.cfg.ang_vel_reward_scale * self.step_dt,
@@ -285,17 +290,18 @@ class QuadcopterEnv(DirectRLEnv):
 
 
 class PotentialFieldPlanner:
-    def __init__(self, map_size=(-10, 10), obstacles=[(0, 4.5), (-3, 8), (2, 10), (-5, 12)], obstacle_radius=1.5,
+    def __init__(self, map_size=(-10, 10), obstacles=[(0, 4.5, 1), (-3, 8, 1), (2, 10, 1), (-5, 12, 1)], obstacle_radius=1.5,
                  attractive_gain=0.7, repulsive_gain=3000.0, step_size=0.1, max_iters=5000, num_envs = 4096, env_origins = None, device = 'cuda', progress_buf=None):
+        self.device = device
         self.map_size = map_size
-        self.obstacles = [torch.tensor(obs, dtype=torch.float32) for obs in obstacles]
         self.obstacle_radius = obstacle_radius
         self.attractive_gain = attractive_gain
         self.repulsive_gain = repulsive_gain
         self.step_size = step_size
         self.max_iters = max_iters
         self.goal = torch.tensor((0.5, 15.5), dtype=torch.float32)  # Default goal
-        self.device = device
+        self.obstacles = [torch.tensor(obs, dtype=torch.float32, device=self.device) for obs in obstacles]
+        
 
         self.future_traj_steps = 4
 
@@ -311,12 +317,25 @@ class PotentialFieldPlanner:
         self.origin = torch.tensor([0.0, 0.0, 0.0], device=self.device) 
 
     def set_goal(self, goal):
-        self.goal = torch.tensor(goal, dtype=torch.float32)
+        self.goal = torch.tensor(goal, dtype=torch.float32, device=self.device)
+
+    # def _compute_potential_gradient(self, pos):
+    #     pos = torch.tensor(pos, dtype=torch.float32)
+    #     att_grad = self.attractive_gain * (pos - self.goal)
+    #     rep_grad = torch.zeros(2, dtype=torch.float32)
+
+    #     for obs in self.obstacles:
+    #         d = torch.norm(pos - obs)
+    #         if d < self.obstacle_radius:
+    #             rep_grad += self.repulsive_gain * (1.0 / d**2 - 1.0 / self.obstacle_radius**2) * (pos - obs) / d**3
+
+    #     total_grad = att_grad - rep_grad
+    #     return total_grad
 
     def _compute_potential_gradient(self, pos):
-        pos = torch.tensor(pos, dtype=torch.float32)
-        att_grad = self.attractive_gain * (pos - self.goal)
-        rep_grad = torch.zeros(2, dtype=torch.float32)
+        pos = pos.to(self.device)
+        att_grad = self.attractive_gain * (pos - self.goal)  # 3D Attraction
+        rep_grad = torch.zeros(3, dtype=torch.float32, device=self.device)
 
         for obs in self.obstacles:
             d = torch.norm(pos - obs)
@@ -332,9 +351,35 @@ class PotentialFieldPlanner:
             filtered_path[i] = alpha * path[i] + (1 - alpha) * filtered_path[i - 1]
         return filtered_path
     
+    # def find_path(self, start):
+    #     path = [torch.tensor(start, dtype=torch.float32)]
+    #     pos = torch.tensor(start, dtype=torch.float32)
+
+    #     for _ in range(self.max_iters):
+    #         grad = self._compute_potential_gradient(pos)
+    #         grad_norm = torch.norm(grad)
+    #         if grad_norm < 1e-3:
+    #             break
+    #         next_pos = pos - self.step_size * grad / grad_norm
+            
+    #         if torch.norm(next_pos - self.goal) < self.step_size:
+    #             path.append(self.goal)
+    #             break
+
+    #         next_pos[0] = torch.clamp(next_pos[0], self.map_size[0], self.map_size[1])
+    #         next_pos[1] = torch.clamp(next_pos[1], 0, self.map_size[1] * 2)
+            
+    #         path.append(next_pos)
+    #         pos = next_pos
+
+    #     # path = torch.stack(path).numpy()
+    #     path = torch.stack(path)
+    #     path_filter = self._apply_low_pass_filter(path).to(device=self.device)
+    #     # return self.smooth_path(path)
+    #     return path_filter
     def find_path(self, start):
-        path = [torch.tensor(start, dtype=torch.float32)]
-        pos = torch.tensor(start, dtype=torch.float32)
+        path = [torch.tensor(start, dtype=torch.float32, device=self.device)]
+        pos = torch.tensor(start, dtype=torch.float32, device=self.device)
 
         for _ in range(self.max_iters):
             grad = self._compute_potential_gradient(pos)
@@ -347,18 +392,16 @@ class PotentialFieldPlanner:
                 path.append(self.goal)
                 break
 
-            next_pos[0] = torch.clamp(next_pos[0], self.map_size[0], self.map_size[1])
-            next_pos[1] = torch.clamp(next_pos[1], 0, self.map_size[1] * 2)
+            next_pos[0] = torch.clamp(next_pos[0], self.map_size[0]*2, self.map_size[1]*2)  # X
+            next_pos[1] = torch.clamp(next_pos[1], 0, self.map_size[1] * 10)  # Y
+            next_pos[2] = torch.clamp(next_pos[2], 0, 10)  # Z (adjust as needed)
             
             path.append(next_pos)
             pos = next_pos
 
-        # path = torch.stack(path).numpy()
         path = torch.stack(path)
-        path_filter = self._apply_low_pass_filter(path).to(device=self.device)
-        # return self.smooth_path(path)
-        return path_filter
-
+        path_filtered = self._apply_low_pass_filter(path).to(device=self.device)
+        return path_filtered
     # def smooth_path(self, path):
     #     if len(path) < 3:
     #         return path  # Not enough points to smooth
@@ -371,16 +414,31 @@ class PotentialFieldPlanner:
     #     smooth_y = cs_y(t_smooth)
     #     return np.vstack((smooth_x, smooth_y)).T
 
+    # def plot(self, start, path):
+    #     plt.figure(figsize=(8, 8))
+    #     for obs in self.obstacles:
+    #         obstacle_circle = plt.Circle(obs.numpy(), self.obstacle_radius, color='red', alpha=0.5)
+    #         plt.gca().add_patch(obstacle_circle)
+        
+    #     plt.scatter(start[0], start[1], color='green', s=100, label='Start')
+    #     plt.scatter(self.goal[0].item(), self.goal[1].item(), color='orange', s=100, label='Goal')
+    #     plt.plot(path[:, 0], path[:, 1], color='blue', linewidth=2, label='Smooth Path')
+
+    #     plt.xlim(self.map_size[0], self.map_size[1])
+    #     plt.ylim(0, self.map_size[1] * 2)
+    #     plt.legend()
+    #     plt.grid(True)
+    #     plt.show()
     def plot(self, start, path):
         plt.figure(figsize=(8, 8))
         for obs in self.obstacles:
-            obstacle_circle = plt.Circle(obs.numpy(), self.obstacle_radius, color='red', alpha=0.5)
+            obstacle_circle = plt.Circle(obs[:2].cpu().numpy(), self.obstacle_radius, color='red', alpha=0.5)
             plt.gca().add_patch(obstacle_circle)
         
         plt.scatter(start[0], start[1], color='green', s=100, label='Start')
-        plt.scatter(self.goal[0].item(), self.goal[1].item(), color='orange', s=100, label='Goal')
-        plt.plot(path[:, 0], path[:, 1], color='blue', linewidth=2, label='Smooth Path')
-
+        plt.scatter(self.goal[0].cpu().numpy(), self.goal[1].cpu().numpy(), color='orange', s=100, label='Goal')
+        plt.plot(path[:, 0].cpu().numpy(), path[:, 1].cpu().numpy(), color='blue', linewidth=2, label='Path')
+        
         plt.xlim(self.map_size[0], self.map_size[1])
         plt.ylim(0, self.map_size[1] * 2)
         plt.legend()
@@ -410,8 +468,8 @@ class PotentialFieldPlanner:
         # Extract trajectory slices
         self.traj_target = input_path[torch.arange(input_path.size(0)).unsqueeze(1), sliding_indices]  # Shape [4096, 4, 3]
 
-        print("traj_target shape = ", self.traj_target.shape)
-        print("self.env_origin_pos shape = ", self.env_origin_pos.shape)
+        # print("traj_target shape = ", self.traj_target.shape)
+        # print("self.env_origin_pos shape = ", self.env_origin_pos.shape)
         return self.env_origin_pos[:, None, :] + self.traj_target
     
     def run(self, start, goal=None):
@@ -423,7 +481,8 @@ class PotentialFieldPlanner:
             print("path shape = ", path.shape)
             path_x = path[:, 0]
             path_y = path[:, 1]
-            path_z = torch.ones_like(path_x)
+            path_z = path[:, 2]
+            # path_z = torch.ones_like(path_x)
 
             self.path_xyz = torch.stack((path_x, path_y, path_z), dim=1)   # Combine x, y, z into a single tensor   -- > #size [path point,3]    
             self.duplicated_path_xyz = self.path_xyz.unsqueeze(0).repeat(self.num_envs, 1, 1)   #[num_env,length_bspline,xyz]    
@@ -445,6 +504,108 @@ class PotentialFieldPlanner:
             print("Failed to find a path.")
             return None
     
+    #TODO: Implement the potential field adaptive heading reward
+    def _calVector(self, robot_pos, obs_pos):
+        if isinstance(obs_pos, list):
+            obs_pos = torch.stack(obs_pos).to(robot_pos.device)
+        # print("robot_pos ", robot_pos.shape)
+        # print("obs_pos ", obs_pos.shape)
+        vectors = obs_pos - robot_pos[:, None, :]  # Shape (4096, 3, 3)
+        distances = torch.norm(vectors, dim=2)
+        return vectors, distances
+    
+    def _calClosestObstacle(self, robot_pos, obs_pos):
+
+        vectors, distances = self._calVector(robot_pos, obs_pos)
+
+        # Find the index of the closest obstacle
+        closest_indices = torch.argmin(distances, dim=1)  # Shape (4096,)
+
+        # Get the minimum distances
+        min_distances = distances[torch.arange(4096), closest_indices]  # Shape (4096,)
+
+        # Get the vector to the closest obstacle
+        closest_vectors = vectors[torch.arange(4096), closest_indices]  # Shape (4096, 3)
+        dx, dy, dz = closest_vectors[:, 0], closest_vectors[:, 1], closest_vectors[:, 2]
+
+        # Convert to Euler angles
+        yaw = torch.atan2(dy, dx)  # Rotation around Z-axis
+        pitch = torch.atan2(dz, torch.sqrt(dx**2 + dy**2))  # Rotation around Y-axis
+
+        # Stack yaw and pitch into a (4096, 2) tensor
+        euler_angles = torch.stack((yaw, pitch), dim=1)  # Shape (4096, 2)
+
+        return min_distances, euler_angles , closest_vectors
+        
+    def _calPotential(self, robot_pos, obs_pos, weight_potential):
+        """
+        Compute the potential field from obstacles.
+
+        Args:
+        - robot_pos: Tensor of shape (4096, 3).
+        - obs_pos: Tensor of shape (4096, 3, 3).
+        - weight_potential: Scalar weight for the potential.
+
+        Returns:
+        - potential: Tensor of shape (4096), potential field values for each obstacle.
+        """
+        
+        vec, euler , dist_vec = self._calClosestObstacle(robot_pos, obs_pos)
+        dist = torch.norm(dist_vec, dim=1)
+        
+        sigma = 0.57  # Standard deviation of Gaussian function
+        gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
+        # print("dist shape", dist.shape)
+        potential = weight_potential * gaussian_factor * torch.exp(-dist**2 / (2 * sigma**2))
+        # print("potential shape ", potential.shape)
+        # print("potential ", potential)
+        
+        return potential
+
+    def _dot_vector(self, a, b):
+        return torch.sum(a * b, dim=1)
+    
+    def _compute_unit_vector(self, vectors):
+        """
+        Compute the unit vector of a given tensor.
+
+        Args:
+        - vectors: torch.Tensor of shape (..., 3), representing 3D vectors.
+
+        Returns:
+        - unit_vectors: torch.Tensor of the same shape (..., 3), normalized to unit length.
+        """
+        # Compute vector magnitude
+        norms = torch.norm(vectors, dim=-1, keepdim=True)  # Shape (..., 1)
+
+        # Avoid division by zero by replacing zeros with a small value
+        norms = torch.where(norms == 0, torch.tensor(1e-8, device=vectors.device), norms)
+
+        # Compute unit vector
+        unit_vectors = vectors / norms  # Shape (..., 3)
+        return unit_vectors
+
+    def potentialReward(self, robot_pos, robot_heading_vec, weight_potential=0.5):
+        _ , euler_angles, closet_vector = self._calClosestObstacle(robot_pos, self.obstacles)
+        
+        norm_robot_heading = self._compute_unit_vector(robot_heading_vec)
+        norm_closet_obs_vec = self._compute_unit_vector(closet_vector)
+
+        dot_product = self._dot_vector(norm_robot_heading, norm_closet_obs_vec)
+
+        # print("euler_angles = ", euler_angles)
+        # print("robot_heading = ", robot_heading)
+        potential = self._calPotential(robot_pos, self.obstacles, weight_potential)
+        # print("potential ", potential.shape)
+        # print("dot_product ", dot_product.shape)
+
+        reward = potential * dot_product
+        print("reward ", reward)
+        return reward
+    # def potentialReward(self, robot_pos, obs_pos, robot_heading, weight_potential=0.5):
+    #     potential = self._calPotential(robot_pos, obs_pos, weight_potential)
+    #     reward = torch.sum(potential, dim=1)
+    #     return reward
     
     # def plot_shortest_path(self):
     #     traj_vis =  self.duplicated_spline_xyz[:,:,:] + self.origin    # !!!! must edit to max length of traj_target_spline

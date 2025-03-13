@@ -22,7 +22,8 @@ from isaaclab.utils.math import subtract_frame_transforms, quat_apply_yaw
 ##
 # Pre-defined configs
 ##
-from isaaclab_assets import CRAZYFLIE_CFG  # isort: skip
+# from isaaclab_assets import CRAZYFLIE_CFG  # isort: skip
+from .robot.agileDrone import AGILE_CFG  # isort: skip
 from isaaclab.markers import CUBOID_MARKER_CFG  # isort: skip
 
 
@@ -55,7 +56,7 @@ class QuadcopterEnvWindow(BaseEnvWindow):
 @configclass
 class QuadcopterEnvCfg(DirectRLEnvCfg):
     # env
-    episode_length_s = 60.0
+    episode_length_s = 10.0
     decimation = 2
     action_space = 4
     observation_space = 12
@@ -91,12 +92,15 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     )
 
     # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=2.5, replicate_physics=True)
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=5.5, replicate_physics=True)
 
     # robot
-    robot: ArticulationCfg = CRAZYFLIE_CFG.replace(prim_path="/World/envs/env_.*/Robot")
-    thrust_to_weight = 1.9
-    moment_scale = 0.01
+    robot: ArticulationCfg = AGILE_CFG.replace(prim_path="/World/envs/env_.*/Robot")
+    # thrust_to_weight = 1.9
+    thrust_to_weight = 5.0
+    
+    # moment_scale = 0.01
+    moment_scale = 0.35
 
     # reward scales
     lin_vel_reward_scale = -0.05
@@ -130,8 +134,9 @@ class QuadcopterEnv(DirectRLEnv):
             ]
         }
         # Get specific body indices
-        self._body_id = self._robot.find_bodies("body")[0]
+        self._body_id = self._robot.find_bodies("base_link")[0] 
         self._robot_mass = self._robot.root_physx_view.get_masses()[0].sum()
+        print("\n\n robot mass", self._robot_mass)
         self._gravity_magnitude = torch.tensor(self.sim.cfg.gravity, device=self.device).norm()
         self._robot_weight = (self._robot_mass * self._gravity_magnitude).item()
 
@@ -351,32 +356,6 @@ class PotentialFieldPlanner:
             filtered_path[i] = alpha * path[i] + (1 - alpha) * filtered_path[i - 1]
         return filtered_path
     
-    # def find_path(self, start):
-    #     path = [torch.tensor(start, dtype=torch.float32)]
-    #     pos = torch.tensor(start, dtype=torch.float32)
-
-    #     for _ in range(self.max_iters):
-    #         grad = self._compute_potential_gradient(pos)
-    #         grad_norm = torch.norm(grad)
-    #         if grad_norm < 1e-3:
-    #             break
-    #         next_pos = pos - self.step_size * grad / grad_norm
-            
-    #         if torch.norm(next_pos - self.goal) < self.step_size:
-    #             path.append(self.goal)
-    #             break
-
-    #         next_pos[0] = torch.clamp(next_pos[0], self.map_size[0], self.map_size[1])
-    #         next_pos[1] = torch.clamp(next_pos[1], 0, self.map_size[1] * 2)
-            
-    #         path.append(next_pos)
-    #         pos = next_pos
-
-    #     # path = torch.stack(path).numpy()
-    #     path = torch.stack(path)
-    #     path_filter = self._apply_low_pass_filter(path).to(device=self.device)
-    #     # return self.smooth_path(path)
-    #     return path_filter
     def find_path(self, start):
         path = [torch.tensor(start, dtype=torch.float32, device=self.device)]
         pos = torch.tensor(start, dtype=torch.float32, device=self.device)
@@ -402,33 +381,7 @@ class PotentialFieldPlanner:
         path = torch.stack(path)
         path_filtered = self._apply_low_pass_filter(path).to(device=self.device)
         return path_filtered
-    # def smooth_path(self, path):
-    #     if len(path) < 3:
-    #         return path  # Not enough points to smooth
-        
-    #     x, y = path[:, 0], path[:, 1]
-    #     cs_x = CubicSpline(range(len(x)), x)
-    #     cs_y = CubicSpline(range(len(y)), y)
-    #     t_smooth = np.linspace(0, len(x) - 1, num=len(x) * 5)
-    #     smooth_x = cs_x(t_smooth)
-    #     smooth_y = cs_y(t_smooth)
-    #     return np.vstack((smooth_x, smooth_y)).T
 
-    # def plot(self, start, path):
-    #     plt.figure(figsize=(8, 8))
-    #     for obs in self.obstacles:
-    #         obstacle_circle = plt.Circle(obs.numpy(), self.obstacle_radius, color='red', alpha=0.5)
-    #         plt.gca().add_patch(obstacle_circle)
-        
-    #     plt.scatter(start[0], start[1], color='green', s=100, label='Start')
-    #     plt.scatter(self.goal[0].item(), self.goal[1].item(), color='orange', s=100, label='Goal')
-    #     plt.plot(path[:, 0], path[:, 1], color='blue', linewidth=2, label='Smooth Path')
-
-    #     plt.xlim(self.map_size[0], self.map_size[1])
-    #     plt.ylim(0, self.map_size[1] * 2)
-    #     plt.legend()
-    #     plt.grid(True)
-    #     plt.show()
     def plot(self, start, path):
         plt.figure(figsize=(8, 8))
         for obs in self.obstacles:
@@ -448,12 +401,6 @@ class PotentialFieldPlanner:
     def compute_shortest_traj(self, input_path, eps_pro , steps: int, env_ids=None, step_size=1):
         if env_ids is None:
             env_ids = ...
-        # print("progress ",eps_pro[0])
-        # self.t = eps_pro[env_ids]
-        # print("t = ", eps_pro[env_ids].unsqueeze(-1).long())
-        # print("t = ", self.t)
-        # self.t = eps_pro[env_ids].unsqueeze(-1).long() * 5 + step_size * torch.arange(steps, device=self.device, dtype=torch.long)
-        # self.traj_target = input_path[torch.arange(input_path.size(0)).unsqueeze(1), self.t]
         # ----------------------------------------------
         device = input_path.device  # Ensure compatibility with GPU if needed
         # Get initial indices from eps_pro[env_ids] and reshape to match batch size
@@ -602,30 +549,4 @@ class PotentialFieldPlanner:
         reward = potential * dot_product
         print("reward ", reward)
         return reward
-    # def potentialReward(self, robot_pos, obs_pos, robot_heading, weight_potential=0.5):
-    #     potential = self._calPotential(robot_pos, obs_pos, weight_potential)
-    #     reward = torch.sum(potential, dim=1)
-    #     return reward
-    
-    # def plot_shortest_path(self):
-    #     traj_vis =  self.duplicated_spline_xyz[:,:,:] + self.origin    # !!!! must edit to max length of traj_target_spline
-    #     # traj_vis = self._compute_shortest_traj(steps = 1000, env_ids = self.central_env_idx)
-    #     traj_vis = traj_vis + self.env_origin_pos[self.central_env_idx]
-    #     # self._terrain.env_origins
-
-
-    #     plot_point_list_0 = traj_vis[self.central_env_idx ,:-1 ,:]
-    #     plot_point_list_1 = traj_vis[self.central_env_idx ,1:  ,:]
-    #     # print(plot_point_list_0.shape)
-
-    #     plot_point_list_0 = plot_point_list_0.tolist()
-    #     plot_point_list_1 = plot_point_list_1.tolist()
-
-    #     colors = [(1.0, 0.0, 0.0, 1.0) for _ in range(len(plot_point_list_0))]
-    #     sizes = [2 for _ in range(len(plot_point_list_1))]
-    #     self.draw.draw_lines(plot_point_list_0, plot_point_list_1, colors, sizes) #draw the line
-
-# if __name__ == "__main__":
-#     planner = PotentialFieldPlanner()
-#     planner.run(start=(0, 0), goal=(-6.0, 18.0))  # Example of setting a new goal
 

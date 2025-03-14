@@ -17,7 +17,8 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sim import SimulationCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
-from isaaclab.utils.math import subtract_frame_transforms, quat_apply_yaw
+from isaaclab.utils.math import subtract_frame_transforms, quat_apply_yaw, euler_xyz_from_quat
+
 
 ##
 # Pre-defined configs
@@ -59,7 +60,8 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     episode_length_s = 10.0
     decimation = 2
     action_space = 4
-    observation_space = 12
+    # observation_space = 12
+    observation_space = 15  # add the guilding path
     state_space = 0
     debug_vis = True
 
@@ -103,9 +105,15 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     moment_scale = 0.35
 
     # reward scales
-    lin_vel_reward_scale = -0.05
-    ang_vel_reward_scale = -0.01
+    lin_vel_reward_scale = -0.5
+    # lin_vel_reward_scale = -0.05
+    
+    # ang_vel_reward_scale = -0.01
+    ang_vel_reward_scale = -0.05
+
     distance_to_goal_reward_scale = 15.0
+    distance_to_guide_reward_scale = 30.0
+    heading_tracking_reward_scale = 1.0
 
 
     
@@ -131,6 +139,8 @@ class QuadcopterEnv(DirectRLEnv):
                 "lin_vel",
                 "ang_vel",
                 "distance_to_goal",
+                "distance_to_guide",
+                "heading_tracking",
             ]
         }
         # Get specific body indices
@@ -148,12 +158,14 @@ class QuadcopterEnv(DirectRLEnv):
         ## Guiding path generation
         self.future_traj_step = 4
         self.target_pos = torch.zeros(self.num_envs, self.future_traj_step, 3, device=self.device)
+        self.guilding_target = torch.zeros(self.num_envs, self.future_traj_step, 3, device=self.device)
+        self.distance_to_guide = torch.zeros(self.num_envs, device=self.device)
 
         self.guilding_planner = PotentialFieldPlanner(env_origins=self._terrain.env_origins, num_envs = self.num_envs, device=self.device)
 
         self._desired_goal = torch.zeros(self.num_envs, 3, device=self.device)
         self.goal_pos = torch.tensor((-6.0, 18.0, 1.0), dtype=torch.float32, device=self.device)
-        self._desired_goal = self.goal_pos.repeat(self.num_envs, 1)
+        self._desired_goal = self.goal_pos.repeat(self.num_envs, 1) + self._terrain.env_origins[:, :]
         print("desired goal shape = ", self._desired_goal.shape)
 
         self.target_path = self.guilding_planner.run(start=(0, 0, 1), goal=self.goal_pos)
@@ -183,7 +195,7 @@ class QuadcopterEnv(DirectRLEnv):
         # self.target_pos = self.guilding_planner.compute_shortest_traj(input_path = self.target_path, eps_pro=self.episode_length_buf , steps = self.future_traj_step, step_size = 5)
         # self.target_pos = self.guilding_planner.compute_shortest_traj(input_path=self.target_path, eps_pro=self.episode_length_buf , steps=self.future_traj_step, step_size=5)
         # print("target_pos_0 = ", self.target_pos[0, :, :].shape)
-        
+        self.guilding_target = self.guilding_planner.compute_shortest_traj(input_path=self.target_path, eps_pro=self.episode_length_buf , steps=self.future_traj_step, step_size=5)
         # original goal command
         # desired_pos_b, _ = subtract_frame_transforms(
         #     self._robot.data.root_state_w[:, :3], self._robot.data.root_state_w[:, 3:7], self._desired_pos_w
@@ -192,6 +204,13 @@ class QuadcopterEnv(DirectRLEnv):
         desired_pos_b, _ = subtract_frame_transforms(
             self._robot.data.root_state_w[:, :3], self._robot.data.root_state_w[:, 3:7], self._desired_goal
         )
+        guilding_pos_b, _ = subtract_frame_transforms(
+            self._robot.data.root_state_w[:, :3], self._robot.data.root_state_w[:, 3:7], self.guilding_target[:, 0, :]
+        )
+
+        self.robot_orientaion = self._robot.data.root_quat_w
+        self.robot_orientaion_euler = euler_xyz_from_quat(self._robot.data.root_quat_w)
+        self.robot_orientaion_euler = torch.stack(self.robot_orientaion_euler, dim=1)   
 
         obs = torch.cat(
             [
@@ -199,6 +218,7 @@ class QuadcopterEnv(DirectRLEnv):
                 self._robot.data.root_ang_vel_b,
                 self._robot.data.projected_gravity_b,
                 desired_pos_b,
+                guilding_pos_b,
             ],
             dim=-1,
         )
@@ -206,25 +226,37 @@ class QuadcopterEnv(DirectRLEnv):
         return observations
 
     def _get_rewards(self) -> torch.Tensor:
-        
-        self.target_pos = self.guilding_planner.compute_shortest_traj(input_path=self.target_path, eps_pro=self.episode_length_buf , steps=self.future_traj_step, step_size=5)
         # print("target_pos_0 = ", self.target_pos.shape)
 
         lin_vel = torch.sum(torch.square(self._robot.data.root_lin_vel_b), dim=1)
-        # print("lin_vel shape = ", lin_vel.shape)
         ang_vel = torch.sum(torch.square(self._robot.data.root_ang_vel_b), dim=1)
+
         # distance_to_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1)
-        distance_to_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1)
-        distance_to_goal_mapped = 1 - torch.tanh(distance_to_goal / 0.8)
+        distance_to_goal = torch.linalg.norm(self._desired_goal - self._robot.data.root_pos_w, dim=1)
+        distance_to_goal_mapped_rew = 1 - torch.tanh(distance_to_goal / 0.8)
+        # print("distance_to_goal_mapped shape",distance_to_goal_mapped.shape)
 
-        robot_heading_vector = quat_apply_yaw(self._robot.data.root_state_w[:, 3:7].to(torch.float32), torch.tensor([1, 0, 0], device=self.device, dtype=torch.float32).repeat(self.num_envs, 1))
+        self.robot_heading_vector = quat_apply_yaw(self._robot.data.root_state_w[:, 3:7].to(torch.float32), torch.tensor([1, 0, 0], device=self.device, dtype=torch.float32).repeat(self.num_envs, 1))
         # print("robot heading vec shape = ", robot_heading_vector[:5])
-        potential = self.guilding_planner.potentialReward(robot_pos=self._robot.data.root_pos_w, robot_heading_vec=robot_heading_vector)
+        potential = self.guilding_planner.potentialReward(robot_pos=self._robot.data.root_pos_w, robot_heading_vec=self.robot_heading_vector)
+        
+        # self.guilding_target = self.guilding_planner.compute_shortest_traj(input_path=self.target_path, eps_pro=self.episode_length_buf , steps=self.future_traj_step, step_size=5)
+        self.distance_to_guide = torch.linalg.norm(self.guilding_target[:, 0, :] - self._robot.data.root_pos_w[:, :], dim=1)
+        guilding_path_rew = 1 - torch.tanh(self.distance_to_guide / 0.8)
+        # print("guilding_path_rew shape",guilding_path_rew.shape)
 
+        self.next_point_path = self.guilding_target[:, 1, :2] - self.guilding_target[:, 0, :2]   # next point - current point (4096,2) {x,y}
+        self.ref_heading = torch.atan2(self.next_point_path[:, 1], self.next_point_path[:, 0])  # radian
+        self.robot_heading = self._robot.data.heading_w
+        angle_diff = self.ref_heading - self.robot_heading
+        head_tracking_path_rew = 1 - torch.tanh(torch.abs(angle_diff) / 0.8)
+        
         rewards = {
             "lin_vel": lin_vel * self.cfg.lin_vel_reward_scale * self.step_dt,
             "ang_vel": ang_vel * self.cfg.ang_vel_reward_scale * self.step_dt,
-            "distance_to_goal": distance_to_goal_mapped * self.cfg.distance_to_goal_reward_scale * self.step_dt,
+            "distance_to_goal": distance_to_goal_mapped_rew * self.cfg.distance_to_goal_reward_scale * self.step_dt,
+            "distance_to_guide": guilding_path_rew * self.cfg.distance_to_guide_reward_scale * self.step_dt,
+            "heading_tracking": head_tracking_path_rew * self.cfg.heading_tracking_reward_scale * self.step_dt,
         }
         reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
         # Logging
@@ -233,8 +265,12 @@ class QuadcopterEnv(DirectRLEnv):
         return reward
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
+        ones = torch.ones_like(self.reset_buf)
+        died = torch.zeros_like(self.reset_buf)
+        
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.1, self._robot.data.root_pos_w[:, 2] > 2.0)
+        died = torch.where(self.distance_to_guide > 0.5, ones, died)
         return died, time_out
 
     def _reset_idx(self, env_ids: torch.Tensor | None):
@@ -310,8 +346,9 @@ class QuadcopterEnv(DirectRLEnv):
 
     def _debug_vis_callback(self, event):
         # update the markers
-        self.goal_pos_visualizer.visualize(self._desired_pos_w)
-        self.target_visualizer.visualize(self.target_pos[:, 0, :])
+        self.goal_pos_visualizer.visualize(self._desired_goal)
+        # self.goal_pos_visualizer.visualize(self._desired_pos_w)
+        self.target_visualizer.visualize(self.guilding_target[:, 0, :])
 
 
 
@@ -568,6 +605,6 @@ class PotentialFieldPlanner:
         # print("dot_product ", dot_product.shape)
 
         reward = potential * dot_product
-        print("reward ", reward)
+        # print("reward ", reward[2015])
         return reward
 

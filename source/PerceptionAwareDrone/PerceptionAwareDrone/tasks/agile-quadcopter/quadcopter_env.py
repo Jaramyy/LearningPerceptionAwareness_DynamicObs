@@ -57,7 +57,7 @@ class QuadcopterEnvWindow(BaseEnvWindow):
 @configclass
 class QuadcopterEnvCfg(DirectRLEnvCfg):
     # env
-    episode_length_s = 10.0
+    episode_length_s = 20.0
     decimation = 2
     action_space = 4
     # observation_space = 12
@@ -112,9 +112,9 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     ang_vel_reward_scale = -0.05
 
     distance_to_goal_reward_scale = 15.0
-    distance_to_guide_reward_scale = 30.0
-    heading_tracking_reward_scale = 1.0
-
+    distance_to_guide_reward_scale = 15.0
+    heading_tracking_reward_scale = 15.0
+    potential_rew_scale = 15.0
 
     
 
@@ -141,6 +141,7 @@ class QuadcopterEnv(DirectRLEnv):
                 "distance_to_goal",
                 "distance_to_guide",
                 "heading_tracking",
+                "potential_rew",
             ]
         }
         # Get specific body indices
@@ -238,7 +239,8 @@ class QuadcopterEnv(DirectRLEnv):
 
         self.robot_heading_vector = quat_apply_yaw(self._robot.data.root_state_w[:, 3:7].to(torch.float32), torch.tensor([1, 0, 0], device=self.device, dtype=torch.float32).repeat(self.num_envs, 1))
         # print("robot heading vec shape = ", robot_heading_vector[:5])
-        potential = self.guilding_planner.potentialReward(robot_pos=self._robot.data.root_pos_w, robot_heading_vec=self.robot_heading_vector)
+        robot_pos_local = self._robot.data.root_pos_w - self._terrain.env_origins
+        potential_rew = self.guilding_planner.potentialReward(robot_pos=robot_pos_local, robot_heading_vec=self.robot_heading_vector)
         
         # self.guilding_target = self.guilding_planner.compute_shortest_traj(input_path=self.target_path, eps_pro=self.episode_length_buf , steps=self.future_traj_step, step_size=5)
         self.distance_to_guide = torch.linalg.norm(self.guilding_target[:, 0, :] - self._robot.data.root_pos_w[:, :], dim=1)
@@ -257,6 +259,7 @@ class QuadcopterEnv(DirectRLEnv):
             "distance_to_goal": distance_to_goal_mapped_rew * self.cfg.distance_to_goal_reward_scale * self.step_dt,
             "distance_to_guide": guilding_path_rew * self.cfg.distance_to_guide_reward_scale * self.step_dt,
             "heading_tracking": head_tracking_path_rew * self.cfg.heading_tracking_reward_scale * self.step_dt,
+            "potential_rew": potential_rew * self.cfg.potential_rew_scale * self.step_dt,
         }
         reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
         # Logging
@@ -270,7 +273,7 @@ class QuadcopterEnv(DirectRLEnv):
         
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.1, self._robot.data.root_pos_w[:, 2] > 2.0)
-        died = torch.where(self.distance_to_guide > 0.5, ones, died)
+        died = torch.where(self.distance_to_guide > 0.45, ones, died)
         return died, time_out
 
     def _reset_idx(self, env_ids: torch.Tensor | None):
@@ -350,11 +353,11 @@ class QuadcopterEnv(DirectRLEnv):
         # self.goal_pos_visualizer.visualize(self._desired_pos_w)
         self.target_visualizer.visualize(self.guilding_target[:, 0, :])
 
-
+# (0, 4.5, 1)
 
 class PotentialFieldPlanner:
-    def __init__(self, map_size=(-10, 10), obstacles=[(0, 4.5, 1), (-3, 8, 1), (2, 10, 1), (-5, 12, 1)], obstacle_radius=1.5,
-                 attractive_gain=0.7, repulsive_gain=3000.0, step_size=0.1, max_iters=5000, num_envs = 4096, env_origins = None, device = 'cuda', progress_buf=None):
+    def __init__(self, map_size=(-10, 10), obstacles=[(-3, 8, 1)], obstacle_radius=1.5,
+                 attractive_gain=0.7, repulsive_gain=3000.0, step_size=0.05, max_iters=5000, num_envs = 4096, env_origins = None, device = 'cuda', progress_buf=None):
         self.device = device
         self.map_size = map_size
         self.obstacle_radius = obstacle_radius
@@ -554,17 +557,23 @@ class PotentialFieldPlanner:
         Returns:
         - potential: Tensor of shape (4096), potential field values for each obstacle.
         """
-        
+        # print("robot_pos ", robot_pos[self.central_env_idx])
+        # print("obs_pos ", obs_pos[self.central_env_idx])
         vec, euler , dist_vec = self._calClosestObstacle(robot_pos, obs_pos)
         dist = torch.norm(dist_vec, dim=1)
-        
-        sigma = 0.57  # Standard deviation of Gaussian function
+
+        sigma = 2.5  # Standard deviation of Gaussian function
         gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
         # print("dist shape", dist.shape)
         potential = weight_potential * gaussian_factor * torch.exp(-dist**2 / (2 * sigma**2))
         # print("potential shape ", potential.shape)
         # print("potential ", potential)
-        
+        # print("dist ", dist[self.central_env_idx])
+        if(dist[self.central_env_idx] < 2.0):
+            print("dist ", dist[self.central_env_idx])
+            print("potential ", potential[self.central_env_idx])
+
+        # potential = torch.min(potential, torch.tensor(0.0, device=potential.device))
         return potential
 
     def _dot_vector(self, a, b):
@@ -590,7 +599,7 @@ class PotentialFieldPlanner:
         unit_vectors = vectors / norms  # Shape (..., 3)
         return unit_vectors
 
-    def potentialReward(self, robot_pos, robot_heading_vec, weight_potential=0.5):
+    def potentialReward(self, robot_pos, robot_heading_vec, weight_potential=1.0):
         _ , euler_angles, closet_vector = self._calClosestObstacle(robot_pos, self.obstacles)
         
         norm_robot_heading = self._compute_unit_vector(robot_heading_vec)
@@ -605,6 +614,6 @@ class PotentialFieldPlanner:
         # print("dot_product ", dot_product.shape)
 
         reward = potential * dot_product
-        # print("reward ", reward[2015])
+        print("reward ", reward[self.central_env_idx])
         return reward
 

@@ -66,7 +66,8 @@ from isaaclab_rl.rl_games import RlGamesGpuEnv, RlGamesVecEnvWrapper
 
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils import get_checkpoint_path, load_cfg_from_registry, parse_env_cfg
-
+# Import extensions to set up environment tasks
+import PerceptionAwareDrone.tasks  # noqa: F401
 
 def main():
     """Play with RL-Games agent."""

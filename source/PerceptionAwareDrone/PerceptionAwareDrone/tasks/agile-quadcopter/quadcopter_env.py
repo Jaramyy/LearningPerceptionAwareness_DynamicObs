@@ -273,7 +273,7 @@ class QuadcopterEnv(DirectRLEnv):
         
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.1, self._robot.data.root_pos_w[:, 2] > 2.0)
-        died = torch.where(self.distance_to_guide > 0.45, ones, died)
+        died = torch.where(self.distance_to_guide > 0.25, ones, died)
         return died, time_out
 
     def _reset_idx(self, env_ids: torch.Tensor | None):
@@ -354,10 +354,10 @@ class QuadcopterEnv(DirectRLEnv):
         self.target_visualizer.visualize(self.guilding_target[:, 0, :])
 
 # (0, 4.5, 1)
-
+# (-3, 8, 1)
 class PotentialFieldPlanner:
-    def __init__(self, map_size=(-10, 10), obstacles=[(-3, 8, 1)], obstacle_radius=1.5,
-                 attractive_gain=0.7, repulsive_gain=3000.0, step_size=0.05, max_iters=5000, num_envs = 4096, env_origins = None, device = 'cuda', progress_buf=None):
+    def __init__(self, map_size=(-10, 10), obstacles=[(-0.5, 4.5, 1), (-3, 8, 1), (2, 10, 1)], obstacle_radius=1.5,
+                 attractive_gain=0.7, repulsive_gain=3000.0, step_size=0.025, max_iters=5000, num_envs = 4096, env_origins = None, device = 'cuda', progress_buf=None):
         self.device = device
         self.map_size = map_size
         self.obstacle_radius = obstacle_radius
@@ -562,7 +562,7 @@ class PotentialFieldPlanner:
         vec, euler , dist_vec = self._calClosestObstacle(robot_pos, obs_pos)
         dist = torch.norm(dist_vec, dim=1)
 
-        sigma = 2.5  # Standard deviation of Gaussian function
+        sigma = 1.5  # Standard deviation of Gaussian function
         gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
         # print("dist shape", dist.shape)
         potential = weight_potential * gaussian_factor * torch.exp(-dist**2 / (2 * sigma**2))
@@ -614,6 +614,6 @@ class PotentialFieldPlanner:
         # print("dot_product ", dot_product.shape)
 
         reward = potential * dot_product
-        print("reward ", reward[self.central_env_idx])
+        # print("reward ", reward[self.central_env_idx])
         return reward
 

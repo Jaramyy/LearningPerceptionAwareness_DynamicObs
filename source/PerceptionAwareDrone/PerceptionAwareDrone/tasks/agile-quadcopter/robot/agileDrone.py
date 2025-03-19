@@ -19,7 +19,7 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 AGILE_CFG = ArticulationCfg(
     prim_path="{ENV_REGEX_NS}/Robot",
     spawn=sim_utils.UsdFileCfg(
-        usd_path=f"/home/jaramy/thesis_ws/AgiDrone/Drone_Full_URDFV3/Drone_Full_URDFV3.usd",
+        usd_path=f"/home/jaramy/thesis_ws/AgiDrone/agile_cam/Drone_Full_URDFV3/Drone_Full_URDFV3.usd",
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
             max_depenetration_velocity=10.0,

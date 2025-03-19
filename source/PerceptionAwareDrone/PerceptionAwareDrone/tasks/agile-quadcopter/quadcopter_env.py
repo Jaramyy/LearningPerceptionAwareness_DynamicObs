@@ -32,6 +32,10 @@ from isaaclab.markers import CUBOID_MARKER_CFG  # isort: skip
 import matplotlib.pyplot as plt
 from scipy.interpolate import CubicSpline
 from isaacsim.util.debug_draw import _debug_draw
+
+# sensor
+from isaaclab.sensors import RayCasterCfg, RayCaster, patterns
+from isaaclab.sensors import Imu, ImuCfg
 #
 
 class QuadcopterEnvWindow(BaseEnvWindow):
@@ -98,6 +102,17 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
 
     # robot
     robot: ArticulationCfg = AGILE_CFG.replace(prim_path="/World/envs/env_.*/Robot")
+
+    # sensor 
+    lidar_sensor = RayCasterCfg(
+        prim_path="/World/envs/env_.*/Robot/base_link",
+        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.15)),
+        attach_yaw_only=False,
+        pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-90.0, 90.0),horizontal_res=36.0),     
+        debug_vis=False,
+        mesh_prim_paths=["/World/ground"],
+    )
+
     # thrust_to_weight = 1.9
     thrust_to_weight = 5.0
     
@@ -107,7 +122,6 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     # reward scales
     lin_vel_reward_scale = -0.5
     # lin_vel_reward_scale = -0.05
-    
     # ang_vel_reward_scale = -0.01
     ang_vel_reward_scale = -0.05
 
@@ -117,7 +131,8 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     potential_rew_scale = 15.0
 
     
-
+def normalize_angle(x):
+    return torch.atan2(torch.sin(x), torch.cos(x))
 
 class QuadcopterEnv(DirectRLEnv):
     cfg: QuadcopterEnvCfg
@@ -167,13 +182,16 @@ class QuadcopterEnv(DirectRLEnv):
         self._desired_goal = torch.zeros(self.num_envs, 3, device=self.device)
         self.goal_pos = torch.tensor((-6.0, 18.0, 1.0), dtype=torch.float32, device=self.device)
         self._desired_goal = self.goal_pos.repeat(self.num_envs, 1) + self._terrain.env_origins[:, :]
-        print("desired goal shape = ", self._desired_goal.shape)
+
 
         self.target_path = self.guilding_planner.run(start=(0, 0, 1), goal=self.goal_pos)
 
     def _setup_scene(self):
         self._robot = Articulation(self.cfg.robot)
         self.scene.articulations["robot"] = self._robot
+
+        self._lidar_sensor = RayCaster(self.cfg.lidar_sensor)
+        self.scene.sensors["lidar_sensor"] = self._lidar_sensor
 
         self.cfg.terrain.num_envs = self.scene.cfg.num_envs
         self.cfg.terrain.env_spacing = self.scene.cfg.env_spacing
@@ -617,3 +635,18 @@ class PotentialFieldPlanner:
         # print("reward ", reward[self.central_env_idx])
         return reward
 
+import isaaclab.envs.mdp as mdp    
+from isaaclab.managers import EventTermCfg as EventTerm
+from isaaclab.managers import SceneEntityCfg
+
+@configclass
+class EventCfg:
+    add_base_mass = EventTerm(
+        func=mdp.randomize_rigid_body_mass,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="base_link"),
+            "mass_distribution_params": (-0.5, 0.5),
+            "operation": "add",
+        },
+    )

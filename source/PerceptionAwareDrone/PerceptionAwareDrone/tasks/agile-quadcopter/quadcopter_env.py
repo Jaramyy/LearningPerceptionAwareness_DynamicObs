@@ -36,7 +36,9 @@ from isaacsim.util.debug_draw import _debug_draw
 # sensor
 from isaaclab.sensors import RayCasterCfg, RayCaster, patterns
 from isaaclab.sensors import Imu, ImuCfg
-#
+
+#terrain
+from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG, OBSTACLE_RAND_POS
 
 class QuadcopterEnvWindow(BaseEnvWindow):
     """Window manager for the Quadcopter environment."""
@@ -103,7 +105,6 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
         )
     else:
         # for custom terrain
-        from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG
         terrain = TerrainImporterCfg(
             prim_path="/World/ground",
             terrain_type="generator",
@@ -116,11 +117,11 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
                 static_friction=1.0,
                 dynamic_friction=1.0,
             ),
-            visual_material=sim_utils.MdlFileCfg(
-                mdl_path="{NVIDIA_NUCLEUS_DIR}/Materials/Base/Architecture/Shingles_01.mdl",
-                project_uvw=True,
-            ),
-            debug_vis=False,
+            # visual_material=sim_utils.MdlFileCfg(
+            #     mdl_path="{NVIDIA_NUCLEUS_DIR}/Materials/Base/Architecture/Shingles_01.mdl",
+            #     project_uvw=True,
+            # ),
+            debug_vis=True,
         )
 
     # scene

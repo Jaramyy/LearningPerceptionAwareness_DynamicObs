@@ -135,7 +135,8 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
         prim_path="/World/envs/env_.*/Robot/base_link",
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.15)),
         attach_yaw_only=False,
-        pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-90.0, 90.0),horizontal_res=36.0),     
+        # pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-90.0, 90.0),horizontal_res=36.0),     
+        pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-45.0, 45.0),horizontal_res=3.0),   
         debug_vis=False,
         mesh_prim_paths=["/World/ground"],
     )
@@ -204,10 +205,13 @@ class QuadcopterEnv(DirectRLEnv):
         self.guilding_target = torch.zeros(self.num_envs, self.future_traj_step, 3, device=self.device)
         self.distance_to_guide = torch.zeros(self.num_envs, device=self.device)
 
-        self.guilding_planner = PotentialFieldPlanner(env_origins=self._terrain.env_origins, num_envs = self.num_envs, device=self.device)
+        # self.guilding_planner = PotentialFieldPlanner(env_origins=self._terrain.env_origins, num_envs = self.num_envs, device=self.device)
+        self.guilding_planner = PotentialFieldPlanner(env_origins=self._terrain.env_origins, num_envs = self.num_envs, obstacles=OBSTACLE_RAND_POS , device=self.device)
+
 
         self._desired_goal = torch.zeros(self.num_envs, 3, device=self.device)
-        self.goal_pos = torch.tensor((-6.0, 18.0, 1.0), dtype=torch.float32, device=self.device)
+        
+        self.goal_pos = torch.tensor((0.2, 18.0, 1.0), dtype=torch.float32, device=self.device)
         self._desired_goal = self.goal_pos.repeat(self.num_envs, 1) + self._terrain.env_origins[:, :]
 
 
@@ -401,8 +405,10 @@ class QuadcopterEnv(DirectRLEnv):
 # (0, 4.5, 1)
 # (-3, 8, 1)
 class PotentialFieldPlanner:
-    def __init__(self, map_size=(-10, 10), obstacles=[(-0.5, 4.5, 1), (-3, 8, 1), (2, 10, 1)], obstacle_radius=1.5,
-                 attractive_gain=0.7, repulsive_gain=3000.0, step_size=0.025, max_iters=5000, num_envs = 4096, env_origins = None, device = 'cuda', progress_buf=None):
+    def __init__(self, map_size=(-10, 10), obstacles=[(-0.5, 4.5, 1), (-3, 8, 1), (2, 10, 1)], obstacle_radius=1.2,  #1.5,
+                 attractive_gain=0.7, repulsive_gain=3000.0, step_size=0.025, max_iters=10000, num_envs = 4096, env_origins = None, device = 'cuda', progress_buf=None):
+                #  attractive_gain=0.7, repulsive_gain=6000.0, step_size=0.025, max_iters=10000, num_envs = 4096, env_origins = None, device = 'cuda', progress_buf=None):
+        
         self.device = device
         self.map_size = map_size
         self.obstacle_radius = obstacle_radius
@@ -411,6 +417,7 @@ class PotentialFieldPlanner:
         self.step_size = step_size
         self.max_iters = max_iters
         self.goal = torch.tensor((0.5, 15.5), dtype=torch.float32)  # Default goal
+        # print("\n\n\n\n\n len obstacles ", len(obstacles))
         self.obstacles = [torch.tensor(obs, dtype=torch.float32, device=self.device) for obs in obstacles]
         
 

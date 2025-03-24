@@ -40,6 +40,33 @@ from isaaclab.sensors import Imu, ImuCfg
 #terrain
 from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG, OBSTACLE_RAND_POS
 
+import isaaclab.envs.mdp as mdp    
+from isaaclab.managers import EventTermCfg as EventTerm
+from isaaclab.managers import SceneEntityCfg
+
+
+@configclass
+class EventCfg:
+    add_base_mass = EventTerm(
+        func=mdp.randomize_rigid_body_mass,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="base_link"),
+            "mass_distribution_params": (-0.50, 0.5),
+            "operation": "add",
+        },
+    # push_force_body = EventTerm(
+    #     func=mdp.apply_external_force_torque,
+    #     mode="interval",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", body_names="base_link"),
+    #         "force": (0, 0, 0.5),
+    #         "torque": (0, 0, 0),
+    #         "operation": "add",
+    #     },
+    )
+
+
 class QuadcopterEnvWindow(BaseEnvWindow):
     """Window manager for the Quadcopter environment."""
 
@@ -127,6 +154,9 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=5.5, replicate_physics=True)
 
+    # events
+    events: EventCfg = EventCfg()
+
     # robot
     robot: ArticulationCfg = AGILE_CFG.replace(prim_path="/World/envs/env_.*/Robot")
 
@@ -135,8 +165,8 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
         prim_path="/World/envs/env_.*/Robot/base_link",
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.15)),
         attach_yaw_only=False,
-        # pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-90.0, 90.0),horizontal_res=36.0),     
-        pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-45.0, 45.0),horizontal_res=3.0),   
+        pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-90.0, 90.0),horizontal_res=36.0),     
+        # pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-48.0, 48.0),horizontal_res=3.0),   
         debug_vis=False,
         mesh_prim_paths=["/World/ground"],
     )
@@ -669,18 +699,3 @@ class PotentialFieldPlanner:
         # print("reward ", reward[self.central_env_idx])
         return reward
 
-import isaaclab.envs.mdp as mdp    
-from isaaclab.managers import EventTermCfg as EventTerm
-from isaaclab.managers import SceneEntityCfg
-
-@configclass
-class EventCfg:
-    add_base_mass = EventTerm(
-        func=mdp.randomize_rigid_body_mass,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="base_link"),
-            "mass_distribution_params": (-0.5, 0.5),
-            "operation": "add",
-        },
-    )

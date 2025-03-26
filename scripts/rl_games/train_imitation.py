@@ -73,9 +73,7 @@ import PerceptionAwareDrone.tasks  # noqa: F401
 import numpy as np
 import torch
 from torchinfo import summary
-
 from tqdm import tqdm
-
 import pandas as pd
 import wandb
 from datetime import datetime
@@ -196,6 +194,24 @@ def create_csv_from_dataset(dataloader, csv_filename="dataset.csv"):
     df.to_csv(csv_filename, index=False)
     print(f"Dataset saved to {csv_filename}")
 
+
+def save_checkpoint(model, optimizer, scheduler, epoch, loss, path):
+    checkpoint_save = {
+        'epoch': epoch,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'scheduler_state_dict': scheduler.state_dict(),
+        'loss': loss,
+    }
+    torch.save(checkpoint_save, path)
+    print(f"Checkpoint saved to {path}")
+
+
+def save_best_checkpoint(model, optimizer, scheduler, epoch, loss, best_loss, path):
+    if loss < best_loss:
+        save_checkpoint(model, optimizer, scheduler, epoch, loss, path)
+        return loss
+    return best_loss
 # DRAGGER #
 
 def main():
@@ -327,21 +343,19 @@ def main():
     
     while simulation_app.is_running():
         start_time = time.time()
-
         for iteration in tqdm(range(imitation.CONFIG_IMITATION['num_iterations']), desc="DAgger Iterations"):
             with tqdm(total=imitation.CONFIG_IMITATION['max_samples'], desc="samples", unit="sample") as progress_bar:
                 new_data = []
                 teacher_timestep = 0
-                while len(new_data) < imitation.CONFIG_IMITATION['max_samples']:
+                while len(new_data) < imitation.CONFIG_IMITATION['max_samples']:  # TODO: change to for loop of num_episodes_progress
                     with torch.inference_mode():
                         obs = agent.obs_to_torch(obs)
-                        lidar_scan = (env.env.scene["lidar_sensor"].data.ray_hits_w - env.env.scene["lidar_sensor"].data.pos_w.unsqueeze(1)).norm(dim=-1).clamp_max(10).reshape(env.num_envs, 5)
-
                         lin_vel = obs[:, :3]
                         ang_vel = obs[:, 3:6]
                         robot_orientation = obs[:, 9:12]
                         target = obs[:, 12:15]
-                        obsatacle_dist = obs[:, 15:16]
+
+                        lidar_scan = (env.env.scene["lidar_sensor"].data.ray_hits_w - env.env.scene["lidar_sensor"].data.pos_w.unsqueeze(1)).norm(dim=-1).clamp_max(10).reshape(env.unwrapped.num_envs, 5)
                         
                         drone_state = torch.cat((lin_vel, ang_vel, robot_orientation, target, lidar_scan), dim=1)
                         student_input = drone_state
@@ -363,8 +377,7 @@ def main():
                                 # print("student action", actions)
                                 # print("Teacher action ", teacher_actions)
                         # print("teacher_timestepp", teacher_timestep)
-                        teacher_timestep += 1       
-        
+                        teacher_timestep += 1
         
                         if teacher_timestep > 1000: 
                             teacher_timestep = 0
@@ -403,7 +416,7 @@ def main():
 
                 # create_csv_from_dataset(train_loader, file_name)
                 train_student_policy(student_model, train_loader, val_loader, optimizer, loss_fn, imitation.CONFIG_IMITATION, scheduler)
-                max_teacher_timesteps = max(0, round(max_teacher_timesteps - (iteration*20)))   # adaptive teacher timesteps
+                max_teacher_timesteps = max(0, round(max_teacher_timesteps - (iteration * 20)))   # adaptive teacher timesteps
 
 
 

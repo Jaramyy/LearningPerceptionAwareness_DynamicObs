@@ -12,11 +12,11 @@ CONFIG_IMITATION = {
     'scheduler_factor': 1e-2,
     'scheduler_patience': 2,  # 2
     'scheduler_min_lr': 1e-4,
-    'epochs': 10,
-    'num_iterations': 500,
+    'epochs': 5,
+    'num_iterations' : 200_000,
     'num_episodes': 100,
-    'batch_size': 32,
-    'max_samples': 100_000
+    'batch_size': 83_88_608,  #24576,
+    'max_samples': 4096,
 }
 
 
@@ -30,14 +30,14 @@ class StudentPolicy(nn.Module):
         self.fc3 = nn.Linear(hidden_size, hidden_size)
         self.dropout3 = nn.Dropout(0.05)
         self.out = nn.Linear(hidden_size, output_size)
-        self.elu = nn.ELU() 
+        self.elu = nn.ELU()
 
     def forward(self, x):
         x1 = self.elu(self.fc1(x))
         x1 = self.dropout1(x1)
         
         x2 = self.elu(self.fc2(x1))
-        x2 = self.dropout2(x2)       
+        x2 = self.dropout2(x2)
         
         x3 = self.elu(self.fc3(x2))
         x3 = self.dropout3(x3)

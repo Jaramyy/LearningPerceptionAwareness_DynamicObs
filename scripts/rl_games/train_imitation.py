@@ -364,7 +364,7 @@ def main():
                             actions = agent.get_action(obs, is_deterministic=agent.is_deterministic) # Shape [envs, action_dim], [2,4]
                             teacher_actions = actions
                             # print("action shape ",actions.shape)
-                            # print("pure teacher action ",actions)
+                            print("pure teacher action ")
                             
                         else:
                             if teacher_timestep < max_teacher_timesteps: 

@@ -15,8 +15,8 @@ CONFIG_IMITATION = {
     'epochs': 5,
     'num_iterations' : 200_000,
     'num_episodes': 100,
-    'batch_size': 83_88_608,  #24576,
-    'max_samples': 4096,
+    'batch_size': 65536,  #24576, num_step = 2048, num_env = 4096
+    'max_samples': 2097152,
 }
 
 

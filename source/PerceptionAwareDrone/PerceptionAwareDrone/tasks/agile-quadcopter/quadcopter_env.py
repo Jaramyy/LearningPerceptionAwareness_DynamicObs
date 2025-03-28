@@ -55,6 +55,15 @@ class EventCfg:
             "mass_distribution_params": (-0.50, 0.5),
             "operation": "add",
         },
+    )
+    # start_position = EventTerm(
+    #     func=mdp.reset_root_state_uniform,
+    #     mode="startup",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", body_names="base_link"),
+    #         "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "z": (0.9, 1.1)},
+    #     },
+    # )
     # push_force_body = EventTerm(
     #     func=mdp.apply_external_force_torque,
     #     mode="interval",
@@ -64,7 +73,7 @@ class EventCfg:
     #         "torque": (0, 0, 0),
     #         "operation": "add",
     #     },
-    )
+    
 
 
 class QuadcopterEnvWindow(BaseEnvWindow):
@@ -386,10 +395,12 @@ class QuadcopterEnv(DirectRLEnv):
             self.episode_length_buf = torch.randint_like(self.episode_length_buf, high=int(self.max_episode_length))
 
         self._actions[env_ids] = 0.0
+        
         # Sample new commands
-        self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-2.0, 2.0)
-        self._desired_pos_w[env_ids, :2] += self._terrain.env_origins[env_ids, :2]
-        self._desired_pos_w[env_ids, 2] = torch.zeros_like(self._desired_pos_w[env_ids, 2]).uniform_(0.5, 1.5)
+        # self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-2.0, 2.0)
+        # self._desired_pos_w[env_ids, :2] += self._terrain.env_origins[env_ids, :2]
+        # self._desired_pos_w[env_ids, 2] = torch.zeros_like(self._desired_pos_w[env_ids, 2]).uniform_(0.5, 1.5)
+        
         # Reset robot state
         joint_pos = self._robot.data.default_joint_pos[env_ids]
         joint_vel = self._robot.data.default_joint_vel[env_ids]
@@ -612,10 +623,10 @@ class PotentialFieldPlanner:
         closest_indices = torch.argmin(distances, dim=1)  # Shape (4096,)
 
         # Get the minimum distances
-        min_distances = distances[torch.arange(4096), closest_indices]  # Shape (4096,)
+        min_distances = distances[torch.arange(self.num_envs), closest_indices]  # Shape (4096,)
 
         # Get the vector to the closest obstacle
-        closest_vectors = vectors[torch.arange(4096), closest_indices]  # Shape (4096, 3)
+        closest_vectors = vectors[torch.arange(self.num_envs), closest_indices]  # Shape (4096, 3)
         dx, dy, dz = closest_vectors[:, 0], closest_vectors[:, 1], closest_vectors[:, 2]
 
         # Convert to Euler angles

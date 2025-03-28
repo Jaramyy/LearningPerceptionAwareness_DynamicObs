@@ -12,16 +12,16 @@ CONFIG_IMITATION = {
     'scheduler_factor': 1e-2,
     'scheduler_patience': 2,  # 2
     'scheduler_min_lr': 1e-4,
-    'epochs': 5,
-    'num_iterations' : 200_000,
+    'epochs': 10,
+    'num_iterations' : 5000,
     'num_episodes': 100,
-    'batch_size': 65536,  #24576, num_step = 2048, num_env = 4096
-    'max_samples': 2097152,
+    'batch_size': 4096,  #24576, num_step = 2048, num_env = 4096
+    'max_samples': 32768,
 }
 
 
 class StudentPolicy(nn.Module):
-    def __init__(self, input_size=17, hidden_size=64, output_size=4):
+    def __init__(self, input_size=14, hidden_size=64, output_size=4):
         super(StudentPolicy, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.dropout1 = nn.Dropout(0.05)

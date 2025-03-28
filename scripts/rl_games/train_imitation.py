@@ -352,12 +352,15 @@ def main():
                         obs = agent.obs_to_torch(obs)
                         lin_vel = obs[:, :3]
                         ang_vel = obs[:, 3:6]
-                        robot_orientation = obs[:, 9:12]
-                        target = obs[:, 12:15]
+                        # robot_orientation = obs[:, 9:12]
+                        desired_pos_b = obs[:, 9:12]
+                        # guilding_pos_b = obs[:, 12:15]
 
                         lidar_scan = (env.env.scene["lidar_sensor"].data.ray_hits_w - env.env.scene["lidar_sensor"].data.pos_w.unsqueeze(1)).norm(dim=-1).clamp_max(10).reshape(env.unwrapped.num_envs, 5)
                         
-                        drone_state = torch.cat((lin_vel, ang_vel, robot_orientation, target, lidar_scan), dim=1)
+                        # drone_state = torch.cat((lin_vel, ang_vel, desired_pos_b, guilding_pos_b, lidar_scan), dim=1)
+
+                        drone_state = torch.cat((lin_vel, ang_vel, desired_pos_b, lidar_scan), dim=1)
                         student_input = drone_state
                         
                         if iteration < 1:  # 2 iterations, use teacher's action
@@ -379,7 +382,7 @@ def main():
                         # print("teacher_timestepp", teacher_timestep)
                         teacher_timestep += 1
         
-                        if teacher_timestep > 1000: 
+                        if teacher_timestep > 1000:
                             teacher_timestep = 0
 
                         new_data.extend(zip(drone_state, teacher_actions))

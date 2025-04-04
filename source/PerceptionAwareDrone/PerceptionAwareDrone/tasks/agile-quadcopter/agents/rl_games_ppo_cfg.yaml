@@ -26,7 +26,7 @@ params:
           val: 0
         fixed_sigma: True
     mlp:
-      units: [64, 64]
+      units: [128, 128]
       activation: elu
       d2rl: False
 
@@ -61,7 +61,7 @@ params:
     schedule_type: legacy
     kl_threshold: 0.016
     score_to_win: 20000
-    max_epochs: 2000
+    max_epochs: 4000
     save_best_after: 100
     save_frequency: 25
     grad_norm: 1.0

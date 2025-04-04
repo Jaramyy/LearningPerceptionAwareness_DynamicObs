@@ -15,13 +15,13 @@ CONFIG_IMITATION = {
     'epochs': 10,
     'num_iterations' : 5000,
     'num_episodes': 100,
-    'batch_size': 4096,  #24576, num_step = 2048, num_env = 4096
+    'batch_size': 512,  #24576, num_step = 2048, num_env = 4096
     'max_samples': 32768,
 }
 
 
 class StudentPolicy(nn.Module):
-    def __init__(self, input_size=14, hidden_size=64, output_size=4):
+    def __init__(self, input_size=14, hidden_size=128, output_size=4):
         super(StudentPolicy, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.dropout1 = nn.Dropout(0.05)

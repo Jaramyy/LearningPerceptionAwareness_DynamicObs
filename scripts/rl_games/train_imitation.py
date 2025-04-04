@@ -339,7 +339,7 @@ def main():
     file_name = f"dataset_{timestamp}.csv"
     D = []
     
-    max_teacher_timesteps = 1000
+    max_teacher_timesteps = 3000
     
     while simulation_app.is_running():
         start_time = time.time()
@@ -347,13 +347,15 @@ def main():
             with tqdm(total=imitation.CONFIG_IMITATION['max_samples'], desc="samples", unit="sample") as progress_bar:
                 new_data = []
                 teacher_timestep = 0
-                while len(new_data) < imitation.CONFIG_IMITATION['max_samples']:  # TODO: change to for loop of num_episodes_progress
+                while len(new_data) < imitation.CONFIG_IMITATION['max_samples']:  
                     with torch.inference_mode():
                         obs = agent.obs_to_torch(obs)
                         lin_vel = obs[:, :3]
                         ang_vel = obs[:, 3:6]
                         # robot_orientation = obs[:, 9:12]
                         desired_pos_b = obs[:, 9:12]
+                        altitude = obs[:,12]
+                        # robot_orientation = obs[:, 9:12]
                         # guilding_pos_b = obs[:, 12:15]
 
                         lidar_scan = (env.env.scene["lidar_sensor"].data.ray_hits_w - env.env.scene["lidar_sensor"].data.pos_w.unsqueeze(1)).norm(dim=-1).clamp_max(10).reshape(env.unwrapped.num_envs, 5)
@@ -363,7 +365,7 @@ def main():
                         drone_state = torch.cat((lin_vel, ang_vel, desired_pos_b, lidar_scan), dim=1)
                         student_input = drone_state
                         
-                        if iteration < 1:  # 2 iterations, use teacher's action
+                        if iteration < 5:  # 2 iterations, use teacher's action
                             actions = agent.get_action(obs, is_deterministic=agent.is_deterministic) # Shape [envs, action_dim], [2,4]
                             teacher_actions = actions
                             # print("action shape ",actions.shape)
@@ -373,7 +375,7 @@ def main():
                             if teacher_timestep < max_teacher_timesteps: 
                                 actions = agent.get_action(obs, is_deterministic=agent.is_deterministic)  # Teacher's action
                                 teacher_actions = actions
-                                # print("Teacher guild action") 
+                                print("\n Teacher guild action \n") 
                             else:  
                                 actions = play_student_model(student_model, student_input).squeeze(1)  # Student's action for partial observation
                                 teacher_actions = agent.get_action(obs, is_deterministic=agent.is_deterministic)  # Teacher's action / for comparison with student action
@@ -381,9 +383,9 @@ def main():
                                 # print("Teacher action ", teacher_actions)
                         # print("teacher_timestepp", teacher_timestep)
                         teacher_timestep += 1
-        
-                        if teacher_timestep > 1000:
-                            teacher_timestep = 0
+                        
+                        # if teacher_timestep > 5000:
+                        #     teacher_timestep = 0
 
                         new_data.extend(zip(drone_state, teacher_actions))
                         progress_bar.update(len(new_data) - progress_bar.n)

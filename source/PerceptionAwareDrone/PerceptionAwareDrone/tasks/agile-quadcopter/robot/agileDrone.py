@@ -35,7 +35,7 @@ AGILE_CFG = ArticulationCfg(
         copy_from_source=False,
     ),
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 1.2),
+        pos=(0.0, 0.0, 1.0),
         rot=(0.707, 0.0, 0.0, 0.707),
         joint_pos={
             ".*": 0.0,

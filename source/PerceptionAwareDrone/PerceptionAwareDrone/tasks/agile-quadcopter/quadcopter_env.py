@@ -44,6 +44,8 @@ import isaaclab.envs.mdp as mdp
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import SceneEntityCfg
 
+# viewpoint
+from isaaclab.envs.ui  import viewport_camera_controller
 
 @configclass
 class EventCfg:
@@ -99,11 +101,13 @@ class QuadcopterEnvWindow(BaseEnvWindow):
 @configclass
 class QuadcopterEnvCfg(DirectRLEnvCfg):
     # env
-    episode_length_s = 20.0
+    episode_length_s = 30.0
     decimation = 2
     action_space = 4
     # observation_space = 12
-    observation_space = 15  # add the guilding path
+    # observation_space = 15  # add the guilding path
+    observation_space = 18  # add the guilding path + attitude
+
     state_space = 0
     debug_vis = True
 
@@ -192,10 +196,10 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     # ang_vel_reward_scale = -0.01
     ang_vel_reward_scale = -0.05
 
-    distance_to_goal_reward_scale = 15.0
+    distance_to_goal_reward_scale = 13.0
     distance_to_guide_reward_scale = 15.0
     heading_tracking_reward_scale = 15.0
-    potential_rew_scale = 15.0
+    potential_rew_scale = 12.0
 
     
 def normalize_angle(x):
@@ -256,6 +260,9 @@ class QuadcopterEnv(DirectRLEnv):
 
         self.target_path = self.guilding_planner.run(start=(0, 0, 1), goal=self.goal_pos)
 
+        
+
+
     def _setup_scene(self):
         self._robot = Articulation(self.cfg.robot)
         self.scene.articulations["robot"] = self._robot
@@ -271,6 +278,8 @@ class QuadcopterEnv(DirectRLEnv):
         # add lights
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
+
+
 
     def _pre_physics_step(self, actions: torch.Tensor):
         self._actions = actions.clone().clamp(-1.0, 1.0)
@@ -299,15 +308,39 @@ class QuadcopterEnv(DirectRLEnv):
 
         self.robot_orientaion = self._robot.data.root_quat_w
         self.robot_orientaion_euler = euler_xyz_from_quat(self._robot.data.root_quat_w)
-        self.robot_orientaion_euler = torch.stack(self.robot_orientaion_euler, dim=1)   
+        self.robot_orientaion_euler = torch.stack(self.robot_orientaion_euler, dim=1)
 
+        self.drone_pos = self._robot.data.root_state_w[:, 0:3]
+
+        # with_orient = False
+        
+        # if with_orient:
+        #     obs = torch.cat(
+        #         [
+        #             self._robot.data.root_lin_vel_b,
+        #             self._robot.data.root_ang_vel_b,
+        #             desired_pos_b,
+        #             self.robot_orientaion_euler,
+        #             self._robot.data.projected_gravity_b,
+        #             guilding_pos_b,
+        #         ],
+        #         dim=-1,
+        #     )
+        # else:
         obs = torch.cat(
             [
+                # self._robot.data.root_lin_vel_b,
+                # self._robot.data.root_ang_vel_b,
+                # self._robot.data.projected_gravity_b,
+                # desired_pos_b,
+                # guilding_pos_b,
+                self.drone_pos,
                 self._robot.data.root_lin_vel_b,
                 self._robot.data.root_ang_vel_b,
                 self._robot.data.projected_gravity_b,
                 desired_pos_b,
                 guilding_pos_b,
+                
             ],
             dim=-1,
         )
@@ -335,7 +368,7 @@ class QuadcopterEnv(DirectRLEnv):
         guilding_path_rew = 1 - torch.tanh(self.distance_to_guide / 0.8)
         # print("guilding_path_rew shape",guilding_path_rew.shape)
 
-        self.next_point_path = self.guilding_target[:, 1, :2] - self.guilding_target[:, 0, :2]   # next point - current point (4096,2) {x,y}
+        self.next_point_path = self.guilding_target[:, 3, :2] - self.guilding_target[:, 0, :2]   # next point - current point (4096,2) {x,y}
         self.ref_heading = torch.atan2(self.next_point_path[:, 1], self.next_point_path[:, 0])  # radian
         self.robot_heading = self._robot.data.heading_w
         angle_diff = self.ref_heading - self.robot_heading
@@ -361,7 +394,18 @@ class QuadcopterEnv(DirectRLEnv):
         
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.1, self._robot.data.root_pos_w[:, 2] > 2.0)
+        print("died1  shape = ", died.sum().item())
         died = torch.where(self.distance_to_guide > 0.25, ones, died)
+        # print("\n shape2 = ", torch.any(torch.abs(self.distance_to_guide) > 0.15).shape)
+        # died = died | (torch.abs(self.distance_to_guide) < 1.0).any(dim=-1, keepdim=True)
+
+        print("died2  shape = ", died.sum().item())
+        print("time_out  shape = ", time_out.sum().item())
+
+
+        #TODO Terminate drone when its facing opposite to the target
+        # died = torch.where(torch.abs(self.robot_heading) > 1.5, ones, died)
+
         return died, time_out
 
     def _reset_idx(self, env_ids: torch.Tensor | None):
@@ -449,7 +493,6 @@ class PotentialFieldPlanner:
     def __init__(self, map_size=(-10, 10), obstacles=[(-0.5, 4.5, 1), (-3, 8, 1), (2, 10, 1)], obstacle_radius=1.2,  #1.5,
                  attractive_gain=0.7, repulsive_gain=3000.0, step_size=0.025, max_iters=10000, num_envs = 4096, env_origins = None, device = 'cuda', progress_buf=None):
                 #  attractive_gain=0.7, repulsive_gain=6000.0, step_size=0.025, max_iters=10000, num_envs = 4096, env_origins = None, device = 'cuda', progress_buf=None):
-        
         self.device = device
         self.map_size = map_size
         self.obstacle_radius = obstacle_radius
@@ -461,9 +504,7 @@ class PotentialFieldPlanner:
         # print("\n\n\n\n\n len obstacles ", len(obstacles))
         self.obstacles = [torch.tensor(obs, dtype=torch.float32, device=self.device) for obs in obstacles]
         
-
         self.future_traj_steps = 4
-
 
         self.draw = _debug_draw.acquire_debug_draw_interface()
         self.draw.clear_lines()
@@ -471,9 +512,11 @@ class PotentialFieldPlanner:
         # env information
         # self.progress_buf = progress_buf
         self.num_envs = num_envs
-        self.env_origin_pos = env_origins  
+        self.env_origin_pos = env_origins
         self.central_env_idx = self.env_origin_pos.norm(dim=-1).argmin()  
         self.origin = torch.tensor([0.0, 0.0, 0.0], device=self.device) 
+
+        
 
     def set_goal(self, goal):
         self.goal = torch.tensor(goal, dtype=torch.float32, device=self.device)
@@ -510,6 +553,88 @@ class PotentialFieldPlanner:
             filtered_path[i] = alpha * path[i] + (1 - alpha) * filtered_path[i - 1]
         return filtered_path
     
+    def resample_cycle_torch_linear(self, cycle_tensor: torch.Tensor, num_points: int) -> torch.Tensor:
+        """
+        Pure PyTorch implementation of linear interpolation for trajectory resampling.
+
+        Args:
+            cycle_tensor: (N, D) tensor, where N is original number of points, D is feature dimension (e.g., 3 for XYZ).
+            num_points: Number of points to resample to.
+
+        Returns:
+            Resampled tensor of shape (num_points, D).
+        """
+        N, D = cycle_tensor.shape
+        device = cycle_tensor.device
+        dtype = cycle_tensor.dtype
+
+        # Original and target normalized indices (0 to 1)
+        original_idx = torch.linspace(0, 1, steps=N, device=device, dtype=dtype)
+        new_idx = torch.linspace(0, 1, steps=num_points, device=device, dtype=dtype)
+
+        # Find indices in original_idx where each new_idx would be inserted
+        idxs = torch.searchsorted(original_idx, new_idx, right=True)
+        idxs = torch.clamp(idxs, 1, N - 1)
+
+        left = idxs - 1
+        right = idxs
+
+        left_x = original_idx[left]
+        right_x = original_idx[right]
+        left_y = cycle_tensor[left]
+        right_y = cycle_tensor[right]
+
+        # Linear interpolation weights
+        weights = (new_idx - left_x) / (right_x - left_x)
+        weights = weights.unsqueeze(1)  # Shape (num_points, 1)
+
+        interpolated = left_y + weights * (right_y - left_y)
+        return interpolated
+    
+    def resample_by_arclength(self, points: torch.Tensor, num_points: int) -> torch.Tensor:
+        """
+        Resample a trajectory to have uniform spatial spacing using arc-length.
+        
+        Args:
+            points: (N, D) torch tensor representing the trajectory (e.g., N points in 3D space).
+            num_points: Number of points in the resampled trajectory.
+
+        Returns:
+            (num_points, D) torch tensor with uniform spatial density.
+        """
+        device = points.device
+        dtype = points.dtype
+        N, D = points.shape
+
+        # 1. Compute distances between consecutive points
+        deltas = points[1:] - points[:-1]
+        segment_lengths = torch.norm(deltas, dim=1)
+
+        # 2. Compute cumulative arc-length
+        arc_lengths = torch.cat([torch.zeros(1, device=device, dtype=dtype), torch.cumsum(segment_lengths, dim=0)])
+        total_length = arc_lengths[-1]
+
+        # 3. Generate new equally spaced arc-length positions
+        target_lengths = torch.linspace(0, total_length, num_points, device=device, dtype=dtype)
+
+        # 4. Find corresponding segments for interpolation
+        idxs = torch.searchsorted(arc_lengths, target_lengths, right=True)
+        idxs = torch.clamp(idxs, 1, N - 1)
+        left = idxs - 1
+        right = idxs
+
+        # 5. Interpolate positions
+        left_points = points[left]
+        right_points = points[right]
+        left_l = arc_lengths[left]
+        right_l = arc_lengths[right]
+
+        t = (target_lengths - left_l) / (right_l - left_l)
+        t = t.unsqueeze(1)  # (num_points, 1)
+
+        resampled_points = left_points + t * (right_points - left_points)
+        return resampled_points
+    
     def find_path(self, start):
         path = [torch.tensor(start, dtype=torch.float32, device=self.device)]
         pos = torch.tensor(start, dtype=torch.float32, device=self.device)
@@ -534,7 +659,14 @@ class PotentialFieldPlanner:
 
         path = torch.stack(path)
         path_filtered = self._apply_low_pass_filter(path).to(device=self.device)
-        return path_filtered
+        
+        # print("path_filtered shape = ", path_filtered.shape)
+
+        resampled_path = self.resample_by_arclength(path_filtered, num_points=round(path_filtered.shape[0] * 1.5))
+        # print("resampled_path shape = ", resampled_path.shape)
+
+        return resampled_path
+        # return path_filtered
 
     def plot(self, start, path):
         plt.figure(figsize=(8, 8))
@@ -586,7 +718,7 @@ class PotentialFieldPlanner:
             # path_z = torch.ones_like(path_x)
 
             self.path_xyz = torch.stack((path_x, path_y, path_z), dim=1)   # Combine x, y, z into a single tensor   -- > #size [path point,3]    
-            self.duplicated_path_xyz = self.path_xyz.unsqueeze(0).repeat(self.num_envs, 1, 1)   #[num_env,length_bspline,xyz]    
+            self.duplicated_path_xyz = self.path_xyz.unsqueeze(0).repeat(self.num_envs, 1, 1)   # [num_env,length_bspline,xyz]    
             self.path_xyz = self.path_xyz.to(self.device) + self.env_origin_pos[self.central_env_idx]
             point_list_0 = self.path_xyz[:-1].tolist()   # cut the endding point to make a line ex. whose line is 1,2,3,4; point_list_0 = 1,2,3  
             point_list_1 = self.path_xyz[1:].tolist()    # cut the starting point to make a line ex. whose line is 1,2,3,4; point_list_1 = 2,3,4   then the line is 1-2, 2-3, 3-4
@@ -595,7 +727,7 @@ class PotentialFieldPlanner:
             if debug_plot == True:
                 colors = [(1.0, 1.0, 0.0, 1.0) for _ in range(len(point_list_0))]
                 sizes = [2 for _ in range(len(point_list_0))]
-                self.draw.draw_lines(point_list_0, point_list_1, colors, sizes) #draw the line
+                self.draw.draw_lines(point_list_0, point_list_1, colors, sizes)  # draw the line
             
             return self.duplicated_path_xyz
             # while(True):
@@ -605,7 +737,6 @@ class PotentialFieldPlanner:
             print("Failed to find a path.")
             return None
     
-    #TODO: Implement the potential field adaptive heading reward
     def _calVector(self, robot_pos, obs_pos):
         if isinstance(obs_pos, list):
             obs_pos = torch.stack(obs_pos).to(robot_pos.device)
@@ -662,9 +793,11 @@ class PotentialFieldPlanner:
         # print("potential shape ", potential.shape)
         # print("potential ", potential)
         # print("dist ", dist[self.central_env_idx])
-        if(dist[self.central_env_idx] < 2.0):
-            print("dist ", dist[self.central_env_idx])
-            print("potential ", potential[self.central_env_idx])
+        
+        #for debug potential
+        # if(dist[self.central_env_idx] < 2.0):
+        #     print("dist ", dist[self.central_env_idx])
+        #     print("potential ", potential[self.central_env_idx])
 
         # potential = torch.min(potential, torch.tensor(0.0, device=potential.device))
         return potential

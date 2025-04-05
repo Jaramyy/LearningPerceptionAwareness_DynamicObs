@@ -45,8 +45,7 @@ from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import SceneEntityCfg
 
 # viewpoint
-from isaaclab.envs.ui  import ViewportCameraController
-from isaaclab.envs import ViewerCfg
+from isaaclab.envs.ui  import viewport_camera_controller
 
 @configclass
 class EventCfg:
@@ -97,8 +96,7 @@ class QuadcopterEnvWindow(BaseEnvWindow):
                 with self.ui_window_elements["debug_vstack"]:
                     # add command manager visualization
                     self._create_debug_vis_ui_element("targets", self.env)
-        
-        
+
 
 @configclass
 class QuadcopterEnvCfg(DirectRLEnvCfg):
@@ -114,9 +112,6 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     debug_vis = True
 
     ui_window_class_type = QuadcopterEnvWindow
-
-    viewer = ViewerCfg(eye=(-19.8, -23.8, 11.5), lookat=(-24.0, -8.5, -1.7),origin_type='env', env_index=2015)
-    
 
     # simulation
     sim: SimulationCfg = SimulationCfg(
@@ -264,7 +259,7 @@ class QuadcopterEnv(DirectRLEnv):
 
 
         self.target_path = self.guilding_planner.run(start=(0, 0, 1), goal=self.goal_pos)
-        
+
         
 
 

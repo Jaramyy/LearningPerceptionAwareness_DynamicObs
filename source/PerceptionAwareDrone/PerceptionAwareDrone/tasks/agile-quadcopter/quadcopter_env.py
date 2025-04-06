@@ -115,9 +115,8 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
 
     ui_window_class_type = QuadcopterEnvWindow
 
-    viewer = ViewerCfg(eye=(-19.8, -23.8, 11.5), lookat=(-24.0, -8.5, -1.7),origin_type='env', env_index=2015)
+    viewer = ViewerCfg(eye=(-19.8, -23.8, 11.5), lookat=(-24.0, -8.5, -1.7), origin_type='env', env_index=2015)
     
-
     # simulation
     sim: SimulationCfg = SimulationCfg(
         dt=1 / 100,
@@ -189,22 +188,23 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
         mesh_prim_paths=["/World/ground"],
     )
 
-    # thrust_to_weight = 1.9
+
+    # spec for agile drone
     thrust_to_weight = 5.0
-    
-    # moment_scale = 0.01
     moment_scale = 0.35
+    # thrust_to_weight = 1.9
+    # moment_scale = 0.01
 
     # reward scales
     lin_vel_reward_scale = -0.5
     # lin_vel_reward_scale = -0.05
-    # ang_vel_reward_scale = -0.01
-    ang_vel_reward_scale = -0.05
+    ang_vel_reward_scale = -0.025
+    # ang_vel_reward_scale = -0.05
 
     distance_to_goal_reward_scale = 15.0
     distance_to_guide_reward_scale = 15.0
     heading_tracking_reward_scale = 15.0
-    potential_rew_scale = 12.0
+    potential_rew_scale = 13.0
 
     
 def normalize_angle(x):
@@ -233,6 +233,7 @@ class QuadcopterEnv(DirectRLEnv):
                 "distance_to_guide",
                 "heading_tracking",
                 "potential_rew",
+                "action_rate",
             ]
         }
         # Get specific body indices
@@ -259,13 +260,14 @@ class QuadcopterEnv(DirectRLEnv):
 
         self._desired_goal = torch.zeros(self.num_envs, 3, device=self.device)
         
-        self.goal_pos = torch.tensor((0.2, 18.0, 1.0), dtype=torch.float32, device=self.device)
+        self.goal_pos = torch.tensor((0.2, 15.0, 1.0), dtype=torch.float32, device=self.device)
         self._desired_goal = self.goal_pos.repeat(self.num_envs, 1) + self._terrain.env_origins[:, :]
 
 
         self.target_path = self.guilding_planner.run(start=(0, 0, 1), goal=self.goal_pos)
         
-        
+        self.previous_action = torch.zeros(self.num_envs, gym.spaces.flatdim(self.single_action_space), device=self.device)
+
 
 
     def _setup_scene(self):
@@ -288,6 +290,7 @@ class QuadcopterEnv(DirectRLEnv):
 
     def _pre_physics_step(self, actions: torch.Tensor):
         self._actions = actions.clone().clamp(-1.0, 1.0)
+        self.previous_action = self._actions.clone()
         self._thrust[:, 0, 2] = self.cfg.thrust_to_weight * self._robot_weight * (self._actions[:, 0] + 1.0) / 2.0
         self._moment[:, 0, :] = self.cfg.moment_scale * self._actions[:, 1:]
 
@@ -377,7 +380,9 @@ class QuadcopterEnv(DirectRLEnv):
         self.ref_heading = torch.atan2(self.next_point_path[:, 1], self.next_point_path[:, 0])  # radian
         self.robot_heading = self._robot.data.heading_w
         angle_diff = self.ref_heading - self.robot_heading
-        head_tracking_path_rew = 1 - torch.tanh(torch.abs(angle_diff) / 0.8)
+        head_tracking_path_rew = 1 - torch.tanh(torch.abs(angle_diff) / 0.25)
+
+        action_rate = torch.sum(torch.square(self._actions - self.previous_action), dim=1)
         
         rewards = {
             "lin_vel": lin_vel * self.cfg.lin_vel_reward_scale * self.step_dt,
@@ -386,6 +391,7 @@ class QuadcopterEnv(DirectRLEnv):
             "distance_to_guide": guilding_path_rew * self.cfg.distance_to_guide_reward_scale * self.step_dt,
             "heading_tracking": head_tracking_path_rew * self.cfg.heading_tracking_reward_scale * self.step_dt,
             "potential_rew": potential_rew * self.cfg.potential_rew_scale * self.step_dt,
+            "action_rate": action_rate * -0.2 * self.step_dt,
         }
         reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
         # Logging
@@ -398,14 +404,14 @@ class QuadcopterEnv(DirectRLEnv):
         died = torch.zeros_like(self.reset_buf)
         
         time_out = self.episode_length_buf >= self.max_episode_length - 1
-        died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.1, self._robot.data.root_pos_w[:, 2] > 2.0)
-        print("died1  shape = ", died.sum().item())
+        died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.5, self._robot.data.root_pos_w[:, 2] > 2.5)
+        # print("died1  shape = ", died.sum().item())
         died = torch.where(self.distance_to_guide > 0.25, ones, died)
         # print("\n shape2 = ", torch.any(torch.abs(self.distance_to_guide) > 0.15).shape)
         # died = died | (torch.abs(self.distance_to_guide) < 1.0).any(dim=-1, keepdim=True)
 
-        print("died2  shape = ", died.sum().item())
-        print("time_out  shape = ", time_out.sum().item())
+        # print("died2  shape = ", died.sum().item())
+        # print("time_out  shape = ", time_out.sum().item())
 
 
         #TODO Terminate drone when its facing opposite to the target
@@ -444,6 +450,7 @@ class QuadcopterEnv(DirectRLEnv):
             self.episode_length_buf = torch.randint_like(self.episode_length_buf, high=int(self.max_episode_length))
 
         self._actions[env_ids] = 0.0
+        self.previous_action[env_ids] = 0.0
         
         # Sample new commands
         # self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-2.0, 2.0)
@@ -667,7 +674,7 @@ class PotentialFieldPlanner:
         
         # print("path_filtered shape = ", path_filtered.shape)
 
-        resampled_path = self.resample_by_arclength(path_filtered, num_points=round(path_filtered.shape[0] * 1.5))
+        resampled_path = self.resample_by_arclength(path_filtered, num_points=round(path_filtered.shape[0] * 1.55))
         # print("resampled_path shape = ", resampled_path.shape)
 
         return resampled_path

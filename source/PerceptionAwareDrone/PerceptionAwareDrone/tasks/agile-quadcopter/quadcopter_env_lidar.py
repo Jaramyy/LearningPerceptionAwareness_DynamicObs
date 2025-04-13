@@ -998,7 +998,8 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     episode_length_s = 10.0
     decimation = 2
     action_space = 4
-    observation_space = 17
+    observation_space = 72
+    # observation_space = 17 #with 5 beams lidar
     # observation_space = 12
     state_space = 0
     debug_vis = True
@@ -1072,7 +1073,7 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
         prim_path="/World/envs/env_.*/Robot/base_link",
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.15)),
         attach_yaw_only=False,
-        pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-90.0, 90.0),horizontal_res=36.0),     
+        pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-90.0, 90.0),horizontal_res=3.0),     
         # pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-48.0, 48.0),horizontal_res=3.0),   
         debug_vis=False,
         mesh_prim_paths=["/World/ground"],
@@ -1130,7 +1131,7 @@ class QuadcopterEnv(DirectRLEnv):
         self.previous_action = torch.zeros(self.num_envs, gym.spaces.flatdim(self.single_action_space), device=self.device)
 
         #lidar
-        self.lidar_resolution = (5)
+        self.lidar_resolution = (60)
         self.lidar_range = 5.0
 
     def _setup_scene(self):
@@ -1156,7 +1157,7 @@ class QuadcopterEnv(DirectRLEnv):
 
     def _apply_action(self):
         self._robot.set_external_force_and_torque(self._thrust, self._moment, body_ids=self._body_id)
-        self.previous_action = self._actions.clone()
+        
 
     def _get_observations(self) -> dict:
         desired_pos_b, _ = subtract_frame_transforms(
@@ -1186,6 +1187,7 @@ class QuadcopterEnv(DirectRLEnv):
         distance_to_goal_mapped = 1 - torch.tanh(distance_to_goal / 0.5)
 
         # action rate reward
+        # print(torch.square(self._actions - self.previous_action))
         action_rate = torch.sum(torch.square(self._actions - self.previous_action), dim=1)
 
         # target velocity direction reward
@@ -1218,6 +1220,9 @@ class QuadcopterEnv(DirectRLEnv):
             "head_tracking": head_tracking_path_rew * self.cfg.head_tracking * self.step_dt,
         }
         reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
+        
+        self.previous_action = self._actions.clone()
+
         # Logging
         for key, value in rewards.items():
             self._episode_sums[key] += value
@@ -1228,14 +1233,28 @@ class QuadcopterEnv(DirectRLEnv):
         died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.3, self._robot.data.root_pos_w[:, 2] > 3.0)
         # reach_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1) < 0.25
         # died = died | reach_goal
-        print("dead shape", died.shape)
-        static_collision = einops.reduce(self.lidar_scan, "n 1 w -> n 1", "max") < 1.0  # 0.3 collision radius
-        # static_collision = einops.reduce(self.lidar_scan, "n 1 w -> n 1", "max") < (self.lidar_range - (self.lidar_range - 0.3))  # 0.3 collision radius
+        # print("dead shape", died.shape)
+
+        # print("lidar dist",einops.reduce(self.lidar_scan, "n 1 w -> n 1", "min"))
+        static_collision = einops.reduce(self.lidar_scan, "n 1 w -> n 1", "min") < 0.5  # 0.3 collision radius
+        # print("static_collision", static_collision.squeeze(1))
+        # num_collisions = static_collision.sum()
+
+        # If you want it as a Python int:
+        # num_collisions = static_collision.sum().item()
+        # print("Number of static collisions:", num_collisions)
         
+        # static_collision = einops.reduce(self.lidar_scan, "n 1 w -> n 1", "max") < (self.lidar_range - (self.lidar_range - 0.3))  # 0.3 collision radius
+        # print(self._robot.data.root_lin_vel_b.shape)
+        # print("shape norm", torch.norm(self._robot.data.root_lin_vel_b, dim=1).shape)
+        # print("norm", torch.norm(self._robot.data.root_lin_vel_b.squeeze(0), dim=1, keepdim=True))
+
+        limit_vel = torch.norm(self._robot.data.root_lin_vel_b, dim=1) > 4.0
+
         # print(static_collision.squeeze(1).shape)
 
-        died = died | static_collision.squeeze(1)
-        print("dead shape2 ", died.shape)
+        died = died | static_collision.squeeze(1) | limit_vel
+        # print("dead shape2 ", died.shape)
         return died, time_out
 
     def _reset_idx(self, env_ids: torch.Tensor | None):

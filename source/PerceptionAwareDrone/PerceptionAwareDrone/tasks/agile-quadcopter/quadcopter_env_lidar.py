@@ -542,361 +542,7 @@
 #         self.goal_pos_visualizer.visualize(self._desired_pos_w)
 #         # self.target_visualizer.visualize(self.guilding_target[:, 0, :])
 
-# # (0, 4.5, 1)
-# # (-3, 8, 1)
-# class PotentialFieldPlanner:
-#     def __init__(self, map_size=(-10, 10), obstacles=[(-0.5, 4.5, 1), (-3, 8, 1), (2, 10, 1)], obstacle_radius=1.2,  #1.5,
-#                  attractive_gain=0.7, repulsive_gain=3000.0, step_size=0.025, max_iters=10000, num_envs = 4096, env_origins = None, device = 'cuda', progress_buf=None):
-#                 #  attractive_gain=0.7, repulsive_gain=6000.0, step_size=0.025, max_iters=10000, num_envs = 4096, env_origins = None, device = 'cuda', progress_buf=None):
-#         self.device = device
-#         self.map_size = map_size
-#         self.obstacle_radius = obstacle_radius
-#         self.attractive_gain = attractive_gain
-#         self.repulsive_gain = repulsive_gain
-#         self.step_size = step_size
-#         self.max_iters = max_iters
-#         self.goal = torch.tensor((0.5, 15.5), dtype=torch.float32)  # Default goal
-#         # print("\n\n\n\n\n len obstacles ", len(obstacles))
-#         self.obstacles = [torch.tensor(obs, dtype=torch.float32, device=self.device) for obs in obstacles]
-        
-#         self.future_traj_steps = 4
 
-#         self.draw = _debug_draw.acquire_debug_draw_interface()
-#         self.draw.clear_lines()
-
-#         # env information
-#         # self.progress_buf = progress_buf
-#         self.num_envs = num_envs
-#         self.env_origin_pos = env_origins
-#         self.central_env_idx = self.env_origin_pos.norm(dim=-1).argmin()  
-#         self.origin = torch.tensor([0.0, 0.0, 0.0], device=self.device) 
-
-        
-
-#     def set_goal(self, goal):
-#         self.goal = torch.tensor(goal, dtype=torch.float32, device=self.device)
-
-#     # def _compute_potential_gradient(self, pos):
-#     #     pos = torch.tensor(pos, dtype=torch.float32)
-#     #     att_grad = self.attractive_gain * (pos - self.goal)
-#     #     rep_grad = torch.zeros(2, dtype=torch.float32)
-
-#     #     for obs in self.obstacles:
-#     #         d = torch.norm(pos - obs)
-#     #         if d < self.obstacle_radius:
-#     #             rep_grad += self.repulsive_gain * (1.0 / d**2 - 1.0 / self.obstacle_radius**2) * (pos - obs) / d**3
-
-#     #     total_grad = att_grad - rep_grad
-#     #     return total_grad
-
-#     def _compute_potential_gradient(self, pos):
-#         pos = pos.to(self.device)
-#         att_grad = self.attractive_gain * (pos - self.goal)  # 3D Attraction
-#         rep_grad = torch.zeros(3, dtype=torch.float32, device=self.device)
-
-#         for obs in self.obstacles:
-#             d = torch.norm(pos - obs)
-#             if d < self.obstacle_radius:
-#                 rep_grad += self.repulsive_gain * (1.0 / d**2 - 1.0 / self.obstacle_radius**2) * (pos - obs) / d**3
-
-#         total_grad = att_grad - rep_grad
-#         return total_grad
-    
-#     def _apply_low_pass_filter(self, path, alpha=0.1):
-#         filtered_path = torch.clone(path)
-#         for i in range(1, len(path)):
-#             filtered_path[i] = alpha * path[i] + (1 - alpha) * filtered_path[i - 1]
-#         return filtered_path
-    
-#     def resample_cycle_torch_linear(self, cycle_tensor: torch.Tensor, num_points: int) -> torch.Tensor:
-#         """
-#         Pure PyTorch implementation of linear interpolation for trajectory resampling.
-
-#         Args:
-#             cycle_tensor: (N, D) tensor, where N is original number of points, D is feature dimension (e.g., 3 for XYZ).
-#             num_points: Number of points to resample to.
-
-#         Returns:
-#             Resampled tensor of shape (num_points, D).
-#         """
-#         N, D = cycle_tensor.shape
-#         device = cycle_tensor.device
-#         dtype = cycle_tensor.dtype
-
-#         # Original and target normalized indices (0 to 1)
-#         original_idx = torch.linspace(0, 1, steps=N, device=device, dtype=dtype)
-#         new_idx = torch.linspace(0, 1, steps=num_points, device=device, dtype=dtype)
-
-#         # Find indices in original_idx where each new_idx would be inserted
-#         idxs = torch.searchsorted(original_idx, new_idx, right=True)
-#         idxs = torch.clamp(idxs, 1, N - 1)
-
-#         left = idxs - 1
-#         right = idxs
-
-#         left_x = original_idx[left]
-#         right_x = original_idx[right]
-#         left_y = cycle_tensor[left]
-#         right_y = cycle_tensor[right]
-
-#         # Linear interpolation weights
-#         weights = (new_idx - left_x) / (right_x - left_x)
-#         weights = weights.unsqueeze(1)  # Shape (num_points, 1)
-
-#         interpolated = left_y + weights * (right_y - left_y)
-#         return interpolated
-    
-#     def resample_by_arclength(self, points: torch.Tensor, num_points: int) -> torch.Tensor:
-#         """
-#         Resample a trajectory to have uniform spatial spacing using arc-length.
-        
-#         Args:
-#             points: (N, D) torch tensor representing the trajectory (e.g., N points in 3D space).
-#             num_points: Number of points in the resampled trajectory.
-
-#         Returns:
-#             (num_points, D) torch tensor with uniform spatial density.
-#         """
-#         device = points.device
-#         dtype = points.dtype
-#         N, D = points.shape
-
-#         # 1. Compute distances between consecutive points
-#         deltas = points[1:] - points[:-1]
-#         segment_lengths = torch.norm(deltas, dim=1)
-
-#         # 2. Compute cumulative arc-length
-#         arc_lengths = torch.cat([torch.zeros(1, device=device, dtype=dtype), torch.cumsum(segment_lengths, dim=0)])
-#         total_length = arc_lengths[-1]
-
-#         # 3. Generate new equally spaced arc-length positions
-#         target_lengths = torch.linspace(0, total_length, num_points, device=device, dtype=dtype)
-
-#         # 4. Find corresponding segments for interpolation
-#         idxs = torch.searchsorted(arc_lengths, target_lengths, right=True)
-#         idxs = torch.clamp(idxs, 1, N - 1)
-#         left = idxs - 1
-#         right = idxs
-
-#         # 5. Interpolate positions
-#         left_points = points[left]
-#         right_points = points[right]
-#         left_l = arc_lengths[left]
-#         right_l = arc_lengths[right]
-
-#         t = (target_lengths - left_l) / (right_l - left_l)
-#         t = t.unsqueeze(1)  # (num_points, 1)
-
-#         resampled_points = left_points + t * (right_points - left_points)
-#         return resampled_points
-    
-#     def find_path(self, start):
-#         path = [torch.tensor(start, dtype=torch.float32, device=self.device)]
-#         pos = torch.tensor(start, dtype=torch.float32, device=self.device)
-
-#         for _ in range(self.max_iters):
-#             grad = self._compute_potential_gradient(pos)
-#             grad_norm = torch.norm(grad)
-#             if grad_norm < 1e-3:
-#                 break
-#             next_pos = pos - self.step_size * grad / grad_norm
-            
-#             if torch.norm(next_pos - self.goal) < self.step_size:
-#                 path.append(self.goal)
-#                 break
-
-#             next_pos[0] = torch.clamp(next_pos[0], self.map_size[0]*2, self.map_size[1]*2)  # X
-#             next_pos[1] = torch.clamp(next_pos[1], 0, self.map_size[1] * 10)  # Y
-#             next_pos[2] = torch.clamp(next_pos[2], 0, 10)  # Z (adjust as needed)
-            
-#             path.append(next_pos)
-#             pos = next_pos
-
-#         path = torch.stack(path)
-#         path_filtered = self._apply_low_pass_filter(path).to(device=self.device)
-        
-#         # print("path_filtered shape = ", path_filtered.shape)
-
-#         resampled_path = self.resample_by_arclength(path_filtered, num_points=round(path_filtered.shape[0] * 1.55))
-#         # print("resampled_path shape = ", resampled_path.shape)
-
-#         return resampled_path
-#         # return path_filtered
-
-#     def plot(self, start, path):
-#         plt.figure(figsize=(8, 8))
-#         for obs in self.obstacles:
-#             obstacle_circle = plt.Circle(obs[:2].cpu().numpy(), self.obstacle_radius, color='red', alpha=0.5)
-#             plt.gca().add_patch(obstacle_circle)
-        
-#         plt.scatter(start[0], start[1], color='green', s=100, label='Start')
-#         plt.scatter(self.goal[0].cpu().numpy(), self.goal[1].cpu().numpy(), color='orange', s=100, label='Goal')
-#         plt.plot(path[:, 0].cpu().numpy(), path[:, 1].cpu().numpy(), color='blue', linewidth=2, label='Path')
-        
-#         plt.xlim(self.map_size[0], self.map_size[1])
-#         plt.ylim(0, self.map_size[1] * 2)
-#         plt.legend()
-#         plt.grid(True)
-#         plt.show()
-    
-#     def compute_shortest_traj(self, input_path, eps_pro , steps: int, env_ids=None, step_size=1):
-#         if env_ids is None:
-#             env_ids = ...
-#         # ----------------------------------------------
-#         device = input_path.device  # Ensure compatibility with GPU if needed
-#         # Get initial indices from eps_pro[env_ids] and reshape to match batch size
-#         start_indices = eps_pro[env_ids].unsqueeze(-1).long()  # Shape [4096, 1]
-
-#         # Compute sliding window indices
-#         sliding_indices = start_indices + step_size * torch.arange(steps, device=device).unsqueeze(0)  # Shape [4096, 4]
-
-#         # Clip indices to avoid out-of-bounds errors (ensure they are within [0, 299])
-#         sliding_indices = sliding_indices.clamp(0, input_path.size(1) - 1)
-
-#         # Extract trajectory slices
-#         self.traj_target = input_path[torch.arange(input_path.size(0)).unsqueeze(1), sliding_indices]  # Shape [4096, 4, 3]
-
-#         # print("traj_target shape = ", self.traj_target.shape)
-#         # print("self.env_origin_pos shape = ", self.env_origin_pos.shape)
-#         return self.env_origin_pos[:, None, :] + self.traj_target
-    
-#     def run(self, start, goal=None):
-#         if goal is not None:
-#             self.set_goal(goal)
-#         path = self.find_path(start)
-#         if path is not None:
-#             print("Path found!")
-#             print("path shape = ", path.shape)
-#             path_x = path[:, 0]
-#             path_y = path[:, 1]
-#             path_z = path[:, 2]
-#             # path_z = torch.ones_like(path_x)
-
-#             self.path_xyz = torch.stack((path_x, path_y, path_z), dim=1)   # Combine x, y, z into a single tensor   -- > #size [path point,3]    
-#             self.duplicated_path_xyz = self.path_xyz.unsqueeze(0).repeat(self.num_envs, 1, 1)   # [num_env,length_bspline,xyz]    
-#             self.path_xyz = self.path_xyz.to(self.device) + self.env_origin_pos[self.central_env_idx]
-#             point_list_0 = self.path_xyz[:-1].tolist()   # cut the endding point to make a line ex. whose line is 1,2,3,4; point_list_0 = 1,2,3  
-#             point_list_1 = self.path_xyz[1:].tolist()    # cut the starting point to make a line ex. whose line is 1,2,3,4; point_list_1 = 2,3,4   then the line is 1-2, 2-3, 3-4
-
-#             debug_plot = True
-#             if debug_plot == True:
-#                 colors = [(1.0, 1.0, 0.0, 1.0) for _ in range(len(point_list_0))]
-#                 sizes = [2 for _ in range(len(point_list_0))]
-#                 self.draw.draw_lines(point_list_0, point_list_1, colors, sizes)  # draw the line
-            
-#             return self.duplicated_path_xyz
-#             # while(True):
-#             #     pass
-#             # self.plot(start, path)
-#         else:
-#             print("Failed to find a path.")
-#             return None
-    
-#     def _calVector(self, robot_pos, obs_pos):
-#         if isinstance(obs_pos, list):
-#             obs_pos = torch.stack(obs_pos).to(robot_pos.device)
-#         # print("robot_pos ", robot_pos.shape)
-#         # print("obs_pos ", obs_pos.shape)
-#         vectors = obs_pos - robot_pos[:, None, :]  # Shape (4096, 3, 3)
-#         distances = torch.norm(vectors, dim=2)
-#         return vectors, distances
-    
-#     def _calClosestObstacle(self, robot_pos, obs_pos):
-
-#         vectors, distances = self._calVector(robot_pos, obs_pos)
-
-#         # Find the index of the closest obstacle
-#         closest_indices = torch.argmin(distances, dim=1)  # Shape (4096,)
-
-#         # Get the minimum distances
-#         min_distances = distances[torch.arange(self.num_envs), closest_indices]  # Shape (4096,)
-
-#         # Get the vector to the closest obstacle
-#         closest_vectors = vectors[torch.arange(self.num_envs), closest_indices]  # Shape (4096, 3)
-#         dx, dy, dz = closest_vectors[:, 0], closest_vectors[:, 1], closest_vectors[:, 2]
-
-#         # Convert to Euler angles
-#         yaw = torch.atan2(dy, dx)  # Rotation around Z-axis
-#         pitch = torch.atan2(dz, torch.sqrt(dx**2 + dy**2))  # Rotation around Y-axis
-
-#         # Stack yaw and pitch into a (4096, 2) tensor
-#         euler_angles = torch.stack((yaw, pitch), dim=1)  # Shape (4096, 2)
-
-#         return min_distances, euler_angles , closest_vectors
-        
-#     def _calPotential(self, robot_pos, obs_pos, weight_potential):
-#         """
-#         Compute the potential field from obstacles.
-
-#         Args:
-#         - robot_pos: Tensor of shape (4096, 3).
-#         - obs_pos: Tensor of shape (4096, 3, 3).
-#         - weight_potential: Scalar weight for the potential.
-
-#         Returns:
-#         - potential: Tensor of shape (4096), potential field values for each obstacle.
-#         """
-#         # print("robot_pos ", robot_pos[self.central_env_idx])
-#         # print("obs_pos ", obs_pos[self.central_env_idx])
-#         vec, euler , dist_vec = self._calClosestObstacle(robot_pos, obs_pos)
-#         dist = torch.norm(dist_vec, dim=1)
-
-#         sigma = 1.5  # Standard deviation of Gaussian function
-#         gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
-#         # print("dist shape", dist.shape)
-#         potential = weight_potential * gaussian_factor * torch.exp(-dist**2 / (2 * sigma**2))
-#         # print("potential shape ", potential.shape)
-#         # print("potential ", potential)
-#         # print("dist ", dist[self.central_env_idx])
-        
-#         #for debug potential
-#         # if(dist[self.central_env_idx] < 2.0):
-#         #     print("dist ", dist[self.central_env_idx])
-#         #     print("potential ", potential[self.central_env_idx])
-
-#         # potential = torch.min(potential, torch.tensor(0.0, device=potential.device))
-#         return potential
-
-#     def _dot_vector(self, a, b):
-#         return torch.sum(a * b, dim=1)
-    
-#     def _compute_unit_vector(self, vectors):
-#         """
-#         Compute the unit vector of a given tensor.
-
-#         Args:
-#         - vectors: torch.Tensor of shape (..., 3), representing 3D vectors.
-
-#         Returns:
-#         - unit_vectors: torch.Tensor of the same shape (..., 3), normalized to unit length.
-#         """
-#         # Compute vector magnitude
-#         norms = torch.norm(vectors, dim=-1, keepdim=True)  # Shape (..., 1)
-
-#         # Avoid division by zero by replacing zeros with a small value
-#         norms = torch.where(norms == 0, torch.tensor(1e-8, device=vectors.device), norms)
-
-#         # Compute unit vector
-#         unit_vectors = vectors / norms  # Shape (..., 3)
-#         return unit_vectors
-
-#     def potentialReward(self, robot_pos, robot_heading_vec, weight_potential=1.0):
-#         _ , euler_angles, closet_vector = self._calClosestObstacle(robot_pos, self.obstacles)
-        
-#         norm_robot_heading = self._compute_unit_vector(robot_heading_vec)
-#         norm_closet_obs_vec = self._compute_unit_vector(closet_vector)
-
-#         dot_product = self._dot_vector(norm_robot_heading, norm_closet_obs_vec)
-
-#         # print("euler_angles = ", euler_angles)
-#         # print("robot_heading = ", robot_heading)
-#         potential = self._calPotential(robot_pos, self.obstacles, weight_potential)
-#         # print("potential ", potential.shape)
-#         # print("dot_product ", dot_product.shape)
-
-#         reward = potential * dot_product
-#         # print("reward ", reward[self.central_env_idx])
-#         return reward
 
 # Copyright (c) 2022-2025, The Isaac Lab Project Developers.
 # All rights reserved.
@@ -917,7 +563,7 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sim import SimulationCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
-from isaaclab.utils.math import subtract_frame_transforms
+from isaaclab.utils.math import subtract_frame_transforms, quat_apply_yaw, quat_from_angle_axis
 
 ##
 # Pre-defined configs
@@ -942,6 +588,12 @@ from isaaclab.sensors import Imu, ImuCfg
 
 #lidar 
 import einops
+from isaacsim.util.debug_draw import _debug_draw
+
+#markers
+from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
+from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
+
 
 @configclass
 class EventCfg:
@@ -1089,7 +741,8 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     action_rate_reward_scale = -0.5
     velocity_direction = 15.0
     reward_safety_static = 10.0
-    head_tracking = 20.0
+    head_tracking = 15.0
+    potential_tracking = 16.0
 
 
 class QuadcopterEnv(DirectRLEnv):
@@ -1116,6 +769,7 @@ class QuadcopterEnv(DirectRLEnv):
                 "rew_velocity_dir",
                 "reward_safety_static",
                 "head_tracking",
+                "potential_tracking",
             ]
         }
         # Get specific body indices
@@ -1134,6 +788,48 @@ class QuadcopterEnv(DirectRLEnv):
         self.lidar_resolution = (60)
         self.lidar_range = 5.0
 
+        self.draw = _debug_draw.acquire_debug_draw_interface()
+        self.draw.clear_lines()
+
+        self.my_visualizer = self.define_markers()
+        self.robot_visualizer = self.define_robot_markers()
+    
+    def define_markers(self) -> VisualizationMarkers:
+        """Define markers with various different shapes."""
+        marker_cfg = VisualizationMarkersCfg(
+            prim_path="/Visuals/myMarkers",
+            markers={
+                # "frame": sim_utils.UsdFileCfg(
+                #     usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
+                #     scale=(0.5, 0.5, 0.5),
+                # ),
+                "arrow_x": sim_utils.UsdFileCfg(
+                    usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+                    scale=(0.1, 0.1, 1.0),
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
+                ),
+            },
+        )
+        return VisualizationMarkers(marker_cfg)
+    
+    def define_robot_markers(self) -> VisualizationMarkers:
+        """Define markers with various different shapes."""
+        marker_cfg = VisualizationMarkersCfg(
+            prim_path="/Visuals/myMarkers",
+            markers={
+                # "frame": sim_utils.UsdFileCfg(
+                #     usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
+                #     scale=(0.5, 0.5, 0.5),
+                # ),
+                "arrow_x": sim_utils.UsdFileCfg(
+                    usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+                    scale=(0.1, 0.1, 1.0),
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),
+                ),
+            },
+        )
+        return VisualizationMarkers(marker_cfg)
+    
     def _setup_scene(self):
         self._robot = Articulation(self.cfg.robot)
         self.scene.articulations["robot"] = self._robot
@@ -1164,7 +860,16 @@ class QuadcopterEnv(DirectRLEnv):
             self._robot.data.root_state_w[:, :3], self._robot.data.root_state_w[:, 3:7], self._desired_pos_w
         )
 
-        self.lidar_scan = ((self._lidar_sensor.data.ray_hits_w - self._lidar_sensor.data.pos_w.unsqueeze(1)).norm(dim=-1).clamp_max(self.lidar_range).reshape(self.num_envs, 1, self.lidar_resolution))
+        self.lidar_scan = (
+            (
+                self._lidar_sensor.data.ray_hits_w
+                - self._lidar_sensor.data.pos_w.unsqueeze(1)
+            )
+            .norm(dim=-1)
+            .clamp_max(self.lidar_range)
+            .reshape(self.num_envs, 1, self.lidar_resolution)
+        )
+        
         # print(self.lidar_scan.squeeze(1)[2015])
         obs = torch.cat(
             [
@@ -1193,16 +898,47 @@ class QuadcopterEnv(DirectRLEnv):
         # target velocity direction reward
         relative_err_pos = self._desired_pos_w - self._robot.data.root_pos_w
         unit_relative_err_pos = relative_err_pos / (relative_err_pos.norm(dim=-1, keepdim=True) + 1e-6)
-        # print(self._robot.data.root_lin_vel_b)
-        # print(unit_relative_err_pos)
         rew_vel_dir = self._robot.data.root_lin_vel_w * unit_relative_err_pos
-        # print("rew vel = ", rew_vel_dir)
         rew_vel_dir = torch.sum(rew_vel_dir, dim=-1)
         # print("reward vel = ", rew_vel_dir)
         # print("reward vel shape = ", rew_vel_dir.shape)
 
         # lidar safety reward
         reward_safety_static = 1 - torch.tanh((self.lidar_range - self.lidar_scan).clamp(min=1e-6, max=self.lidar_range)).mean(dim=2).squeeze(1)
+
+        # lidar potential field adapt heading reward
+        vec_to_obstacles = (self._lidar_sensor.data.ray_hits_w - self._lidar_sensor.data.pos_w.unsqueeze(1)) .clamp_max(self.lidar_range * 2.0)
+        dists = vec_to_obstacles.norm(dim=-1)
+        closest_idx = torch.argmin(dists, dim=1)
+        env_idx = torch.arange(vec_to_obstacles.shape[0])
+
+        nearest_vec = vec_to_obstacles[env_idx, closest_idx]
+        nearest_dist = dists[env_idx, closest_idx]
+        
+        nearest_angle = torch.atan2(nearest_vec[:, 1], nearest_vec[:, 0])
+        # nearest_quat = torch.zeros((self.num_envs, 4), device=self.device)
+        nearest_quat = quat_from_angle_axis(nearest_angle, torch.tensor([0, 0, 1], device=self.device, dtype=torch.float32).repeat(self.num_envs, 1))
+
+        robot_heading_vector = quat_apply_yaw(
+            self._robot.data.root_state_w[:, 3:7].to(torch.float32),
+            torch.tensor([1, 0, 0], device=self.device, dtype=torch.float32).repeat(self.num_envs, 1),
+        )
+
+        dot_vec = torch.sum(robot_heading_vector * nearest_vec, dim=1)
+        
+        sigma = 0.4  # Standard deviation of Gaussian function
+        gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
+        # print("dist shape", dist.shape)
+        print("dist ", nearest_dist[2015])
+        potential = 0.5 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
+        print("potential ", potential[2015])
+        potential_rew = potential * dot_vec
+
+        self.my_visualizer.visualize(translations=self._lidar_sensor.data.pos_w, orientations=nearest_quat)
+        self.robot_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=self._robot.data.root_quat_w)
+        print("potential_rew", potential_rew[2015])
+        # print("nearest_dist shape = ", nearest_dist.shape)
+
         
         # heading tracking reward
         self.ref_heading = torch.atan2(relative_err_pos[:, 1], relative_err_pos[:, 0])  # radian
@@ -1218,6 +954,7 @@ class QuadcopterEnv(DirectRLEnv):
             "rew_velocity_dir": rew_vel_dir * self.cfg.velocity_direction * self.step_dt,
             "reward_safety_static": reward_safety_static * self.cfg.reward_safety_static * self.step_dt,
             "head_tracking": head_tracking_path_rew * self.cfg.head_tracking * self.step_dt,
+            "potential_tracking": potential_rew * self.cfg.potential_tracking * self.step_dt,
         }
         reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
         
@@ -1236,13 +973,9 @@ class QuadcopterEnv(DirectRLEnv):
         # print("dead shape", died.shape)
 
         # print("lidar dist",einops.reduce(self.lidar_scan, "n 1 w -> n 1", "min"))
-        static_collision = einops.reduce(self.lidar_scan, "n 1 w -> n 1", "min") < 0.5  # 0.3 collision radius
+        static_collision = einops.reduce(self.lidar_scan, "n 1 w -> n 1", "min") < 0.3  # 0.3 collision radius
         # print("static_collision", static_collision.squeeze(1))
         # num_collisions = static_collision.sum()
-
-        # If you want it as a Python int:
-        # num_collisions = static_collision.sum().item()
-        # print("Number of static collisions:", num_collisions)
         
         # static_collision = einops.reduce(self.lidar_scan, "n 1 w -> n 1", "max") < (self.lidar_range - (self.lidar_range - 0.3))  # 0.3 collision radius
         # print(self._robot.data.root_lin_vel_b.shape)
@@ -1250,10 +983,11 @@ class QuadcopterEnv(DirectRLEnv):
         # print("norm", torch.norm(self._robot.data.root_lin_vel_b.squeeze(0), dim=1, keepdim=True))
 
         limit_vel = torch.norm(self._robot.data.root_lin_vel_b, dim=1) > 4.0
+        
+        # print(self._robot.data.projected_gravity_b[2015, :])
+        uprightness = self._robot.data.projected_gravity_b[:, 2] >= 0.0
 
-        # print(static_collision.squeeze(1).shape)
-
-        died = died | static_collision.squeeze(1) | limit_vel
+        died = died | static_collision.squeeze(1) | limit_vel | uprightness
         # print("dead shape2 ", died.shape)
         return died, time_out
 
@@ -1286,7 +1020,7 @@ class QuadcopterEnv(DirectRLEnv):
 
         self._actions[env_ids] = 0.0
         # Sample new commands
-        self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-15.0, 15.0)
+        self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(13.0, 15.0)
         self._desired_pos_w[env_ids, :2] += self._terrain.env_origins[env_ids, :2]
         self._desired_pos_w[env_ids, 2] = torch.zeros_like(self._desired_pos_w[env_ids, 2]).uniform_(1.0, 1.5)
         # Reset robot state
@@ -1316,3 +1050,130 @@ class QuadcopterEnv(DirectRLEnv):
     def _debug_vis_callback(self, event):
         # update the markers
         self.goal_pos_visualizer.visualize(self._desired_pos_w)
+
+
+class PotentialFieldPlanner:
+    def __init__(self, map_size=(-10, 10), obstacles=[(-0.5, 4.5, 1), (-3, 8, 1), (2, 10, 1)], obstacle_radius=1.2,  #1.5,
+                 attractive_gain=0.7, repulsive_gain=3000.0, step_size=0.025, max_iters=10000, num_envs = 4096, env_origins = None, device = 'cuda', progress_buf=None):
+                #  attractive_gain=0.7, repulsive_gain=6000.0, step_size=0.025, max_iters=10000, num_envs = 4096, env_origins = None, device = 'cuda', progress_buf=None):
+        self.device = device
+        self.map_size = map_size
+        self.obstacle_radius = obstacle_radius
+        self.attractive_gain = attractive_gain
+        self.repulsive_gain = repulsive_gain
+        self.goal = torch.tensor((0.5, 15.5), dtype=torch.float32)  # Default goal
+        # print("\n\n\n\n\n len obstacles ", len(obstacles))
+        self.obstacles = [torch.tensor(obs, dtype=torch.float32, device=self.device) for obs in obstacles]
+
+        # env information
+        # self.progress_buf = progress_buf
+        self.num_envs = num_envs
+        self.env_origin_pos = env_origins
+        self.central_env_idx = self.env_origin_pos.norm(dim=-1).argmin()  
+        self.origin = torch.tensor([0.0, 0.0, 0.0], device=self.device) 
+    
+    def _calVector(self, robot_pos, obs_pos):
+        if isinstance(obs_pos, list):
+            obs_pos = torch.stack(obs_pos).to(robot_pos.device)
+        # print("robot_pos ", robot_pos.shape)
+        # print("obs_pos ", obs_pos.shape)
+        vectors = obs_pos - robot_pos[:, None, :]  # Shape (4096, 3, 3)
+        distances = torch.norm(vectors, dim=2)
+        return vectors, distances
+    
+    def _calClosestObstacle(self, robot_pos, obs_pos):
+
+        vectors, distances = self._calVector(robot_pos, obs_pos)
+
+        # Find the index of the closest obstacle
+        closest_indices = torch.argmin(distances, dim=1)  # Shape (4096,)
+
+        # Get the minimum distances
+        min_distances = distances[torch.arange(self.num_envs), closest_indices]  # Shape (4096,)
+
+        # Get the vector to the closest obstacle
+        closest_vectors = vectors[torch.arange(self.num_envs), closest_indices]  # Shape (4096, 3)
+        dx, dy, dz = closest_vectors[:, 0], closest_vectors[:, 1], closest_vectors[:, 2]
+
+        # Convert to Euler angles
+        yaw = torch.atan2(dy, dx)  # Rotation around Z-axis
+        pitch = torch.atan2(dz, torch.sqrt(dx**2 + dy**2))  # Rotation around Y-axis
+
+        # Stack yaw and pitch into a (4096, 2) tensor
+        euler_angles = torch.stack((yaw, pitch), dim=1)  # Shape (4096, 2)
+
+        return min_distances, euler_angles , closest_vectors
+        
+    def _calPotential(self, robot_pos, obs_pos, weight_potential):
+        """
+        Compute the potential field from obstacles.
+
+        Args:
+        - robot_pos: Tensor of shape (4096, 3).
+        - obs_pos: Tensor of shape (4096, 3, 3).
+        - weight_potential: Scalar weight for the potential.
+
+        Returns:
+        - potential: Tensor of shape (4096), potential field values for each obstacle.
+        """
+        # print("robot_pos ", robot_pos[self.central_env_idx])
+        # print("obs_pos ", obs_pos[self.central_env_idx])
+        vec, euler , dist_vec = self._calClosestObstacle(robot_pos, obs_pos)
+        dist = torch.norm(dist_vec, dim=1)
+
+        sigma = 1.5  # Standard deviation of Gaussian function
+        gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
+        # print("dist shape", dist.shape)
+        potential = weight_potential * gaussian_factor * torch.exp(-dist**2 / (2 * sigma**2))
+        # print("potential shape ", potential.shape)
+        # print("potential ", potential)
+        # print("dist ", dist[self.central_env_idx])
+        
+        #for debug potential
+        # if(dist[self.central_env_idx] < 2.0):
+        #     print("dist ", dist[self.central_env_idx])
+        #     print("potential ", potential[self.central_env_idx])
+
+        # potential = torch.min(potential, torch.tensor(0.0, device=potential.device))
+        return potential
+
+    def _dot_vector(self, a, b):
+        return torch.sum(a * b, dim=1)
+    
+    def _compute_unit_vector(self, vectors):
+        """
+        Compute the unit vector of a given tensor.
+
+        Args:
+        - vectors: torch.Tensor of shape (..., 3), representing 3D vectors.
+
+        Returns:
+        - unit_vectors: torch.Tensor of the same shape (..., 3), normalized to unit length.
+        """
+        # Compute vector magnitude
+        norms = torch.norm(vectors, dim=-1, keepdim=True)  # Shape (..., 1)
+
+        # Avoid division by zero by replacing zeros with a small value
+        norms = torch.where(norms == 0, torch.tensor(1e-8, device=vectors.device), norms)
+
+        # Compute unit vector
+        unit_vectors = vectors / norms  # Shape (..., 3)
+        return unit_vectors
+
+    def potentialReward(self, robot_pos, robot_heading_vec, weight_potential=1.0):
+        _ , euler_angles, closet_vector = self._calClosestObstacle(robot_pos, self.obstacles)
+        
+        norm_robot_heading = self._compute_unit_vector(robot_heading_vec)
+        norm_closet_obs_vec = self._compute_unit_vector(closet_vector)
+
+        dot_product = self._dot_vector(norm_robot_heading, norm_closet_obs_vec)
+
+        # print("euler_angles = ", euler_angles)
+        # print("robot_heading = ", robot_heading)
+        potential = self._calPotential(robot_pos, self.obstacles, weight_potential)
+        # print("potential ", potential.shape)
+        # print("dot_product ", dot_product.shape)
+
+        reward = potential * dot_product
+        # print("reward ", reward[self.central_env_idx])
+        return reward

@@ -737,12 +737,12 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     # reward scales
     lin_vel_reward_scale = -0.5
     ang_vel_reward_scale = -0.05
-    distance_to_goal_reward_scale = 15.0
+    distance_to_goal_reward_scale = 20.0
     action_rate_reward_scale = -0.5
     velocity_direction = 15.0
     reward_safety_static = 10.0
     head_tracking = 15.0
-    potential_tracking = 16.0
+    potential_tracking = 50.0
 
 
 class QuadcopterEnv(DirectRLEnv):
@@ -924,9 +924,9 @@ class QuadcopterEnv(DirectRLEnv):
             torch.tensor([1, 0, 0], device=self.device, dtype=torch.float32).repeat(self.num_envs, 1),
         )
 
-        dot_vec = torch.sum(robot_heading_vector * nearest_vec, dim=1)
+        dot_vec = torch.abs(torch.sum(robot_heading_vector * nearest_vec, dim=1))
         
-        sigma = 0.4  # Standard deviation of Gaussian function
+        sigma = 0.7  # Standard deviation of Gaussian function
         gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
         # print("dist shape", dist.shape)
         print("dist ", nearest_dist[2015])
@@ -968,7 +968,8 @@ class QuadcopterEnv(DirectRLEnv):
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.3, self._robot.data.root_pos_w[:, 2] > 3.0)
-        # reach_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1) < 0.25
+        
+        reach_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1) < 0.25
         # died = died | reach_goal
         # print("dead shape", died.shape)
 
@@ -987,7 +988,7 @@ class QuadcopterEnv(DirectRLEnv):
         # print(self._robot.data.projected_gravity_b[2015, :])
         uprightness = self._robot.data.projected_gravity_b[:, 2] >= 0.0
 
-        died = died | static_collision.squeeze(1) | limit_vel | uprightness
+        died = died | static_collision.squeeze(1) | limit_vel | uprightness | reach_goal
         # print("dead shape2 ", died.shape)
         return died, time_out
 
@@ -1020,7 +1021,7 @@ class QuadcopterEnv(DirectRLEnv):
 
         self._actions[env_ids] = 0.0
         # Sample new commands
-        self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(13.0, 15.0)
+        self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-15.0, 15.0)
         self._desired_pos_w[env_ids, :2] += self._terrain.env_origins[env_ids, :2]
         self._desired_pos_w[env_ids, 2] = torch.zeros_like(self._desired_pos_w[env_ids, 2]).uniform_(1.0, 1.5)
         # Reset robot state

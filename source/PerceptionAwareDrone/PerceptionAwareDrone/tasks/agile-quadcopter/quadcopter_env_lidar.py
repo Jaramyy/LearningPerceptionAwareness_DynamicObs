@@ -594,6 +594,8 @@ from isaacsim.util.debug_draw import _debug_draw
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 
+#goal
+import numpy as np
 
 @configclass
 class EventCfg:
@@ -725,7 +727,7 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
         prim_path="/World/envs/env_.*/Robot/base_link",
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.15)),
         attach_yaw_only=False,
-        pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-90.0, 90.0),horizontal_res=3.0),     
+        pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-50.0, 50.0),horizontal_res=1.67),     
         # pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-48.0, 48.0),horizontal_res=3.0),   
         debug_vis=False,
         mesh_prim_paths=["/World/ground"],
@@ -735,14 +737,14 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     moment_scale = 0.7
 
     # reward scales
-    lin_vel_reward_scale = -0.5
-    ang_vel_reward_scale = -0.05
-    distance_to_goal_reward_scale = 20.0
+    lin_vel_reward_scale = -0.05
+    ang_vel_reward_scale = -0.01
+    distance_to_goal_reward_scale = 40.0
     action_rate_reward_scale = -0.5
     velocity_direction = 15.0
     reward_safety_static = 10.0
     head_tracking = 15.0
-    potential_tracking = 50.0
+    potential_tracking = 60.0
 
 
 class QuadcopterEnv(DirectRLEnv):
@@ -793,6 +795,8 @@ class QuadcopterEnv(DirectRLEnv):
 
         self.my_visualizer = self.define_markers()
         self.robot_visualizer = self.define_robot_markers()
+
+        self._reach_goal_counter = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
     
     def define_markers(self) -> VisualizationMarkers:
         """Define markers with various different shapes."""
@@ -929,14 +933,14 @@ class QuadcopterEnv(DirectRLEnv):
         sigma = 0.7  # Standard deviation of Gaussian function
         gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
         # print("dist shape", dist.shape)
-        print("dist ", nearest_dist[2015])
+        # print("dist ", nearest_dist[2015])
         potential = 0.5 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
-        print("potential ", potential[2015])
+        # print("potential ", potential[2015])
         potential_rew = potential * dot_vec
 
         self.my_visualizer.visualize(translations=self._lidar_sensor.data.pos_w, orientations=nearest_quat)
         self.robot_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=self._robot.data.root_quat_w)
-        print("potential_rew", potential_rew[2015])
+        # print("potential_rew", potential_rew[2015])
         # print("nearest_dist shape = ", nearest_dist.shape)
 
         
@@ -969,7 +973,11 @@ class QuadcopterEnv(DirectRLEnv):
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.3, self._robot.data.root_pos_w[:, 2] > 3.0)
         
+        self._time_limit = 100
         reach_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1) < 0.25
+        self._reach_goal_counter = self._reach_goal_counter + reach_goal.int()
+        self._reach_goal_exceed = self._reach_goal_counter > self._time_limit
+
         # died = died | reach_goal
         # print("dead shape", died.shape)
 
@@ -988,7 +996,7 @@ class QuadcopterEnv(DirectRLEnv):
         # print(self._robot.data.projected_gravity_b[2015, :])
         uprightness = self._robot.data.projected_gravity_b[:, 2] >= 0.0
 
-        died = died | static_collision.squeeze(1) | limit_vel | uprightness | reach_goal
+        died = died | static_collision.squeeze(1) | limit_vel | uprightness | self._reach_goal_exceed
         # print("dead shape2 ", died.shape)
         return died, time_out
 
@@ -1020,15 +1028,45 @@ class QuadcopterEnv(DirectRLEnv):
             self.episode_length_buf = torch.randint_like(self.episode_length_buf, high=int(self.max_episode_length))
 
         self._actions[env_ids] = 0.0
+        self._reach_goal_counter[env_ids] = 0
+        
         # Sample new commands
-        self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-15.0, 15.0)
+        box_size = 15.0
+        half_box = box_size / 2.0
+        self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-17.0, 17.0)
         self._desired_pos_w[env_ids, :2] += self._terrain.env_origins[env_ids, :2]
         self._desired_pos_w[env_ids, 2] = torch.zeros_like(self._desired_pos_w[env_ids, 2]).uniform_(1.0, 1.5)
+
+        # while True:
+        #     # Sample (x, y) uniformly
+        #     self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-17.0, 17.0)
+        #     self._desired_pos_w[env_ids, :2] += self._terrain.env_origins[env_ids, :2]
+        #     self._desired_pos_w[env_ids, 2] = torch.zeros_like(self._desired_pos_w[env_ids, 2]).uniform_(1.0, 1.5)
+        #     # print("desired_pos_w", self._desired_pos_w[env_ids, :2])
+        #     # Find goals inside the box (e.g., [-5, 5] x [-5, 5])
+        #     mask_x = self._desired_pos_w[env_ids, 0].abs() < half_box
+        #     mask_y = self._desired_pos_w[env_ids, 1].abs() < half_box
+        #     invalid_mask = mask_x & mask_y
+
+        #     # If no invalid goals, break the loop
+        #     if not invalid_mask.any():
+        #         break
+
+        #     # Resample only the invalid ones
+        #     resample_ids = env_ids[invalid_mask]
+        #     self._desired_pos_w[resample_ids, :2] = torch.zeros_like(self._desired_pos_w[resample_ids, :2]).uniform_(-15.0, 15.0)
+        #     self._desired_pos_w[resample_ids, :2] += self._terrain.env_origins[resample_ids, :2]
+        #     # print("desired_pos_w", self._desired_pos_w[resample_ids, :2])
+        
         # Reset robot state
         joint_pos = self._robot.data.default_joint_pos[env_ids]
         joint_vel = self._robot.data.default_joint_vel[env_ids]
         default_root_state = self._robot.data.default_root_state[env_ids]
-        default_root_state[:, :3] += self._terrain.env_origins[env_ids]
+        # default_root_state[:, :3] += self._terrain.env_origins[env_ids]
+
+        default_root_state[:, 0] += self._terrain.env_origins[env_ids, 0] - 15.0  # offset
+        default_root_state[:, 1] += self._terrain.env_origins[env_ids, 1]
+        default_root_state[:, 2] += self._terrain.env_origins[env_ids, 2]
         self._robot.write_root_pose_to_sim(default_root_state[:, :7], env_ids)
         self._robot.write_root_velocity_to_sim(default_root_state[:, 7:], env_ids)
         self._robot.write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)

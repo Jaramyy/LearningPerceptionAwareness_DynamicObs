@@ -652,7 +652,7 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     episode_length_s = 10.0
     decimation = 2
     action_space = 4
-    observation_space = 72
+    observation_space = 75
     # observation_space = 17 #with 5 beams lidar
     # observation_space = 12
     state_space = 0
@@ -738,13 +738,14 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
 
     # reward scales
     lin_vel_reward_scale = -0.05
-    ang_vel_reward_scale = -0.01
+    ang_vel_reward_scale = -0.05
     distance_to_goal_reward_scale = 40.0
     action_rate_reward_scale = -0.5
     velocity_direction = 15.0
-    reward_safety_static = 10.0
+    reward_safety_static = 15.0
     head_tracking = 15.0
     potential_tracking = 60.0
+    penalty_height = - 0.1
 
 
 class QuadcopterEnv(DirectRLEnv):
@@ -759,6 +760,7 @@ class QuadcopterEnv(DirectRLEnv):
         self._moment = torch.zeros(self.num_envs, 1, 3, device=self.device)
         # Goal position
         self._desired_pos_w = torch.zeros(self.num_envs, 3, device=self.device)
+        self.height_range = torch.zeros(self.num_envs, 2 , device=self.device)
 
         # Logging
         self._episode_sums = {
@@ -772,6 +774,7 @@ class QuadcopterEnv(DirectRLEnv):
                 "reward_safety_static",
                 "head_tracking",
                 "potential_tracking",
+                "penalty_height",
             ]
         }
         # Get specific body indices
@@ -863,6 +866,19 @@ class QuadcopterEnv(DirectRLEnv):
         desired_pos_b, _ = subtract_frame_transforms(
             self._robot.data.root_state_w[:, :3], self._robot.data.root_state_w[:, 3:7], self._desired_pos_w
         )
+    
+        desired_dist = desired_pos_b.norm(dim=-1, keepdim=True)
+        unit_desird_pos_b = desired_pos_b / (desired_dist + 1e-6)
+
+        desired_dist_2d = desired_pos_b[:, :2].norm(dim=-1, keepdim=True)
+        desired_dist_z = desired_pos_b[:, 2].unsqueeze(1)
+        # print("unit_desird_pos_b", unit_desird_pos_b)
+        
+
+        # print("desired_pos_w", self._desired_pos_w[2015])
+        # print("root_pos_w", self._robot.data.root_pos_w[2015])
+        # print("desired_dist", desired_dist[2015])
+        # print("desired_pos_b", desired_pos_b[2015])
 
         self.lidar_scan = (
             (
@@ -873,6 +889,17 @@ class QuadcopterEnv(DirectRLEnv):
             .clamp_max(self.lidar_range)
             .reshape(self.num_envs, 1, self.lidar_resolution)
         )
+
+        # lidar potential field
+        vec_to_obstacles = (self._lidar_sensor.data.ray_hits_w - self._lidar_sensor.data.pos_w.unsqueeze(1)) .clamp_max(self.lidar_range * 2.0)
+        dists_to_obstacle = vec_to_obstacles.norm(dim=-1)
+        closest_idx = torch.argmin(dists_to_obstacle, dim=1)
+        env_idx = torch.arange(vec_to_obstacles.shape[0])
+        nearest_dist = dists_to_obstacle[env_idx, closest_idx]
+        
+        sigma = 0.7  # Standard deviation of Gaussian function
+        gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
+        potential = 0.5 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
         
         # print(self.lidar_scan.squeeze(1)[2015])
         obs = torch.cat(
@@ -880,8 +907,11 @@ class QuadcopterEnv(DirectRLEnv):
                 self._robot.data.root_lin_vel_b,
                 self._robot.data.root_ang_vel_b,
                 self._robot.data.projected_gravity_b,
-                desired_pos_b,
+                unit_desird_pos_b,
+                desired_dist_2d,
+                desired_dist_z,
                 self.lidar_scan.squeeze(1),
+                potential.unsqueeze(1),
             ],
             dim=-1,
         )
@@ -911,7 +941,7 @@ class QuadcopterEnv(DirectRLEnv):
         reward_safety_static = 1 - torch.tanh((self.lidar_range - self.lidar_scan).clamp(min=1e-6, max=self.lidar_range)).mean(dim=2).squeeze(1)
 
         # lidar potential field adapt heading reward
-        vec_to_obstacles = (self._lidar_sensor.data.ray_hits_w - self._lidar_sensor.data.pos_w.unsqueeze(1)) .clamp_max(self.lidar_range * 2.0)
+        vec_to_obstacles = (self._lidar_sensor.data.ray_hits_w - self._lidar_sensor.data.pos_w.unsqueeze(1)).clamp_max(self.lidar_range * 2.0)
         dists = vec_to_obstacles.norm(dim=-1)
         closest_idx = torch.argmin(dists, dim=1)
         env_idx = torch.arange(vec_to_obstacles.shape[0])
@@ -920,7 +950,6 @@ class QuadcopterEnv(DirectRLEnv):
         nearest_dist = dists[env_idx, closest_idx]
         
         nearest_angle = torch.atan2(nearest_vec[:, 1], nearest_vec[:, 0])
-        # nearest_quat = torch.zeros((self.num_envs, 4), device=self.device)
         nearest_quat = quat_from_angle_axis(nearest_angle, torch.tensor([0, 0, 1], device=self.device, dtype=torch.float32).repeat(self.num_envs, 1))
 
         robot_heading_vector = quat_apply_yaw(
@@ -932,23 +961,27 @@ class QuadcopterEnv(DirectRLEnv):
         
         sigma = 0.7  # Standard deviation of Gaussian function
         gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
-        # print("dist shape", dist.shape)
-        # print("dist ", nearest_dist[2015])
         potential = 0.5 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
         # print("potential ", potential[2015])
         potential_rew = potential * dot_vec
 
         self.my_visualizer.visualize(translations=self._lidar_sensor.data.pos_w, orientations=nearest_quat)
         self.robot_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=self._robot.data.root_quat_w)
-        # print("potential_rew", potential_rew[2015])
-        # print("nearest_dist shape = ", nearest_dist.shape)
-
         
         # heading tracking reward
         self.ref_heading = torch.atan2(relative_err_pos[:, 1], relative_err_pos[:, 0])  # radian
         self.robot_heading = self._robot.data.heading_w
         self.angle_diff = self.ref_heading - self.robot_heading
         head_tracking_path_rew = 1 - torch.tanh(torch.abs(self.angle_diff) / 0.5)
+
+        # penalty for too hight or too low
+        clipped_z = torch.clamp(
+            self._robot.data.root_pos_w[:, 2],
+            self.height_range[:, 0] - 0.2,  # allow small tolerance
+            self.height_range[:, 1] + 0.2
+        )
+        penalty_height = ((self._robot.data.root_pos_w[:, 2] - clipped_z) ** 2)  # shape (num_envs, 1)
+        # print("shape of panalty", penalty_height.shape)
 
         rewards = {
             "lin_vel": lin_vel * self.cfg.lin_vel_reward_scale * self.step_dt,
@@ -959,6 +992,7 @@ class QuadcopterEnv(DirectRLEnv):
             "reward_safety_static": reward_safety_static * self.cfg.reward_safety_static * self.step_dt,
             "head_tracking": head_tracking_path_rew * self.cfg.head_tracking * self.step_dt,
             "potential_tracking": potential_rew * self.cfg.potential_tracking * self.step_dt,
+            "penalty_height": penalty_height * self.cfg.penalty_height * self.step_dt,
         }
         reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
         
@@ -1036,6 +1070,13 @@ class QuadcopterEnv(DirectRLEnv):
         self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-17.0, 17.0)
         self._desired_pos_w[env_ids, :2] += self._terrain.env_origins[env_ids, :2]
         self._desired_pos_w[env_ids, 2] = torch.zeros_like(self._desired_pos_w[env_ids, 2]).uniform_(1.0, 1.5)
+
+        desired_heights = self._desired_pos_w[:, 2]
+        margin = 0.5
+        self.height_range = torch.stack([
+            desired_heights - margin,
+            desired_heights + margin
+        ], dim=-1)
 
         # while True:
         #     # Sample (x, y) uniformly

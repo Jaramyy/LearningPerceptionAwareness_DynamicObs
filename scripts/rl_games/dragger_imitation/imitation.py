@@ -5,6 +5,8 @@ import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 import torch.nn as nn
 import torch.optim as optim
+import h5py
+import numpy as np
 
 CONFIG_IMITATION = {
     'architecture': 'feedforward',
@@ -12,16 +14,19 @@ CONFIG_IMITATION = {
     'scheduler_factor': 1e-2,
     'scheduler_patience': 2,  # 2
     'scheduler_min_lr': 1e-4,
-    'epochs': 10,
-    'num_iterations' : 5000,
-    'num_episodes': 100,
-    'batch_size': 512,  #24576, num_step = 2048, num_env = 4096
-    'max_samples': 32768,
+    'epochs': 5,
+    'num_iterations' : 2000,
+    "minibatch_size" : 32768,
+    'batch_size': 32768,  # num_step = 2048, num_env = 4096
+    'max_samples': 65536,
+    'num_steps': 128,
+    'best_checkpoint_path': './best_model.pth',
 }
 
 
+
 class StudentPolicy(nn.Module):
-    def __init__(self, input_size=14, hidden_size=128, output_size=4):
+    def __init__(self, input_size=72, hidden_size=64, output_size=4):
         super(StudentPolicy, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.dropout1 = nn.Dropout(0.05)
@@ -61,3 +66,24 @@ class DAggerDataset(Dataset):
     def __getitem__(self, idx):
         obs, action = self.data[idx]
         return torch.tensor(obs, dtype=torch.float32), torch.tensor(action, dtype=torch.float32)
+
+
+class HDF5DAggerDataset(Dataset):
+    def __init__(self, h5_path, device='cuda:0'):
+        self.h5_path = h5_path
+        self.device = device
+        # We avoid keeping the file open to allow 'with' usage per access
+
+        # Get length once to avoid re-opening for __len__
+        with h5py.File(self.h5_path, 'r') as f:
+            self.length = f['observations'].shape[0]
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, idx):
+        with h5py.File(self.h5_path, 'r') as f:
+            obs = torch.tensor(f['observations'][idx], dtype=torch.float32, device=self.device)
+            act = torch.tensor(f['actions'][idx], dtype=torch.float32, device=self.device)
+        return obs, act
+    

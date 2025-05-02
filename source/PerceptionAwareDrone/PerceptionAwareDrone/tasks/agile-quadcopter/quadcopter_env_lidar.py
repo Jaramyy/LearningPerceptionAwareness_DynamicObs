@@ -660,7 +660,8 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
 
     ui_window_class_type = QuadcopterEnvWindow
     
-    viewer = ViewerCfg(eye=(-19.8, -23.8, 11.5), lookat=(-24.0, -8.5, -1.7), origin_type='env', env_index=2015)
+    # viewer = ViewerCfg(eye=(-19.8, -23.8, 11.5), lookat=(-24.0, -8.5, -1.7), origin_type='env', env_index=2015)
+    viewer = ViewerCfg(eye=(-19.8, -23.8, 11.5), lookat=(-24.0, -8.5, -1.7), origin_type='env')
 
     # simulation
     sim: SimulationCfg = SimulationCfg(
@@ -904,14 +905,14 @@ class QuadcopterEnv(DirectRLEnv):
         # print(self.lidar_scan.squeeze(1)[2015])
         obs = torch.cat(
             [
-                self._robot.data.root_lin_vel_b,
-                self._robot.data.root_ang_vel_b,
-                self._robot.data.projected_gravity_b,
-                unit_desird_pos_b,
-                desired_dist_2d,
-                desired_dist_z,
-                self.lidar_scan.squeeze(1),
-                potential.unsqueeze(1),
+                self._robot.data.root_lin_vel_b,  # 3
+                self._robot.data.root_ang_vel_b,  # 3
+                self._robot.data.projected_gravity_b,  # 3
+                unit_desird_pos_b,  # 3
+                desired_dist_2d,  # 1
+                desired_dist_z,  # 1
+                self.lidar_scan.squeeze(1),  # 60
+                potential.unsqueeze(1),  # 1
             ],
             dim=-1,
         )

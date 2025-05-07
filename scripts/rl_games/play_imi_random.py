@@ -193,7 +193,6 @@ def train_student_policy(student_policy, dataloader, val_loader, optimizer, loss
 
         wandb.log({'train_loss': avg_train_loss, 'val_loss': avg_val_loss, 'lr': current_lr})
 
-
     return train_loss
 
 
@@ -349,9 +348,22 @@ def main():
     #   operations such as masking that is used for multi-agent learning by RL-Games.
 
     # dragger imitation
+    # Load the checkpoint
+    checkpoint_dir = os.path.join("checkpoints")
+    checkpoint_path = os.path.join(checkpoint_dir, log_dir, "best_model.pt")
+    checkpoint = torch.load(checkpoint_path)
+    # Load the model state
+    # imitation_model = imitation.StudentPolicy()
+    # imitation_model.load_state_dict(checkpoint['model_state_dict'])
+    # imitation_model.eval()
+
 
     student_model = imitation.StudentPolicy()
     student_model = student_model.to(rl_device)
+    
+    student_model.load_state_dict(checkpoint['model_state_dict'])
+    student_model.eval()
+
     optimizer = torch.optim.Adam(student_model.parameters(), lr=imitation.CONFIG_IMITATION['lr'])
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,

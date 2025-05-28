@@ -397,9 +397,11 @@ def main():
                         obs = agent.obs_to_torch(obs)
                         lin_vel = obs[:, :3]
                         ang_vel = obs[:, 3:6]
-                        unit_desired_pos = obs[:, 6:9]
-                        desired_dist_2d = obs[:, 9:11]
-                        desired_dist_z = obs[:, 11:12]
+                        
+                        unit_desired_pos = obs[:, 9:12]
+                        
+                        desired_dist_2d = obs[:, 12:13]
+                        desired_dist_z = obs[:, 13:14]
 
                         lidar_scan = (
                             (

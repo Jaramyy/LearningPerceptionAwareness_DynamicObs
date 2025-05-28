@@ -26,7 +26,7 @@ CONFIG_IMITATION = {
 
 
 class StudentPolicy(nn.Module):
-    def __init__(self, input_size=72, hidden_size=64, output_size=4):
+    def __init__(self, input_size=71, hidden_size=64, output_size=4):
         super(StudentPolicy, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.dropout1 = nn.Dropout(0.05)

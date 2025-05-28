@@ -79,11 +79,7 @@ import wandb
 from datetime import datetime
 
 import dragger_imitation.imitation as imitation
-
-import pickle
-import gzip
-import tempfile
-import h5py
+import csv
 
 
 
@@ -275,6 +271,21 @@ def main():
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     file_name = f"dataset_{timestamp}.pt"
+
+    log_filename = f"./log_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    csv_file = open(log_filename, mode="w", newline='')
+    csv_writer = csv.writer(csv_file)
+
+    csv_writer.writerow([
+        "lin_vel_x", "lin_vel_y", "lin_vel_z",
+        "ang_vel_x", "ang_vel_y", "ang_vel_z",
+        "unit_des_x", "unit_des_y", "unit_des_z",
+        "des_dist_xy", "des_dist_z",
+        # Example for lidar: save first 5 lidar inputs only
+        *[f"lidar_{i}" for i in range(60)]
+    ])
+
+
     
     max_teacher_timesteps = 3000
     lidar_resolution = (60)
@@ -287,9 +298,12 @@ def main():
             obs = agent.obs_to_torch(obs)
             lin_vel = obs[:, :3]
             ang_vel = obs[:, 3:6]
-            unit_desired_pos = obs[:, 6:9]
-            desired_dist_2d = obs[:, 9:11]
-            desired_dist_z = obs[:, 11:12]
+            unit_desired_pos = obs[:, 9:12]
+            
+            desired_dist_2d =  obs[:, 12:13]
+            desired_dist_z = obs[:, 13:14]
+            # print("desired_dist_2d", desired_dist_2d.shape)
+            # print("desired_dist_z", desired_dist_z.shape)
 
             lidar_scan = (
                 (
@@ -304,6 +318,16 @@ def main():
             input_model = torch.cat((drone_state, lidar_scan.squeeze(1)), dim=1)  # shape (num_envs, 73)
             # print("input model shape", input_model.shape)
             student_input = input_model
+
+            # csv_writer.writerow(
+            #     [
+            #         lin_vel[0, 0].item(), lin_vel[0, 1].item(), lin_vel[0, 2].item(),
+            #         ang_vel[0, 0].item(), ang_vel[0, 1].item(), ang_vel[0, 2].item(),
+            #         unit_desired_pos[0, 0].item(), unit_desired_pos[0, 1].item(), unit_desired_pos[0, 2].item(),
+            #         desired_dist_2d[0].item(), desired_dist_z[0].item(),
+            #         *lidar_scan[0].squeeze(1).cpu().numpy().tolist()
+            #     ]
+            # )
             teacher_actions = agent.get_action(obs, is_deterministic=agent.is_deterministic)
             student_actions = play_student_model(student_model, student_input).squeeze(1)
 

@@ -328,7 +328,7 @@ def main():
             #         *lidar_scan[0].squeeze(1).cpu().numpy().tolist()
             #     ]
             # )
-            teacher_actions = agent.get_action(obs, is_deterministic=agent.is_deterministic)
+            # teacher_actions = agent.get_action(obs, is_deterministic=agent.is_deterministic)
             student_actions = play_student_model(student_model, student_input).squeeze(1)
 
             policy_actions = student_actions
@@ -349,6 +349,11 @@ def main():
             # Exit the play loop after recording one video
             if timestep == args_cli.video_length:
                 break
+
+        # loop_duration = time.time() - start_time
+        # print(f"Loop time: {loop_duration:.4f} seconds, Frequency: {1.0 / loop_duration:.2f} Hz")
+
+        
         # time delay for real-time evaluation
         sleep_time = dt - (time.time() - start_time)
         if args_cli.real_time and sleep_time > 0:

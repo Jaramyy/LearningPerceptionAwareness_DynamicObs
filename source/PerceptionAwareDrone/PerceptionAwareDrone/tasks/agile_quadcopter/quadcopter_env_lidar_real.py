@@ -182,8 +182,7 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
         prim_path="/World/envs/env_.*/Robot/base_link",
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.15)),
         attach_yaw_only=False,
-        # pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-50.0, 50.0),horizontal_res=1.67),     #For limited fov
-        pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-179.0, 179.0),horizontal_res=6.0),      #For full fov
+        pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-50.0, 50.0),horizontal_res=1.67),     
         # pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-48.0, 48.0),horizontal_res=3.0),   
         debug_vis=False,
         mesh_prim_paths=["/World/ground"],
@@ -194,31 +193,14 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
 
     # reward scales
     lin_vel_reward_scale = -0.05
-    ang_vel_reward_scale = -0.002
-    distance_to_goal_reward_scale = 60.0
+    ang_vel_reward_scale = -0.05
+    distance_to_goal_reward_scale = 40.0
     action_rate_reward_scale = -0.5
     velocity_direction = 15.0
-    reward_safety_static = 30.0  # 15.0
-    head_tracking = 15.0  # 15.0
-    potential_tracking = 40.0  # 60.0
-    penalty_height = -0.1
-    heading_reward_blended = 2.0
-
-    taus: list[float] = (0.0001, 0.0001, 0.0001, 0.0001)
-    """Time constants for each motor."""
-        
-    init: list[float] = (2572.5, 2572.5, 2572.5, 2572.5)
-    """Initial angular velocities for each motor in rad/s."""
-        
-    max_rate: list[float] = (50000.0, 50000.0, 50000.0, 50000.0)
-    """Maximum rate of change of angular velocities for each motor in rad/s^2."""
-        
-    min_rate: list[float] = (-50000.0, -50000.0, -50000.0, -50000.0)
-    """Minimum rate of change of angular velocities for each motor in rad/s^2."""
-        
-    use_motor_model: bool = False
-    """Flag to determine if motor delay is bypassed."""
-
+    reward_safety_static = 30.0#15.0
+    head_tracking = 15.0
+    potential_tracking = 65.0#60.0
+    penalty_height = - 0.1
 
 
 class QuadcopterEnv(DirectRLEnv):
@@ -248,11 +230,6 @@ class QuadcopterEnv(DirectRLEnv):
                 "head_tracking",
                 "potential_tracking",
                 "penalty_height",
-                "reach_goal_vel_penalty",
-                "reach_goal_ang_vel_penalty",
-                "stable_reward",
-                "heading_reward_blended",
-                "repulsion_reward",
             ]
         }
         # Get specific body indices
@@ -278,19 +255,6 @@ class QuadcopterEnv(DirectRLEnv):
         self.robot_visualizer = self.define_robot_markers()
 
         self._reach_goal_counter = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
-
-        self.alloc_matrix = Allocation(num_envs=self.num_envs, device=self.device)
-
-        self._motor = Motor(
-            num_envs=self.num_envs,
-            taus=self.cfg.taus,
-            init=self.cfg.init,
-            max_rate=self.cfg.max_rate,
-            min_rate=self.cfg.min_rate,
-            dt=self.step_dt,
-            use=self.cfg.use_motor_model,
-            device=self.device,
-        )
     
     def define_markers(self) -> VisualizationMarkers:
         """Define markers with various different shapes."""
@@ -343,35 +307,11 @@ class QuadcopterEnv(DirectRLEnv):
         # add lights
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
-    
-    def _process_actions(self, actions: torch.Tensor):
-        """Process actions before applying them to the robot."""
-        # Clamp actions to the range [-1.0, 1.0]
-        # actions = actions.clone().clamp(-1.0, 1.0)
-        # Scale actions to the range [0.0, 1.0]
-        scaled_actions = (actions + 1.0) / 2.0
 
-        omega_ref = self.alloc_matrix.get_omega_max() * scaled_actions
-        omega_real = self._motor.compute(omega_ref)
-
-        processed_actions = self.alloc_matrix.compute(omega_real)
-
-        return processed_actions
-    
     def _pre_physics_step(self, actions: torch.Tensor):
         self._actions = actions.clone().clamp(-1.0, 1.0)
-
-        self._actions_modify = self._process_actions(self._actions)
-        # if torch.isnan(self._actions_modify).any() or torch.isinf(self._actions_modify).any():
-        #     print("[ERROR] NaN or Inf in actions")
-
-        # print("actions modify shape", self._actions_modify.shape)
-        # print("actions modify", self._actions_modify[0])
-
-        self._thrust[:, 0, 2] = self._actions_modify[:, 0]
-        self._moment[:, 0, :] = self._actions_modify[:, 1:]
-        # self._thrust[:, 0, 2] = self.cfg.thrust_to_weight * self._robot_weight * (self._actions[:, 0] + 1.0) / 2.0
-        # self._moment[:, 0, :] = self.cfg.moment_scale * self._actions[:, 1:]
+        self._thrust[:, 0, 2] = self.cfg.thrust_to_weight * self._robot_weight * (self._actions[:, 0] + 1.0) / 2.0
+        self._moment[:, 0, :] = self.cfg.moment_scale * self._actions[:, 1:]
 
     def _apply_action(self):
         self._robot.set_external_force_and_torque(self._thrust, self._moment, body_ids=self._body_id)
@@ -387,6 +327,13 @@ class QuadcopterEnv(DirectRLEnv):
 
         desired_dist_2d = desired_pos_b[:, :2].norm(dim=-1, keepdim=True)
         desired_dist_z = desired_pos_b[:, 2].unsqueeze(1)
+        # print("unit_desird_pos_b", unit_desird_pos_b)
+        
+
+        # print("desired_pos_w", self._desired_pos_w[2015])
+        # print("root_pos_w", self._robot.data.root_pos_w[2015])
+        # print("desired_dist", desired_dist[2015])
+        # print("desired_pos_b", desired_pos_b[2015])
 
         self.lidar_scan = (
             (
@@ -409,6 +356,7 @@ class QuadcopterEnv(DirectRLEnv):
         gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
         potential = 0.5 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
         
+        # print(self.lidar_scan.squeeze(1)[2015])
         obs = torch.cat(
             [
                 self._robot.data.root_lin_vel_b,  # 3
@@ -430,7 +378,7 @@ class QuadcopterEnv(DirectRLEnv):
         ang_vel = torch.sum(torch.square(self._robot.data.root_ang_vel_b), dim=1)
         
         distance_to_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1)
-        distance_to_goal_mapped = 1 - torch.tanh(distance_to_goal / 0.4)
+        distance_to_goal_mapped = 1 - torch.tanh(distance_to_goal / 0.5)
 
         # action rate reward
         # print(torch.square(self._actions - self.previous_action))
@@ -464,22 +412,13 @@ class QuadcopterEnv(DirectRLEnv):
             torch.tensor([1, 0, 0], device=self.device, dtype=torch.float32).repeat(self.num_envs, 1),
         )
 
-        nearest_vec_norm = nearest_vec / (nearest_vec.norm(dim=-1, keepdim=True) + 1e-6)
-
-        # TODO: Edit this part to use the robot's heading vector
-        cos_facing_obstacle = torch.sum(robot_heading_vector * nearest_vec_norm, dim=1)  # in [-1, 1]
-        # dot_vec = torch.abs(torch.sum(robot_heading_vector * nearest_vec, dim=1))
+        dot_vec = torch.abs(torch.sum(robot_heading_vector * nearest_vec, dim=1))
         
         sigma = 0.7  # Standard deviation of Gaussian function
         gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
         potential = 0.5 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
         # print("potential ", potential[2015])
-        
-        # TODO: Edit this part to use the robot's heading vector
-        potential_rew = potential * cos_facing_obstacle
-        #potential_rew = potential * dot_vec
-        
-
+        potential_rew = potential * dot_vec
 
         self.my_visualizer.visualize(translations=self._lidar_sensor.data.pos_w, orientations=nearest_quat)
         self.robot_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=self._robot.data.root_quat_w)
@@ -493,38 +432,11 @@ class QuadcopterEnv(DirectRLEnv):
         # penalty for too hight or too low
         clipped_z = torch.clamp(
             self._robot.data.root_pos_w[:, 2],
-            self.height_range[:, 0] ,  # allow small tolerance
-            self.height_range[:, 1]
+            self.height_range[:, 0] - 0.2,  # allow small tolerance
+            self.height_range[:, 1] + 0.2
         )
         penalty_height = ((self._robot.data.root_pos_w[:, 2] - clipped_z) ** 2)  # shape (num_envs, 1)
         # print("shape of panalty", penalty_height.shape)
-
-        goal_reached_now = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1) < 0.3
-        goal_reached_precise = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1) < 0.15
-        lin_vel_norm = torch.linalg.norm(self._robot.data.root_lin_vel_b, dim=1)
-        reach_goal_vel_penalty = -(goal_reached_now.float() * lin_vel_norm * 0.5)
-
-        ang_vel_norm = torch.linalg.norm(self._robot.data.root_ang_vel_w, dim=1)
-        reach_goal_ang_vel_penalty = -(goal_reached_now.float() * ang_vel_norm * 0.5)
-        
-        flag_reach_goal = self._reach_goal_counter < 1
-        self._reach_goal_counter = torch.where(goal_reached_precise, self._reach_goal_counter + 1, self._reach_goal_counter)
-        goal_reached_bonus_once = torch.where(
-            flag_reach_goal & goal_reached_precise,
-            torch.ones_like(goal_reached_now, dtype=torch.float32) * 100.0,
-            torch.zeros_like(goal_reached_now, dtype=torch.float32),
-        )
-        
-        stable_reward = (distance_to_goal < 0.15) & (lin_vel_norm < 0.1)
-        stable_reward = stable_reward.float() * 10.0
-
-        goal_heading_error = torch.abs(self.angle_diff)
-        goal_heading_reward = 1 - torch.tanh(goal_heading_error / 0.5)
-        heading_reward_blended = (1 - potential) * goal_heading_reward + potential * cos_facing_obstacle
-
-        # nearest_vec_unit = nearest_vec / (nearest_vec.norm(dim=-1, keepdim=True) + 1e-6)  
-        # repulsion_vector = -nearest_vec_unit * potential.unsqueeze(-1)     
-        # repulsion_reward = torch.sum(self._robot.data.root_lin_vel_b * repulsion_vector, dim=1)
 
         rewards = {
             "lin_vel": lin_vel * self.cfg.lin_vel_reward_scale * self.step_dt,
@@ -536,14 +448,8 @@ class QuadcopterEnv(DirectRLEnv):
             "head_tracking": head_tracking_path_rew * self.cfg.head_tracking * self.step_dt,
             "potential_tracking": potential_rew * self.cfg.potential_tracking * self.step_dt,
             "penalty_height": penalty_height * self.cfg.penalty_height * self.step_dt,
-            "reach_goal_vel_penalty": reach_goal_vel_penalty * self.step_dt,
-            "reach_goal_ang_vel_penalty": reach_goal_ang_vel_penalty * self.step_dt,
-            "stable_reward": stable_reward * self.step_dt,
-            "heading_reward_blended": heading_reward_blended * self.cfg.heading_reward_blended * self.step_dt,
-            # "repulsion_reward": 5.0 * repulsion_reward * self.step_dt,
-
         }
-        reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
+        reward = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
         
         self.previous_action = self._actions.clone()
 
@@ -554,34 +460,24 @@ class QuadcopterEnv(DirectRLEnv):
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
         time_out = self.episode_length_buf >= self.max_episode_length - 1
-        died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.3, self._robot.data.root_pos_w[:, 2] > 4.0)
+        died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.3, self._robot.data.root_pos_w[:, 2] > 3.0)
         
         self._time_limit = 100
-        self.reach_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1) < 0.02
-        # self._reach_goal_counter = self._reach_goal_counter + reach_goal.int()
-        # self._reach_goal_exceed = self._reach_goal_counter > self._time_limit
+        reach_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1) < 0.25
+        self._reach_goal_counter = self._reach_goal_counter + reach_goal.int()
+        self._reach_goal_exceed = self._reach_goal_counter > self._time_limit
 
         # died = died | reach_goal
         # print("dead shape", died.shape)
 
         # print("lidar dist",einops.reduce(self.lidar_scan, "n 1 w -> n 1", "min"))
-        static_collision = einops.reduce(self.lidar_scan, "n 1 w -> n 1", "min") < 0.25  # 0.3 collision radius
+        static_collision = einops.reduce(self.lidar_scan, "n 1 w -> n 1", "min") < 0.1  # 0.3 collision radius
         # print("static_collision", static_collision.squeeze(1))
         # num_collisions = static_collision.sum()
-        
-        # static_collision = einops.reduce(self.lidar_scan, "n 1 w -> n 1", "max") < (self.lidar_range - (self.lidar_range - 0.3))  # 0.3 collision radius
-        # print(self._robot.data.root_lin_vel_b.shape)
-        # print("shape norm", torch.norm(self._robot.data.root_lin_vel_b, dim=1).shape)
-        # print("norm", torch.norm(self._robot.data.root_lin_vel_b.squeeze(0), dim=1, keepdim=True))
-
-        limit_vel = torch.norm(self._robot.data.root_lin_vel_b, dim=1) > 4.0
-        
-        # print(self._robot.data.projected_gravity_b[2015, :])
         uprightness = self._robot.data.projected_gravity_b[:, 2] >= 0.0
 
-        died = died | static_collision.squeeze(1) | limit_vel | uprightness | self.reach_goal
         # died = died | static_collision.squeeze(1) | limit_vel | uprightness | self._reach_goal_exceed
-        # died = died | static_collision.squeeze(1) | uprightness | self._reach_goal_exceed
+        died = died | static_collision.squeeze(1) | uprightness | self._reach_goal_exceed
         
         # print("dead shape2 ", died.shape)
         return died, time_out
@@ -611,12 +507,16 @@ class QuadcopterEnv(DirectRLEnv):
         super()._reset_idx(env_ids)
         if len(env_ids) == self.num_envs:
             # Spread out the resets to avoid spikes in training when many environments reset at a similar time
-            self.episode_length_buf = torch.randint_like(self.episode_length_buf, high=int(self.max_episode_length))
+            # self.episode_length_buf = torch.randint_like(self.episode_length_buf, high=int(self.max_episode_length))
+            self.episode_length_buf = torch.zeros_like(self.episode_length_buf)
+
 
         self._actions[env_ids] = 0.0
         self._reach_goal_counter[env_ids] = 0
         
         # Sample new commands
+        box_size = 15.0
+        half_box = box_size / 2.0
         self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-17.0, 17.0)
         self._desired_pos_w[env_ids, :2] += self._terrain.env_origins[env_ids, :2]
         self._desired_pos_w[env_ids, 2] = torch.zeros_like(self._desired_pos_w[env_ids, 2]).uniform_(1.0, 1.5)
@@ -641,8 +541,6 @@ class QuadcopterEnv(DirectRLEnv):
         self._robot.write_root_velocity_to_sim(default_root_state[:, 7:], env_ids)
         self._robot.write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
 
-        self._motor.reset(env_ids)
-
     def _set_debug_vis_impl(self, debug_vis: bool):
         # create markers if necessary for the first tome
         if debug_vis:
@@ -663,131 +561,3 @@ class QuadcopterEnv(DirectRLEnv):
         self.goal_pos_visualizer.visualize(self._desired_pos_w)
 
 
-class Allocation:
-    def __init__(self, num_envs, device="cuda", dtype=torch.float32):
-        """
-        Initializes the allocation matrix for a quadrotor for multiple environments.
-
-        Parameters:
-        - num_envs (int): Number of environments
-        - arm_length (float): Distance from the center to the rotor
-        - thrust_coeff (float): Rotor thrust constant
-        - drag_coeff (float): Rotor torque constant
-        - device (str): 'cpu' or 'cuda'
-        - dtype (torch.dtype): Desired tensor dtype
-        """
-        
-        arm_length: float = 0.130 #0.035
-        """Length of the arms of the drone in meters."""
-        
-        drag_coef: float = 1.5e-9
-        """Drag torque coefficient."""
-        
-        thrust_coef: float = 5.327e-7 #2.25e-7
-        """Thrust coefficient.
-        Calculated with 5145 rad/s max angular velociy, thrust to weight: 4, mass: 0.6076 kg and gravity: 9.81 m/s^2.
-        thrust_coef = (4 * 0.6076 * 9.81) / (4 * 5145**2) = 2.25e-7."""
-        
-        self.omega_max: float = 5145.0
-        """Maximum angular velocity of the drone motors in rad/s.
-        Calculated with 1950KV motor, with 6S LiPo battery with 4.2V per cell.
-        1950 * 6 * 4.2 = 49,140 RPM ~= 5145 rad/s."""
-        
-
-        sqrt2_inv = 1.0 / torch.sqrt(torch.tensor(2.0, dtype=dtype, device=device))
-        A = torch.tensor(
-            [
-                [1.0, 1.0, 1.0, 1.0],
-                [arm_length * sqrt2_inv, -arm_length * sqrt2_inv, -arm_length * sqrt2_inv, arm_length * sqrt2_inv],
-                [-arm_length * sqrt2_inv, -arm_length * sqrt2_inv, arm_length * sqrt2_inv, arm_length * sqrt2_inv],
-                [drag_coef, -drag_coef, drag_coef, -drag_coef],
-            ],
-            dtype=dtype,
-            device=device,
-        )
-        self._allocation_matrix = A.unsqueeze(0).repeat(num_envs, 1, 1)
-        self._thrust_coeff = thrust_coef
-
-    def compute(self, omega):
-        """
-        Computes the total thrust and body torques given the rotor angular velocities.
-
-        Parameters:
-        - omega (torch.Tensor): Tensor of shape (num_envs, 4) representing rotor angular velocities
-
-        Returns:
-        - thrust_torque (torch.Tensor): Tensor of shape (num_envs, 4)
-        """
-        thrusts_ref = self._thrust_coeff * omega**2
-        thrust_torque = torch.bmm(self._allocation_matrix, thrusts_ref.unsqueeze(-1)).squeeze(-1)
-        return thrust_torque
-    
-    def get_omega_max(self):
-        """
-        Returns the maximum angular velocity of the motors.
-
-        Returns:
-        - omega_max (float): Maximum angular velocity in rad/s.
-        """
-        return self.omega_max
-
-
-class Motor:
-    def __init__(self, num_envs, taus, init, max_rate, min_rate, dt, use, device="cpu", dtype=torch.float32):
-        """
-        Initializes the motor model.
-
-        Parameters:
-        - num_envs: Number of envs.
-        - taus: (4,) Tensor or list specifying time constants per motor.
-        - init: (4,) Tensor or list specifying the initial omega per motor. (rad/s)
-        - max_rate: (4,) Tensor or list specifying max rate of change of omega per motor. (rad/s^2)
-        - min_rate: (4,) Tensor or list specifying min rate of change of omega per motor. (rad/s^2)
-        - dt: Time step for integration.
-        - use: Boolean indicating whether to use motor dynamics.
-        - device: 'cpu' or 'cuda' for tensor operations.
-        - dtype: Data type for tensors.
-        """
-        self.num_envs = num_envs
-        self.num_motors = len(taus)
-        self.dt = dt
-        self.use = use
-        self.init = init
-        self.device = device
-        self.dtype = dtype
-
-        self.omega = torch.tensor(init, device=device).expand(num_envs, -1).clone()  # (num_envs, num_motors)
-
-        # Convert to tensors and expand for all drones
-        self.tau = torch.tensor(taus, device=device).expand(num_envs, -1)  # (num_envs, num_motors)
-        self.max_rate = torch.tensor(max_rate, device=device).expand(num_envs, -1)  # (num_envs, num_motors)
-        self.min_rate = torch.tensor(min_rate, device=device).expand(num_envs, -1)  # (num_envs, num_motors)
-
-    def compute(self, omega_ref):
-        """
-        Computes the new omega values based on reference omega and motor dynamics.
-
-        Parameters:
-        - omega_ref: (num_envs, num_motors) Tensor of reference omega values.
-
-        Returns:
-        - omega: (num_envs, num_motors) Tensor of updated omega values.
-        """
-
-        if not self.use:
-            self.omega = omega_ref
-            return self.omega
-
-        # Compute omega rate using first-order motor dynamics
-        omega_rate = (1.0 / self.tau) * (omega_ref - self.omega)  # (num_envs, num_motors)
-        omega_rate = omega_rate.clamp(self.min_rate, self.max_rate)
-
-        # Integrate
-        self.omega += self.dt * omega_rate
-        return self.omega
-
-    def reset(self, env_ids):
-        """
-        Resets the motor model to initial conditions.
-        """
-        self.omega[env_ids] = torch.tensor(self.init, device=self.device, dtype=self.dtype).expand(len(env_ids), -1)

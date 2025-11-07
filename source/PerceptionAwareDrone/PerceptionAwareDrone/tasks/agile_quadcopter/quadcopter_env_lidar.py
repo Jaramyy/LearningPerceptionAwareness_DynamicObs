@@ -350,10 +350,8 @@ class QuadcopterEnv(DirectRLEnv):
         # actions = actions.clone().clamp(-1.0, 1.0)
         # Scale actions to the range [0.0, 1.0]
         scaled_actions = (actions + 1.0) / 2.0
-
         omega_ref = self.alloc_matrix.get_omega_max() * scaled_actions
         omega_real = self._motor.compute(omega_ref)
-
         processed_actions = self.alloc_matrix.compute(omega_real)
 
         return processed_actions

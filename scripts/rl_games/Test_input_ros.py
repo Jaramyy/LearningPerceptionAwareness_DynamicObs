@@ -56,34 +56,9 @@ from isaaclab.utils.math import subtract_frame_transforms
 
 import time
 
-class StudentPolicy(nn.Module):
-    def __init__(self, input_size=71, hidden_size=64, output_size=4):
-        super(StudentPolicy, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size)
-        self.dropout1 = nn.Dropout(0.05)
-        self.fc2 = nn.Linear(hidden_size, hidden_size)
-        self.dropout2 = nn.Dropout(0.05)
-        self.fc3 = nn.Linear(hidden_size, hidden_size)
-        self.dropout3 = nn.Dropout(0.05)
-        self.out = nn.Linear(hidden_size, output_size)
-        self.elu = nn.ELU()
-
-    def forward(self, x):
-        x1 = self.elu(self.fc1(x))
-        x1 = self.dropout1(x1)
-
-        x2 = self.elu(self.fc2(x1))
-        x2 = self.dropout2(x2)
-
-        x3 = self.elu(self.fc3(x2))
-        x3 = self.dropout3(x3)
-
-        out = self.out(x3)
-
-        return out  # self.fc3(x)
-
-    def loss(self):
-        return nn.MSELoss()
+import rclpy
+from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
 
 
 def main():
@@ -309,6 +284,91 @@ def main():
             loop_duration = time.time() - start_time
             # print(f"Loop time: {loop_duration:.4f} seconds, Frequency: {1.0 / loop_duration:.2f} Hz")
 
+class StudentPolicyControl:
+    def __init__(self):
+        self.input_size = 71
+        self.hidden_size = 64
+        self.output_size = 4
+        
+        # Load kit helper
+        sim_cfg = sim_utils.SimulationCfg(
+            dt=1 / 100,
+            device=args_cli.device, 
+            render_interval=2,
+            physics_material=sim_utils.RigidBodyMaterialCfg(
+                friction_combine_mode="multiply",
+                restitution_combine_mode="multiply",
+                static_friction=1.0,
+                dynamic_friction=1.0,
+                restitution=0.0,)
+        )
+
+        sim = SimulationContext(sim_cfg)
+        # Set main camera
+        sim.set_camera_view(eye=[1.0, 1.0, 2.0], target=[0.0, 0.0, 1.0])
+
+        # Spawn things into stage
+        # Ground-plane
+        cfg = sim_utils.GroundPlaneCfg()
+        cfg.func("/World/defaultGroundPlane", cfg)
+        # Lights
+        cfg = sim_utils.DistantLightCfg(intensity=3000.0, color=(0.75, 0.75, 0.75))
+        cfg.func("/World/Light", cfg)
+
+        # Robots
+        robot_cfg = AGILE_CFG.replace(prim_path="/World/AgileDrone")
+        # robot_cfg = CRAZYFLIE_CFG.replace(prim_path="/World/Crazyflie")
+        robot_cfg.spawn.func(
+            "/World/AgileDrone", robot_cfg.spawn, translation=robot_cfg.init_state.pos
+        )
+
+        # create handles for the robots
+        robot = Articulation(robot_cfg)
+
+        # Play the simulator
+        sim.reset()
+
+        checkpoint_dir = os.path.join(
+            "/home/jaramy/ros2_ws/src/ROS2_PX4_Offboard_Example/px4_offboard",
+            "checkpoints",
+        )
+        checkpoint_path = os.path.join(checkpoint_dir, "best_model.pt")
+
+        student_policy = StudentPolicy(self.input_size, self.hidden_size, self.output_size)
+        student_policy.to(torch.device("cuda"))
+        checkpoint = torch.load(checkpoint_path)
+        student_policy.load_state_dict(checkpoint["model_state_dict"])
+        student_policy.eval()
+
+
+class StudentPolicy(nn.Module):
+    def __init__(self, input_size=71, hidden_size=64, output_size=4):
+        super(StudentPolicy, self).__init__()
+        self.fc1 = nn.Linear(input_size, hidden_size)
+        self.dropout1 = nn.Dropout(0.05)
+        self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.dropout2 = nn.Dropout(0.05)
+        self.fc3 = nn.Linear(hidden_size, hidden_size)
+        self.dropout3 = nn.Dropout(0.05)
+        self.out = nn.Linear(hidden_size, output_size)
+        self.elu = nn.ELU()
+
+    def forward(self, x):
+        x1 = self.elu(self.fc1(x))
+        x1 = self.dropout1(x1)
+
+        x2 = self.elu(self.fc2(x1))
+        x2 = self.dropout2(x2)
+
+        x3 = self.elu(self.fc3(x2))
+        x3 = self.dropout3(x3)
+
+        out = self.out(x3)
+
+        return out  # self.fc3(x)
+
+    def loss(self):
+        return nn.MSELoss()
 
 
 class Allocation:

@@ -53,8 +53,9 @@ import os
 from datetime import datetime
 import csv
 from isaaclab.utils.math import subtract_frame_transforms
-
+from isaaclab.utils.math import matrix_from_quat
 import time
+
 
 import rclpy
 from rclpy.node import Node
@@ -153,52 +154,63 @@ def main():
         device=sim.device,
     )
 
-    controller = VelocityController(k_p=3.0, k_d=1.2, max_force=10.0, device=sim.device)
+    # Create controllers
+    pos_controller = PositionController(k_p=5.2, k_d=0.4, max_vel=10.0, device=sim.device)
+    vel_controller = VelocityController(k_p=10.0, k_d=1.2, max_force=50.0, device=sim.device)
+    yaw_controller = YawController(k_p=4.0, k_d=0.8, max_torque=0.5, device=sim.device)
+
+    desired_pos = torch.tensor([[0.0, 0.0, 2.0]], device=sim.device)
+    desired_yaw = torch.tensor([0.0], device=sim.device)  # 0 rad (facing forward)
 
     while simulation_app.is_running():
-        start_time = time.time()
-        # rclpy.spin_once(pid_publisher, timeout_sec=0.0)
-
         with torch.inference_mode():
-            lin_vel_b = robot.data.root_lin_vel_b
+            
+
+            # Read current states
+            state_w = {
+                "pos_w": robot.data.root_pos_w,
+                "lin_vel_w": robot.data.root_lin_vel_w,
+                "rot_w_b": matrix_from_quat(robot.data.root_link_quat_w),
+            }
             ang_vel_b = robot.data.root_ang_vel_b
-            robot_pos = robot.data.root_state_w[:, :3]
 
-            # Example input to the policy (you’ll replace this with real policy output)
-            policy_input = torch.cat((lin_vel_b[0], ang_vel_b[0], lidar[0]), dim=0)
-            # Simulate a hovering command (vx, vy, vz, yaw_rate = 0)
-            action = torch.zeros(1, 4, device=sim.device)
+            # --- Position Control ---
+            # target_vel_b = pos_controller(state_w, desired_pos)
 
-            # Convert normalized policy output to physical velocity targets
-            max_v = torch.tensor([2.0, 2.0, 2.0], device=sim.device)
-            max_yaw = 1.0  # rad/s
-            target_vel = torch.cat((action[..., :3] * max_v, action[..., 3:4] * max_yaw), dim=-1)
+            # --- Velocity Control (for thrust & XY) ---
+            state_vel = {"lin_vel_b": robot.data.root_lin_vel_b, "ang_vel_b": ang_vel_b}
+            # target_vel_4d = torch.cat([target_vel_b, torch.zeros((1, 1), device=sim.device)], dim=-1)
+            force_b, torque_b = vel_controller(state_vel, target_vel_4d)
 
-            # Run velocity controller
-            state = {"lin_vel_b": lin_vel_b, "ang_vel_b": ang_vel_b}
-            force_b, torque_b = controller(state, target_vel)
+            # --- Yaw Control ---
+            # yaw_torque = yaw_controller(matrix_from_quat(robot.data.root_link_quat_w), ang_vel_b, desired_yaw)
+            # torque_b[:, 2:3] = yaw_torque  # replace yaw torque
 
-            # Convert to motor commands
-            total_thrust = force_b[:, 2] + robot_mass * gravity
-            processed_actions = torch.cat(
-                [total_thrust.unsqueeze(-1), torque_b], dim=-1
-            ).unsqueeze(0)
+            # --- Force + Motor Allocation ---
+            total_thrust = force_b[:, 2] + robot_mass * (-1*gravity)
+            # processed_actions = torch.cat([total_thrust.unsqueeze(-1), torque_b], dim=-1).unsqueeze(0)
 
-            # Compute rotor speeds via allocation
-            omega_guess = torch.sqrt(torch.abs(processed_actions / alloc_matrix._thrust_coeff))
-            omega_ref = torch.clamp(omega_guess.squeeze(0), 0.0, alloc_matrix.get_omega_max())
+            # omega_guess = torch.sqrt(torch.abs(processed_actions / alloc_matrix._thrust_coeff))
+            # omega_ref = torch.clamp(omega_guess.squeeze(0), 0.0, alloc_matrix.get_omega_max())
+            # omega_real = motor.compute(omega_ref)
+            # processed_actions = alloc_matrix.compute(omega_real)
 
-            omega_real = motor.compute(omega_ref)
-            processed_actions = alloc_matrix.compute(omega_real)
+            # forces[:, 2] = processed_actions[0, 0]
+            # torques[:, :] = processed_actions[0, 1:]
+            forces[:, 2] = total_thrust
+            torques[:, :] = torque_b
 
-            forces[:, 2] = processed_actions[0, 0]
-            torques[:, :] = processed_actions[0, 1:]
 
+            # --- Publish debug data for PlotJuggler ---
+            pid_publisher.publish_vec(pid_publisher.pub_error, (target_vel_b - robot.data.root_lin_vel_b).squeeze().cpu())
+            pid_publisher.publish_vec(pid_publisher.pub_cmd, force_b.squeeze().cpu())
+            pid_publisher.publish_vec(pid_publisher.pub_vel, robot.data.root_lin_vel_b.squeeze().cpu())
+            pid_publisher.publish_vec(pid_publisher.pub_target, target_vel_b.squeeze().cpu())
+
+            # --- Apply control ---
             robot.set_external_force_and_torque(forces, torques, body_ids=body_id)
             robot.write_data_to_sim()
             sim.step()
-
-            count += 1
             sim_time += sim_dt
             robot.update(sim_dt)
 
@@ -407,6 +419,76 @@ class PIDPlotPublisher(Node):
         msg.y = float(vec[1])
         msg.z = float(vec[2])
         pub.publish(msg)
+
+class PositionController:
+    def __init__(self, k_p=1.0, k_d=0.3, max_vel=2.0, device="cuda"):
+        """
+        Simple PD position controller that outputs desired body-frame velocity.
+        Args:
+            k_p: proportional gain for position error
+            k_d: derivative gain for velocity damping
+            max_vel: max output velocity [m/s]
+        """
+        self.k_p = k_p
+        self.k_d = k_d
+        self.max_vel = max_vel
+        self.device = device
+
+    def __call__(self, state, target_pos):
+        """
+        Args:
+            state: dict with 'pos_w', 'lin_vel_w' (world frame)
+            target_pos: (num_envs, 3) desired position in world frame
+        Returns:
+            target_vel_b: (num_envs, 3) desired velocity in body frame
+        """
+        pos_w = state["pos_w"]
+        lin_vel_w = state["lin_vel_w"]
+
+        pos_error = target_pos - pos_w
+        vel_cmd_w = self.k_p * pos_error - self.k_d * lin_vel_w
+        vel_cmd_w = torch.clamp(vel_cmd_w, -self.max_vel, self.max_vel)
+
+        # Convert to body frame using rotation matrix
+        rot_w_b = state["rot_w_b"]  # shape: (num_envs, 3, 3)
+        target_vel_b = torch.bmm(rot_w_b.transpose(1, 2), vel_cmd_w.unsqueeze(-1)).squeeze(-1)
+
+        return target_vel_b
+class YawController:
+    def __init__(self, k_p=3.0, k_d=0.5, max_torque=0.5, device="cuda"):
+        """
+        Simple PD controller for yaw orientation.
+        Args:
+            k_p: proportional gain for yaw error
+            k_d: derivative gain for yaw rate damping
+        """
+        self.k_p = k_p
+        self.k_d = k_d
+        self.max_torque = max_torque
+        self.device = device
+
+    def __call__(self, current_rot, current_ang_vel, desired_yaw):
+        """
+        Args:
+            current_rot: (num_envs, 3, 3) rotation matrices world->body
+            current_ang_vel: (num_envs, 3) angular velocity in body frame
+            desired_yaw: (num_envs,) desired yaw in radians
+        Returns:
+            yaw_torque: (num_envs, 1)
+        """
+        # Extract current yaw angle from rotation matrix
+        current_yaw = torch.atan2(current_rot[:, 1, 0], current_rot[:, 0, 0])  # atan2(R21, R11)
+        yaw_error = desired_yaw - current_yaw
+
+        # Wrap error to [-pi, pi]
+        yaw_error = (yaw_error + torch.pi) % (2 * torch.pi) - torch.pi
+
+        # PD control on yaw
+        yaw_rate = current_ang_vel[:, 2]
+        yaw_torque = self.k_p * yaw_error - self.k_d * yaw_rate
+
+        yaw_torque = torch.clamp(yaw_torque, -self.max_torque, self.max_torque)
+        return yaw_torque.unsqueeze(-1)
 
 if __name__ == "__main__":
     # run the main function

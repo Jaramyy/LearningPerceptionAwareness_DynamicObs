@@ -504,7 +504,160 @@ class GeometricPositionController:
 
         return thrust, torque
 
+class GeometricVelocityController:
 
+    def __init__(self, mass, inertia, device):
+        self.mass = mass
+        self.J = inertia.unsqueeze(0).to(device)    # (1,3,3)
+        self.device = device
+
+        # Position gains
+        self.k_p = 16.0 # WORKED at 16.0
+        self.k_d = 64.0
+
+        # Attitude gains
+        self.kR = 2.0 #4.5
+        self.kW = 0.2 #0.3
+
+        # Gravity
+        self.g = torch.tensor([0., 0., -9.81], device=device).unsqueeze(0)
+
+
+    # --------------------
+    # Utility functions
+    # --------------------
+    def vee_map(self, M):
+        # Extract [M32 - M23, M13 - M31, M21 - M12]
+        return torch.stack((
+            M[:, 2, 1] - M[:, 1, 2],
+            M[:, 0, 2] - M[:, 2, 0],
+            M[:, 1, 0] - M[:, 0, 1],
+        ), dim=1)
+
+    def matrix_from_quat(self, q):
+        """ IsaacLab format: q = (w,x,y,z) """
+        w, x, y, z = q[:, 0], q[:, 1], q[:, 2], q[:, 3]
+
+        R = torch.zeros((q.shape[0], 3, 3), device=q.device)
+
+        R[:, 0, 0] = 1 - 2 * (y * y + z * z)
+        R[:, 0, 1] = 2 * (x * y - z * w)
+        R[:, 0, 2] = 2 * (x * z + y * w)
+
+        R[:, 1, 0] = 2 * (x * y + z * w)
+        R[:, 1, 1] = 1 - 2 * (x * x + z * z)
+        R[:, 1, 2] = 2 * (y * z - x * w)
+
+        R[:, 2, 0] = 2 * (x * z - y * w)
+        R[:, 2, 1] = 2 * (y * z + x * w)
+        R[:, 2, 2] = 1 - 2 * (x * x + y * y)
+
+        return R
+
+    def quat_rotate(self, q, v):
+        """Rotate vector v by quaternion q."""
+        R = self.matrix_from_quat(q)
+        return torch.bmm(R, v.unsqueeze(2)).squeeze(2)
+
+
+    # ----------------------------------------
+    # MAIN CONTROL STEP
+    # ----------------------------------------
+    def update(
+        self,
+        pos_w, vel_w, quat_w, omega_b,
+        desired_pos_w, desired_vel_w,
+        desired_yaw, desired_yaw_rate
+    ):
+
+        # Ensure batch dims
+        pos_w = pos_w.view(1, 3)
+        vel_w = vel_w.view(1, 3)
+        quat_w = quat_w.view(1, 4)
+        omega_b = omega_b.view(1, 3)
+        desired_pos_w = desired_pos_w.view(1, 3)
+        desired_vel_w = desired_vel_w.view(1, 3)
+
+        # ---------------------------
+        # 1) POSITION + VELOCITY ERRORS
+        # ---------------------------
+        pos_err = desired_pos_w - desired_pos_w
+        vel_err = desired_vel_w - vel_w
+
+        # ---------------------------
+        # 2) DESIRED ACCELERATION
+        # ---------------------------
+        acc_des = self.k_p * pos_err + self.k_d * vel_err + self.g
+
+        # ---------------------------
+        # 3) DESIRED BODY Z (b3c)
+        # ---------------------------
+        b3_c = acc_des / torch.norm(acc_des, dim=1, keepdim=True)
+
+        # ---------------------------
+        # 4) DESIRED BODY X,Y FROM YAW
+        # ---------------------------
+        cy = torch.cos(desired_yaw)
+        sy = torch.sin(desired_yaw)
+
+        b1_des = torch.tensor([[cy, sy, 0.0]], device=self.device)
+
+        b2_c = torch.cross(b3_c, b1_des, dim=1)
+        b2_c = b2_c / torch.norm(b2_c, dim=1, keepdim=True)
+
+        b1_c = torch.cross(b2_c, b3_c, dim=1)
+
+        # ---------------------------
+        # 5) DESIRED ROTATION MATRIX Rd
+        # ---------------------------
+        Rd = torch.zeros((1, 3, 3), device=self.device)
+        Rd[:, :, 0] = b1_c
+        Rd[:, :, 1] = b2_c
+        Rd[:, :, 2] = b3_c
+
+        # ---------------------------
+        # 6) CURRENT ROTATION MATRIX R
+        # ---------------------------
+        R = self.matrix_from_quat(quat_w)
+
+        # ---------------------------
+        # 7) THRUST COMMAND
+        # ---------------------------
+        # Project desired force onto current body z axis
+        b3 = R[:, :, 2]
+        thrust = self.mass * torch.sum(acc_des * b3, dim=1)
+
+        # ---------------------------
+        # 8) ROTATION ERROR
+        # ---------------------------
+        rotation_error = 0.5 * self.vee_map(
+            torch.bmm(Rd.transpose(1, 2), R) -
+            torch.bmm(R.transpose(1, 2), Rd)
+        )
+
+        # ---------------------------
+        # 9) DESIRED BODY RATES
+        # ---------------------------
+        omega_c = torch.zeros((1, 3), device=self.device)
+        omega_c[:, 2] = desired_yaw_rate
+
+        RRT = torch.bmm(R.transpose(1, 2), Rd)
+        omega_c_body = torch.bmm(RRT, omega_c.unsqueeze(2)).squeeze(2)
+
+        omega_err = omega_b - omega_c_body
+
+        # ---------------------------
+        # 10) FEEDFORWARD TERM (Ω × JΩc)
+        # ---------------------------
+        J_omega_c = torch.bmm(self.J, omega_c.unsqueeze(2)).squeeze(2)
+        feedforward = torch.cross(omega_b, J_omega_c, dim=1)
+
+        # ---------------------------
+        # 11) TORQUE COMMAND
+        # ---------------------------
+        torque = -self.kR * rotation_error - self.kW * omega_err + feedforward
+
+        return thrust, torque
 # -------------------- Main --------------------
 def main():
     # Load kit helper
@@ -559,8 +712,8 @@ def main():
 
     # instantiate the new controller: provide mass and inertia J
     # NOTE: replace this approximate J with your robot's true inertia if available.
-    J_default = torch.diag(torch.tensor([0.01, 0.01, 0.02], device=sim.device))  # (3,3) approximate
-    vac = VelocityAttitudeController(mass=float(robot_mass), J=J_default, g=9.81, k_v=2.0, k_R=4.0, k_omega=0.6, device=sim.device)
+    # J_default = torch.diag(torch.tensor([0.01, 0.01, 0.02], device=sim.device))  # (3,3) approximate
+    # vac = VelocityAttitudeController(mass=float(robot_mass), J=J_default, g=9.81, k_v=2.0, k_R=4.0, k_omega=0.6, device=sim.device)
 
     # diagnostic publishers (assumes pid_publisher global)
     global pid_publisher
@@ -584,15 +737,17 @@ def main():
     Ixx = 0.00072172
     Iyy = 0.00088563
     Izz = 0.0012558
-    controller = GeometricPositionController(
+    controller = GeometricVelocityController(
         mass=robot_mass,
         inertia=torch.diag(torch.tensor([Ixx, Iyy, Izz], device=sim.device)),
         device=sim.device
     )
+
+    
    
     cmd_pos = torch.tensor([[1.0, -1.0, 4.0]], device=sim.device)
-    cmd_vel = torch.tensor([[0.0, 0.0, 0.0]], device=sim.device)
-    cmd_yaw = torch.tensor([0.0], device=sim.device)
+    cmd_vel = torch.tensor([[1.0, 0.0, 1.0]], device=sim.device)
+    cmd_yaw = torch.tensor([0], device=sim.device)
     cmd_yaw_rate = torch.tensor([0.0], device=sim.device)
 
     # main loop

@@ -513,11 +513,15 @@ class GeometricVelocityController:
 
         # Position gains
         self.k_p = 16.0 # WORKED at 16.0
-        self.k_d = 180.0
+        self.k_d = 128.0
+        
+        # FOR 1/200
+        # self.k_p = 16.0 # WORKED at 16.0
+        # self.k_d = 180.0
 
         # Attitude gains
-        self.kR = 2.0 #4.5
-        self.kW = 0.25 #0.3
+        self.kR = 0.1 #4.5
+        self.kW = 0.005 #0.3
 
         # Gravity
         self.g = torch.tensor([0., 0., -9.81], device=device).unsqueeze(0)
@@ -559,7 +563,6 @@ class GeometricVelocityController:
         R = self.matrix_from_quat(q)
         return torch.bmm(R, v.unsqueeze(2)).squeeze(2)
 
-
     # ----------------------------------------
     # MAIN CONTROL STEP
     # ----------------------------------------
@@ -587,7 +590,7 @@ class GeometricVelocityController:
         # ---------------------------
         # 2) DESIRED ACCELERATION
         # ---------------------------
-        print("Position error:", self.k_p * pos_err)
+        # print("Position error:", self.k_p * pos_err)
         acc_des = self.k_p * pos_err + self.k_d * vel_err + self.g
 
         # ---------------------------
@@ -663,7 +666,7 @@ class GeometricVelocityController:
 def main():
     # Load kit helper
     sim_cfg = sim_utils.SimulationCfg(
-        dt=1 / 200,
+        dt=1/100,   # 1/200
         device=args_cli.device,
         render_interval=2,
         physics_material=sim_utils.RigidBodyMaterialCfg(
@@ -769,7 +772,7 @@ def main():
                 desired_yaw_rate=cmd_yaw_rate
             )
 
-            print(f"Thrust: {thrust}, Torque: {torque}")
+            # print(f"Thrust: {thrust}, Torque: {torque}")
 
 
             # # apply to sim
@@ -805,8 +808,9 @@ def main():
 
         # simple timing
         loop_duration = time.time() - start_time
-        inference_time = 0.03
+        inference_time = 0.01 # 0.03
         remaining_time = inference_time - loop_duration
+        print("loop time: {:.4f}, remaining time to wait: {:.4f}".format(loop_duration, remaining_time))
         if remaining_time > 0.0:
             time.sleep(remaining_time)
 

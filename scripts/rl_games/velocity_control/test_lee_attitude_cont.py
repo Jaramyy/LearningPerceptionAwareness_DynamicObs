@@ -357,12 +357,12 @@ class GeometricPositionController:
         self.device = device
 
         # Position gains
-        self.k_p = 4.0
-        self.k_d = 2.5
+        self.k_p = 16.0 # WORKED at 16.0
+        self.k_d = 8.5
 
         # Attitude gains
-        self.kR = 4.5
-        self.kW = 0.3
+        self.kR = 6.0 #4.5
+        self.kW = 0.3 #0.3
 
         # Gravity
         self.g = torch.tensor([0., 0., -9.81], device=device).unsqueeze(0)
@@ -456,9 +456,9 @@ class GeometricPositionController:
         # 5) DESIRED ROTATION MATRIX Rd
         # ---------------------------
         Rd = torch.zeros((1, 3, 3), device=self.device)
-        Rd[0, :, 0] = b1_c
-        Rd[0, :, 1] = b2_c
-        Rd[0, :, 2] = b3_c
+        Rd[:, :, 0] = b1_c
+        Rd[:, :, 1] = b2_c
+        Rd[:, :, 2] = b3_c
 
         # ---------------------------
         # 6) CURRENT ROTATION MATRIX R
@@ -565,21 +565,35 @@ def main():
     # diagnostic publishers (assumes pid_publisher global)
     global pid_publisher
 
-    desired_vel_w = torch.zeros(1, 3, device=sim.device)  # for purely velocity control, could be set to zeros to hover
-    desired_pos = torch.tensor([[0.0, 0.0, 2.0]], device=sim.device)
-    desired_yaw = torch.tensor([0.0], device=sim.device)
-    accel = torch.zeros(3, device=sim.device)
-    rotation_matrix_desired = torch.zeros((1, 3, 3), device=sim.device)
-    rotmat_euler_to_body_rates = torch.zeros((3, 3), device=sim.device)
-    desired_body_angvel = torch.zeros_like(robot.data.root_ang_vel_b)
+    # desired_vel_w = torch.zeros(1, 3, device=sim.device)  # for purely velocity control, could be set to zeros to hover
+    # desired_pos = torch.tensor([[0.0, 0.0, 2.0]], device=sim.device)
+    # desired_yaw = torch.tensor([0.0], device=sim.device)
+    # accel = torch.zeros(3, device=sim.device)
+    # rotation_matrix_desired = torch.zeros((1, 3, 3), device=sim.device)
+    # rotmat_euler_to_body_rates = torch.zeros((3, 3), device=sim.device)
+    # desired_body_angvel = torch.zeros_like(robot.data.root_ang_vel_b)
 
-    desired_vel_w[:, 0] = 1.0  # desired forward velocity in world frame
-    desired_vel_w[:, 1] = 0.0  # desired forward velocity in world frame
-    desired_vel_w[:, 2] = 0.0  # desired forward velocity in world frame
+    # desired_vel_w[:, 0] = 1.0  # desired forward velocity in world frame
+    # desired_vel_w[:, 1] = 0.0  # desired forward velocity in world frame
+    # desired_vel_w[:, 2] = 0.0  # desired forward velocity in world frame
     
 
     sim_time = 0.0
     count = 0
+    
+    Ixx = 0.00072172
+    Iyy = 0.00088563
+    Izz = 0.0012558
+    controller = GeometricPositionController(
+        mass=robot_mass,
+        inertia=torch.diag(torch.tensor([Ixx, Iyy, Izz], device=sim.device)),
+        device=sim.device
+    )
+   
+    cmd_pos = torch.tensor([[1.0, -1.0, 4.0]], device=sim.device)
+    cmd_vel = torch.tensor([[0.0, 0.0, 0.0]], device=sim.device)
+    cmd_yaw = torch.tensor([0.0], device=sim.device)
+    cmd_yaw_rate = torch.tensor([0.0], device=sim.device)
 
     # main loop
     while simulation_app.is_running():
@@ -587,113 +601,127 @@ def main():
         rclpy.spin_once(pid_publisher, timeout_sec=0.0)
 
         with torch.inference_mode():
-            # read state
-            pos_w = robot.data.root_pos_w  # (1,3)
-            quat_w = robot.data.root_link_quat_w  # (1,4) world->body (w,x,y,z) in your API
-            lin_vel_w = robot.data.root_lin_vel_w  # (1,3)
-            lin_vel_b = robot.data.root_lin_vel_b  # (1,3)
-            ang_vel_b = robot.data.root_ang_vel_b  # (1,3)
+            thrust, torque = controller.update(
+                pos_w=robot.data.root_pos_w,
+                vel_w=robot.data.root_lin_vel_w,
+                quat_w=robot.data.root_link_quat_w,   # (1,4)
+                omega_b=robot.data.root_ang_vel_b,
 
-            setpoint_velocity_W = quat_rotate(quat_w, desired_vel_w)
-
-            vel_err_w = setpoint_velocity_W - lin_vel_w
-            # print(f"setpoint_velocity_W: {desired_vel_w}", f"lin_vel_w: {lin_vel_w}")
-            # print(f"vel_err_w: {vel_err_w}")
-            pos_err_w = pos_w - pos_w
-            accel[:] = 0.20 * pos_err_w + 60.0 * vel_err_w
-
-            force = (accel - gravity) * robot_mass
-            
-            # thrust command is transformed by the body orientation's z component
-            wrrench_command = torch.sum(
-                force * matrix_from_quat(quat_w)[:, :, 2], dim=1
+                desired_pos_w=cmd_pos,
+                desired_vel_w=cmd_vel,
+                desired_yaw=cmd_yaw,
+                desired_yaw_rate=cmd_yaw_rate
             )
 
-            # after calculating forces, we calculate the desired euler angles
-            b3_c = torch.div(force, torch.norm(force))
-            temp_dir = torch.zeros_like(force)
-            temp_dir[0] = torch.cos(desired_yaw)
-            temp_dir[1] = torch.sin(desired_yaw)
+            print(f"Thrust: {thrust}, Torque: {torque}")
 
-            b2_c = torch.cross(b3_c, temp_dir)
-            b2_c = torch.div(b2_c, torch.norm(b2_c))
-            b1_c = torch.cross(b2_c, b3_c)
+            # # read state
+            # pos_w = robot.data.root_pos_w  # (1,3)
+            # quat_w = robot.data.root_link_quat_w  # (1,4) world->body (w,x,y,z) in your API
+            # lin_vel_w = robot.data.root_lin_vel_w  # (1,3)
+            # lin_vel_b = robot.data.root_lin_vel_b  # (1,3)
+            # ang_vel_b = robot.data.root_ang_vel_b  # (1,3)
 
-            rotation_matrix_desired[:, :, 0] = b1_c
-            rotation_matrix_desired[:, :, 1] = b2_c
-            rotation_matrix_desired[:, :, 2] = b3_c
+            # setpoint_velocity_W = quat_rotate(quat_w, desired_vel_w)
 
-            q = quat_from_matrix(rotation_matrix_desired)
-            quat_desired = torch.stack((q[:, 1], q[:, 2], q[:, 3], q[:, 0]), dim=1)
+            # vel_err_w = setpoint_velocity_W - lin_vel_w
+            # # print(f"setpoint_velocity_W: {desired_vel_w}", f"lin_vel_w: {lin_vel_w}")
+            # # print(f"vel_err_w: {vel_err_w}")
+            # pos_err_w = pos_w - pos_w
+            # accel[:] = 0.20 * pos_err_w + 60.0 * vel_err_w
 
-            euler_angle_rates = torch.tensor([0.0, 0.0, 0.0], device=sim.device)
-            euler_angle_rates = euler_angle_rates.view(1, 3, 1)
-            # self.desired_body_angvel[:] = euler_rates_to_body_rates(self.robot_euler_angles, self.euler_angle_rates, self.buffer_tensor)
+            # force = (accel - gravity) * robot_mass
             
-            robot_euler_angles = euler_xyz_from_quat(quat_w)
-            # print(f"robot_euler_angles: {robot_euler_angles}")
-            # print(f"shape robot_euler_angles: {len(robot_euler_angles)}")
-            s_pitch = torch.sin(robot_euler_angles[1])
-            c_pitch = torch.cos(robot_euler_angles[1])
-
-            s_roll = torch.sin(robot_euler_angles[0])
-            c_roll = torch.cos(robot_euler_angles[0])
-
-            rotmat_euler_to_body_rates[0, 0] = 1.0
-            rotmat_euler_to_body_rates[1, 1] = c_roll
-            rotmat_euler_to_body_rates[0, 2] = -s_pitch
-            rotmat_euler_to_body_rates[2, 1] = -s_roll
-            rotmat_euler_to_body_rates[1, 2] = s_roll * c_pitch
-            rotmat_euler_to_body_rates[2, 2] = c_roll * c_pitch
-
-            
-            desired_body_angvel[:] = torch.bmm(rotmat_euler_to_body_rates.unsqueeze(0), euler_angle_rates).squeeze(2)
-            # print("desired_body_angvel:", desired_body_angvel.shape)
-
-            max_yaw_rate = 1.0  
-            desired_body_angvel[:, 2] = torch.clamp(desired_body_angvel[:, 2], -max_yaw_rate, max_yaw_rate)
-            
-            # print("shape quat_w:", quat_w.shape)
-            # print("shape quat_desired:", quat_desired.shape)
-            # RT_Rd_quat = quat_mul(quat_inv(quat_w), quat_desired.unsqueeze(0))
-            # RT_Rd = matrix_from_quat(RT_Rd_quat)
-            # rotation_error = 0.5 * compute_vee_map(torch.transpose(RT_Rd, -2, -1) - RT_Rd)
-
-            R = matrix_from_quat(quat_w)      # current
-            Rd = rotation_matrix_desired      # desired
-            rotation_error = 0.5 * compute_vee_map(Rd.transpose(1, 2) @ R - R.transpose(1, 2) @ Rd)
-
-            # angvel_error = ang_vel_b - quat_rotate(RT_Rd_quat, desired_body_angvel)
-            omega_c = desired_body_angvel
-            omega_c_body = torch.bmm(R.transpose(1,2) @ Rd, omega_c.unsqueeze(2)).squeeze(2)
-            angvel_error = ang_vel_b - omega_c_body
-
-            # print("rotation_error:", rotation_error)
-            # print("angvel_error:", angvel_error)
-
-            # robot_inertias = torch.zeros((1, 3, 3), device=sim.device)
-            Ixx = 0.00072172
-            Iyy = 0.00088563
-            Izz = 0.0012558
-            J = torch.diag(torch.tensor([Ixx, Iyy, Izz], device=sim.device)).unsqueeze(0)
-            # feed_forward_body_rates = torch.cross(
-            #     ang_vel_b,
-            #     torch.bmm(robot_inertias, ang_vel_b.unsqueeze(2)).squeeze(2),
-            #     dim=1,
+            # # thrust command is transformed by the body orientation's z component
+            # wrrench_command = torch.sum(
+            #     force * matrix_from_quat(quat_w)[:, :, 2], dim=1
             # )
 
-            omega_c = quat_rotate(RT_Rd_quat, desired_body_angvel)
-            J_omega_c = torch.bmm(J, omega_c.unsqueeze(2)).squeeze(2)
-            feedforward = torch.cross(ang_vel_b, J_omega_c, dim=1)
+            # # after calculating forces, we calculate the desired euler angles
+            # b3_c = torch.div(force, torch.norm(force))
+            # temp_dir = torch.zeros_like(force)
+            # temp_dir[0] = torch.cos(desired_yaw)
+            # temp_dir[1] = torch.sin(desired_yaw)
 
-            torque = (-4.5 * rotation_error - 0.3 * angvel_error + feedforward)
-            # print("torque:", torque, "force:", wrrench_command)
+            # b2_c = torch.cross(b3_c, temp_dir)
+            # b2_c = torch.div(b2_c, torch.norm(b2_c))
+            # b1_c = torch.cross(b2_c, b3_c)
+
+            # rotation_matrix_desired[:, :, 0] = b1_c
+            # rotation_matrix_desired[:, :, 1] = b2_c
+            # rotation_matrix_desired[:, :, 2] = b3_c
+
+            # q = quat_from_matrix(rotation_matrix_desired)
+            # quat_desired = torch.stack((q[:, 1], q[:, 2], q[:, 3], q[:, 0]), dim=1)
+
+            # euler_angle_rates = torch.tensor([0.0, 0.0, 0.0], device=sim.device)
+            # euler_angle_rates = euler_angle_rates.view(1, 3, 1)
+            # # self.desired_body_angvel[:] = euler_rates_to_body_rates(self.robot_euler_angles, self.euler_angle_rates, self.buffer_tensor)
+            
+            # robot_euler_angles = euler_xyz_from_quat(quat_w)
+            # # print(f"robot_euler_angles: {robot_euler_angles}")
+            # # print(f"shape robot_euler_angles: {len(robot_euler_angles)}")
+            # s_pitch = torch.sin(robot_euler_angles[1])
+            # c_pitch = torch.cos(robot_euler_angles[1])
+
+            # s_roll = torch.sin(robot_euler_angles[0])
+            # c_roll = torch.cos(robot_euler_angles[0])
+
+            # rotmat_euler_to_body_rates[0, 0] = 1.0
+            # rotmat_euler_to_body_rates[1, 1] = c_roll
+            # rotmat_euler_to_body_rates[0, 2] = -s_pitch
+            # rotmat_euler_to_body_rates[2, 1] = -s_roll
+            # rotmat_euler_to_body_rates[1, 2] = s_roll * c_pitch
+            # rotmat_euler_to_body_rates[2, 2] = c_roll * c_pitch
+
+            
+            # desired_body_angvel[:] = torch.bmm(rotmat_euler_to_body_rates.unsqueeze(0), euler_angle_rates).squeeze(2)
+            # # print("desired_body_angvel:", desired_body_angvel.shape)
+
+            # max_yaw_rate = 1.0  
+            # desired_body_angvel[:, 2] = torch.clamp(desired_body_angvel[:, 2], -max_yaw_rate, max_yaw_rate)
+            
+            # # print("shape quat_w:", quat_w.shape)
+            # # print("shape quat_desired:", quat_desired.shape)
+            # # RT_Rd_quat = quat_mul(quat_inv(quat_w), quat_desired.unsqueeze(0))
+            # # RT_Rd = matrix_from_quat(RT_Rd_quat)
+            # # rotation_error = 0.5 * compute_vee_map(torch.transpose(RT_Rd, -2, -1) - RT_Rd)
+
+            # R = matrix_from_quat(quat_w)      # current
+            # Rd = rotation_matrix_desired      # desired
+            # rotation_error = 0.5 * compute_vee_map(Rd.transpose(1, 2) @ R - R.transpose(1, 2) @ Rd)
+
+            # # angvel_error = ang_vel_b - quat_rotate(RT_Rd_quat, desired_body_angvel)
+            # omega_c = desired_body_angvel
+            # omega_c_body = torch.bmm(R.transpose(1,2) @ Rd, omega_c.unsqueeze(2)).squeeze(2)
+            # angvel_error = ang_vel_b - omega_c_body
+
+            # # print("rotation_error:", rotation_error)
+            # # print("angvel_error:", angvel_error)
+
+            # # robot_inertias = torch.zeros((1, 3, 3), device=sim.device)
+            # Ixx = 0.00072172
+            # Iyy = 0.00088563
+            # Izz = 0.0012558
+            # J = torch.diag(torch.tensor([Ixx, Iyy, Izz], device=sim.device)).unsqueeze(0)
+            # # feed_forward_body_rates = torch.cross(
+            # #     ang_vel_b,
+            # #     torch.bmm(robot_inertias, ang_vel_b.unsqueeze(2)).squeeze(2),
+            # #     dim=1,
+            # # )
+
+            # omega_c = quat_rotate(RT_Rd_quat, desired_body_angvel)
+            # J_omega_c = torch.bmm(J, omega_c.unsqueeze(2)).squeeze(2)
+            # feedforward = torch.cross(ang_vel_b, J_omega_c, dim=1)
+
+            # torque = (-4.5 * rotation_error - 0.3 * angvel_error + feedforward)
+            # # print("torque:", torque, "force:", wrrench_command)
 
 
 
 
 
-            # print(f"quat_desired: {quat_desired}, force: {force}, wrench_command: {wrrench_command}")
+            # # print(f"quat_desired: {quat_desired}, force: {force}, wrench_command: {wrrench_command}")
 
 
 
@@ -703,12 +731,15 @@ def main():
 
 
 
-            # apply to sim
+            # # apply to sim
             forces[:, :] = 0.0
             torques[:, :] = 0.0
 
-            forces[:, 2] = wrrench_command
-            torques[:, :] = torque.squeeze(0)
+            forces[:, 2] = thrust
+            torques[:, :] = torque
+
+            # forces[:, 2] = wrrench_command
+            # torques[:, :] = torque.squeeze(0)
 
 
             # forces[:, 2] = 8.0 * 1.23 * 9.81

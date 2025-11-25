@@ -25,107 +25,6 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Vector3
 
-# -------------------- Controller: Velocity -> Attitude -> Wrench --------------------
-class VelocityAttitudeController(nn.Module):
-    """
-    Velocity-attitude controller that produces desired wrench (fx,fy,fz, Mx,My,Mz)
-    from velocity command (v_des).
-    Implements:
-      f = -k_v * e_v - m g e3
-      b3_c = -f / ||f||
-      R_c = [b1_c, b2_c, b3_c]
-      e_R = 0.5 * vee(R_c^T R - R^T R_c)
-      e_omega = omega - R^T R_c * omega_d (omega_d = 0)
-      M = -k_R e_R - k_omega e_omega + omega x J omega
-    """
-    def __init__(self, mass: float, J: torch.Tensor, g: float = 9.81, k_v: float = 2.0, k_R: float = 4.0, k_omega: float = 0.6, device="cpu"):
-        super().__init__()
-        self.mass = float(mass)
-        self.J = J.to(device)
-        self.g = float(g)
-        self.k_v = float(k_v)
-        self.k_R = float(k_R)
-        self.k_omega = float(k_omega)
-        self.device = device
-
-    @staticmethod
-    def vee(mat):
-        # mat: (N,3,3)
-        return 0.5 * torch.stack([mat[:, 2, 1] - mat[:, 1, 2],
-                                  mat[:, 0, 2] - mat[:, 2, 0],
-                                  mat[:, 1, 0] - mat[:, 0, 1]], dim=-1)
-
-    def forward(self, pos_w, quat_wb, vel_w, omega_b, v_des_w, yaw_des=None):
-        """
-        pos_w: (B,3)
-        quat_wb: (B,4) -- world->body quaternion (root_link_quat_w)
-        vel_w: (B,3) linear velocity in world frame
-        omega_b: (B,3) angular velocity in body frame
-        v_des_w: (B,3) desired velocity in world frame
-        yaw_des: (B,) desired yaw angle in radians (optional)
-        returns:
-          wrench: (B,6) fx,fy,fz, Mx,My,Mz
-          thrust_scalar: (B,) total thrust (projected on body z)
-          R_c: (B,3,3) desired rotation
-        """
-        B = pos_w.shape[0]
-        device = pos_w.device
-
-        # 1) velocity error
-        e_v = vel_w - v_des_w  # (B,3)
-        e3 = torch.tensor([0.0, 0.0, 1.0], device=device).unsqueeze(0).repeat(B, 1)
-
-        # desired force in world frame (note sign convention)
-        f_w = -self.k_v * e_v - (self.mass * self.g) * e3  # (B,3)
-
-        # 2) desired body z axis
-        b3_c = -f_w  # un-normalized
-        b3_c = normalize(b3_c)  # (B,3) unit vector
-
-        # 3) desired heading (b1) using yaw_des if provided
-        if yaw_des is None:
-            # use current yaw direction (project current body x onto world plane) -> default zero yaw
-            yaw_des = torch.zeros(B, device=device)
-        b1_des = torch.stack([torch.cos(yaw_des), torch.sin(yaw_des), torch.zeros_like(yaw_des)], dim=-1)  # (B,3)
-
-        # make b1_c orthonormal to b3_c
-        b1_c = b1_des - (b1_des * b3_c).sum(-1, keepdim=True) * b3_c
-        b1_c = normalize(b1_c)
-        b2_c = torch.cross(b3_c, b1_c, dim=-1)
-
-        # R_c columns: [b1_c, b2_c, b3_c] arranged as (B,3,3)
-        R_c = torch.stack([b1_c, b2_c, b3_c], dim=-1)  # (B,3,3)
-
-        # 4) current R from quaternion (world->body)
-        R = matrix_from_quat(quat_wb).to(device)  # returns (B,3,3) presumably world->body (verify in your version)
-
-        # 5) rotation error e_R
-        # compute Rc^T * R - R^T * Rc
-        mat = torch.bmm(R_c.transpose(1, 2), R) - torch.bmm(R.transpose(1, 2), R_c)
-        e_R = self.vee(mat)  # (B,3)
-
-        # 6) angular rate error: omega - R^T R_c omega_d ; omega_d = 0 here
-        # so e_omega = omega_b - 0 = omega_b
-        e_omega = omega_b  # (B,3) since omega_d = 0
-
-        # 7) compute moments M
-        # cross term omega x J omega
-        J_omega = (self.J @ omega_b.unsqueeze(-1)).squeeze(-1)  # (B,3)
-        cross = torch.cross(omega_b, J_omega, dim=-1)
-        M = - self.k_R * e_R - self.k_omega * e_omega + cross  # (B,3)
-
-        # 8) total thrust scalar: project f_w onto current body z (R[:, :, 2])
-        # body z axis in world frame is R[:, :, 2] (3rd column)
-        b3_current = R[:, :, 2]  # (B,3)
-        thrust_scalar = (f_w * b3_current).sum(-1)  # (B,) scalar (could be negative; will clamp later)
-
-        # final wrench: fx,fy,fz (we keep body-frame moment M) but for quadrotor we will
-        # only send total thrust along body z and Mx,My,Mz moments.
-        # We return full wrench (f_w, M) for debugging; allocation uses thrust_scalar and M.
-        wrench = torch.cat([f_w, M], dim=-1)  # (B,6)
-
-        return wrench, thrust_scalar, R_c, f_w, M
-
 # -------------------- ROS publisher (unchanged) --------------------
 class PIDPlotPublisher(Node):
     def __init__(self, name="vel_pid_pub"):
@@ -346,7 +245,7 @@ def compute_vee_map(skew_matrix):
         [-skew_matrix[:, 1, 2], skew_matrix[:, 0, 2], -skew_matrix[:, 0, 1]], dim=1
     )
     return vee_map
-import torch
+
 
 
 class GeometricPositionController:
@@ -362,7 +261,7 @@ class GeometricPositionController:
 
         # Attitude gains
         self.kR = 6.0 #4.5
-        self.kW = 0.3 #0.3
+        self.kW = 0.5 #0.3
 
         # Gravity
         self.g = torch.tensor([0., 0., -9.81], device=device).unsqueeze(0)
@@ -655,6 +554,7 @@ class GeometricVelocityController:
         omega_c_body = torch.bmm(RRT, omega_c.unsqueeze(2)).squeeze(2)
 
         omega_err = omega_b - omega_c_body
+        print(f"Omega error: {omega_err}")
 
         # ---------------------------
         # 10) FEEDFORWARD TERM (Ω × JΩc)
@@ -668,6 +568,109 @@ class GeometricVelocityController:
         torque = -self.kR * rotation_error - self.kW * omega_err + feedforward
 
         return thrust, torque
+    
+    def update_velocity_only(
+        self,
+        pos_w, vel_w, quat_w, omega_b,
+        desired_vel_w,
+        desired_yaw_rate
+    ):
+        """
+        Velocity-only control with yaw-rate tracking.
+        Inputs:
+            pos_w          : current position (1,3) [unused, velocity-only]
+            vel_w          : current linear velocity (1,3)
+            quat_w         : current orientation quaternion (1,4)
+            omega_b        : current body angular velocity (1,3)
+            desired_vel_w  : commanded linear velocity (1,3)
+            desired_yaw_rate : commanded body-frame yaw-rate (rad/s)
+        Outputs:
+            thrust  : scalar thrust along body z-axis
+            torque  : body-frame torque (1,3)
+        """
+        # Ensure batch dims
+        vel_w = vel_w.view(1,3)
+        quat_w = quat_w.view(1,4)
+        omega_b = omega_b.view(1,3)
+        desired_vel_w = desired_vel_w.view(1,3)
+
+        # ---------------------------
+        # 1) VELOCITY ERROR
+        # ---------------------------
+        vel_err = desired_vel_w - vel_w
+
+        # ---------------------------
+        # 2) DESIRED ACCELERATION (velocity-only)
+        # ---------------------------
+        acc_des = torch.zeros_like(vel_w)
+        acc_des[:,0] = self.k_d_xy * vel_err[:,0]
+        acc_des[:,1] = self.k_d_xy * vel_err[:,1]
+        acc_des[:,2] = self.k_d_z * vel_err[:,2] + self.g[:,2]  # include gravity
+
+        # ---------------------------
+        # 3) BODY Z (thrust direction)
+        # ---------------------------
+        b3_c = acc_des / torch.norm(acc_des, dim=1, keepdim=True)
+
+        # ---------------------------
+        # 4) DESIRED BODY X/Y (arbitrary, yaw free)
+        # ---------------------------
+        b1_des = torch.tensor([[1.0, 0.0, 0.0]], device=self.device)  # yaw-free reference
+        b2_c = torch.cross(b3_c, b1_des, dim=1)
+        b2_c /= torch.norm(b2_c, dim=1, keepdim=True)
+        b1_c = torch.cross(b2_c, b3_c, dim=1)
+
+        
+
+        # ---------------------------
+        # 5) DESIRED ROTATION MATRIX Rd
+        # ---------------------------
+        Rd = torch.zeros((1,3,3), device=self.device)
+        Rd[:,:,0] = b1_c
+        Rd[:,:,1] = b2_c
+        Rd[:,:,2] = b3_c
+
+        # ---------------------------
+        # 6) CURRENT ROTATION MATRIX R
+        # ---------------------------
+        R = self.matrix_from_quat(quat_w)
+
+        # ---------------------------
+        # 7) THRUST
+        # ---------------------------
+        b3 = R[:,:,2]  # current body z-axis
+        thrust = self.mass * torch.sum(acc_des * b3, dim=1)
+
+        # ---------------------------
+        # 8) ROTATION ERROR (roll/pitch only, yaw ignored)
+        # ---------------------------
+        rotation_error = 0.5 * self.vee_map(
+            torch.bmm(Rd.transpose(1,2), R) - torch.bmm(R.transpose(1,2), Rd)
+        )
+        rotation_error[:,2] = 0.0  # zero yaw error
+
+        # ---------------------------
+        # 9) DESIRED BODY RATES
+        # ---------------------------
+        omega_c = torch.zeros_like(omega_b)
+        omega_c[:,2] = desired_yaw_rate  # yaw-rate tracking
+
+        omega_err = omega_b - omega_c
+
+        # ---------------------------
+        # 10) FEEDFORWARD
+        # ---------------------------
+        J_omega_c = torch.bmm(self.J, omega_c.unsqueeze(2)).squeeze(2)
+        feedforward = torch.cross(omega_b, J_omega_c, dim=1)
+
+        # ---------------------------
+        # 11) TORQUE
+        # ---------------------------
+        torque = -self.kR * rotation_error - self.kW * omega_err + feedforward
+
+        return thrust, torque
+    
+
 # -------------------- Main --------------------
 def main():
     # Load kit helper
@@ -757,8 +760,8 @@ def main():
    
     cmd_pos = torch.tensor([[1.0, -1.0, 4.0]], device=sim.device)
     cmd_vel = torch.tensor([[1.0, 0.0, 1.0]], device=sim.device)
-    cmd_yaw = torch.tensor([0], device=sim.device)
-    cmd_yaw_rate = torch.tensor([1.0], device=sim.device)
+    cmd_yaw = torch.tensor([3.14], device=sim.device)
+    cmd_yaw_rate = torch.tensor([-1.0], device=sim.device)
 
     # main loop
     while simulation_app.is_running():
@@ -766,6 +769,7 @@ def main():
         rclpy.spin_once(pid_publisher, timeout_sec=0.0)
 
         with torch.inference_mode():
+            
             thrust, torque = controller.update(
                 pos_w=robot.data.root_pos_w,
                 vel_w=robot.data.root_lin_vel_w,
@@ -777,6 +781,16 @@ def main():
                 desired_yaw=cmd_yaw,
                 desired_yaw_rate=cmd_yaw_rate
             )
+
+            # thrust, torque = controller.update_velocity_only(
+            #     pos_w=robot.data.root_pos_w,
+            #     vel_w=robot.data.root_lin_vel_w,
+            #     quat_w=robot.data.root_link_quat_w,   # (1,4)
+            #     omega_b=robot.data.root_ang_vel_b,
+            #     desired_vel_w=cmd_vel,
+            #     desired_yaw_rate=cmd_yaw_rate
+            # )
+
 
             # print(f"Thrust: {thrust}, Torque: {torque}")
 
@@ -813,6 +827,8 @@ def main():
             sim.step()
             sim_time += sim_dt
             robot.update(sim_dt)
+            
+            cmd_yaw = torch.tensor([torch.tensor(0.2*sim_time)], device=sim.device)
 
         # simple timing
         loop_duration = time.time() - start_time

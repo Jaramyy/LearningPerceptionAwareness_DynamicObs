@@ -512,16 +512,19 @@ class GeometricVelocityController:
         self.device = device
 
         # Position gains
-        self.k_p = 16.0 # WORKED at 16.0
-        self.k_d = 128.0
+        self.k_p = 8.0 # WORKED at 16.0
+        self.k_d = 25.0
+
+        self.k_d_xy = 22.0
+        self.k_d_z = 80.0
         
         # FOR 1/200
         # self.k_p = 16.0 # WORKED at 16.0
         # self.k_d = 180.0
 
         # Attitude gains
-        self.kR = 0.1 #4.5
-        self.kW = 0.005 #0.3
+        self.kR = 2.5 #4.5
+        self.kW = 0.1 #0.3
 
         # Gravity
         self.g = torch.tensor([0., 0., -9.81], device=device).unsqueeze(0)
@@ -590,8 +593,11 @@ class GeometricVelocityController:
         # ---------------------------
         # 2) DESIRED ACCELERATION
         # ---------------------------
-        # print("Position error:", self.k_p * pos_err)
-        acc_des = self.k_p * pos_err + self.k_d * vel_err + self.g
+        # acc_des = self.k_d * vel_err + self.g
+        acc_des = torch.zeros_like(vel_w)
+        acc_des[:, 0] = self.k_d_xy * vel_err[:, 0]
+        acc_des[:, 1] = self.k_d_xy * vel_err[:, 1]
+        acc_des[:, 2] = self.k_d_z * vel_err[:, 2] + self.g[:, 2]
 
         # ---------------------------
         # 3) DESIRED BODY Z (b3c)
@@ -752,7 +758,7 @@ def main():
     cmd_pos = torch.tensor([[1.0, -1.0, 4.0]], device=sim.device)
     cmd_vel = torch.tensor([[1.0, 0.0, 1.0]], device=sim.device)
     cmd_yaw = torch.tensor([0], device=sim.device)
-    cmd_yaw_rate = torch.tensor([0.0], device=sim.device)
+    cmd_yaw_rate = torch.tensor([1.0], device=sim.device)
 
     # main loop
     while simulation_app.is_running():
@@ -799,6 +805,8 @@ def main():
             # pid_publisher.publish_vec(pid_publisher.pub_cmd, (f_w.squeeze(0)).cpu())
             pid_publisher.publish_vec(pid_publisher.pub_vel, robot.data.root_lin_vel_w.squeeze(0).cpu())
             # pid_publisher.publish_vec(pid_publisher.pub_target, v_des_w.squeeze(0).cpu())
+            # publish yaw rate 
+            pid_publisher.publish_vec(pid_publisher.pub_target, robot.data.root_ang_vel_b.squeeze(0).cpu())
 
             robot.set_external_force_and_torque(forces, torques, body_ids=body_id)
             robot.write_data_to_sim()

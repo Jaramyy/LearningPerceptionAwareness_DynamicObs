@@ -20,7 +20,7 @@ from isaaclab.sim import SimulationContext
 from isaaclab_assets import CRAZYFLIE_CFG  # isort:skip
 from PerceptionAwareDrone.tasks.agile_quadcopter.robot.agileDrone import AGILE_CFG
 
-from isaaclab.utils.math import subtract_frame_transforms, matrix_from_quat,quat_from_matrix , normalize, quat_rotate, euler_xyz_from_quat,quat_mul,quat_inv
+from isaaclab.utils.math import subtract_frame_transforms, matrix_from_quat,quat_from_matrix , normalize, quat_rotate, euler_xyz_from_quat, quat_mul,quat_inv
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Vector3
@@ -265,6 +265,8 @@ class GeometricPositionController:
 
         # Gravity
         self.g = torch.tensor([0., 0., -9.81], device=device).unsqueeze(0)
+
+        self.current_euler = torch.zeros((1,3), device=device)
 
 
     # --------------------
@@ -602,7 +604,7 @@ class GeometricVelocityController:
         # ---------------------------
         # 2) DESIRED ACCELERATION (velocity-only)
         # ---------------------------
-        acc_des = torch.zeros_like(vel_w)
+        acc_des = torch.zeros_like(vel_w)   #force command 
         acc_des[:,0] = self.k_d_xy * vel_err[:,0]
         acc_des[:,1] = self.k_d_xy * vel_err[:,1]
         acc_des[:,2] = self.k_d_z * vel_err[:,2] + self.g[:,2]  # include gravity
@@ -610,14 +612,32 @@ class GeometricVelocityController:
         # ---------------------------
         # 3) BODY Z (thrust direction)
         # ---------------------------
-        b3_c = acc_des / torch.norm(acc_des, dim=1, keepdim=True)
+        b3_c = acc_des / (torch.norm(acc_des, dim=1, keepdim=True))
 
         # ---------------------------
         # 4) DESIRED BODY X/Y (arbitrary, yaw free)
         # ---------------------------
-        b1_des = torch.tensor([[1.0, 0.0, 0.0]], device=self.device)  # yaw-free reference
+        # current yaw from quaternion
+        # w, x, y, z = quat_w[:,0], quat_w[:,1], quat_w[:,2], quat_w[:,3]
+        
+        euler = euler_xyz_from_quat(quat_w)
+        if isinstance(euler, tuple):
+            # Each tensor shape: (1,) → stack to (3,) → then batch to (1,3)
+            self.current_euler = torch.cat(euler, dim=0).view(1, 3)
+
+        cy = torch.cos(self.current_euler[:, 2])
+        sy = torch.sin(self.current_euler[:, 2])
+
+        # cp = torch.cos(self.current_euler[:, 1])
+        # sp = torch.sin(self.current_euler[:, 1])
+
+        # cr = torch.cos(self.current_euler[:, 0])
+        # sr = torch.sin(self.current_euler[:, 0])
+
+        b1_des = torch.tensor([[cy, sy, 0]], device=self.device)
+        # b1_des = torch.tensor([[1.0, 0.0, 0.0]], device=self.device)  # yaw-free reference
         b2_c = torch.cross(b3_c, b1_des, dim=1)
-        b2_c /= torch.norm(b2_c, dim=1, keepdim=True)
+        b2_c /= (torch.norm(b2_c, dim=1, keepdim=True))
         b1_c = torch.cross(b2_c, b3_c, dim=1)
 
         
@@ -758,10 +778,10 @@ def main():
 
     
    
-    cmd_pos = torch.tensor([[1.0, -1.0, 4.0]], device=sim.device)
-    cmd_vel = torch.tensor([[1.0, 0.0, 1.0]], device=sim.device)
-    cmd_yaw = torch.tensor([3.14], device=sim.device)
-    cmd_yaw_rate = torch.tensor([-1.0], device=sim.device)
+    cmd_pos = torch.tensor([[0.0, 0.0, 0.0]], device=sim.device)
+    cmd_vel = torch.tensor([[2.0, -1.0, 1.0]], device=sim.device)
+    cmd_yaw = torch.tensor([0.0], device=sim.device)
+    cmd_yaw_rate = torch.tensor([0.0], device=sim.device)
 
     # main loop
     while simulation_app.is_running():
@@ -770,26 +790,26 @@ def main():
 
         with torch.inference_mode():
             
-            thrust, torque = controller.update(
-                pos_w=robot.data.root_pos_w,
-                vel_w=robot.data.root_lin_vel_w,
-                quat_w=robot.data.root_link_quat_w,   # (1,4)
-                omega_b=robot.data.root_ang_vel_b,
-
-                desired_pos_w=cmd_pos,
-                desired_vel_w=cmd_vel,
-                desired_yaw=cmd_yaw,
-                desired_yaw_rate=cmd_yaw_rate
-            )
-
-            # thrust, torque = controller.update_velocity_only(
+            # thrust, torque = controller.update(
             #     pos_w=robot.data.root_pos_w,
             #     vel_w=robot.data.root_lin_vel_w,
             #     quat_w=robot.data.root_link_quat_w,   # (1,4)
             #     omega_b=robot.data.root_ang_vel_b,
+
+            #     desired_pos_w=cmd_pos,
             #     desired_vel_w=cmd_vel,
+            #     desired_yaw=cmd_yaw,
             #     desired_yaw_rate=cmd_yaw_rate
             # )
+
+            thrust, torque = controller.update_velocity_only(
+                pos_w=robot.data.root_pos_w,
+                vel_w=robot.data.root_lin_vel_w,
+                quat_w=robot.data.root_link_quat_w,   # (1,4)
+                omega_b=robot.data.root_ang_vel_b,
+                desired_vel_w=cmd_vel,
+                desired_yaw_rate=cmd_yaw_rate
+            )
 
 
             # print(f"Thrust: {thrust}, Torque: {torque}")
@@ -828,7 +848,7 @@ def main():
             sim_time += sim_dt
             robot.update(sim_dt)
             
-            cmd_yaw = torch.tensor([torch.tensor(0.2*sim_time)], device=sim.device)
+            # cmd_yaw = torch.tensor([torch.tensor(0.2*sim_time)], device=sim.device)
 
         # simple timing
         loop_duration = time.time() - start_time

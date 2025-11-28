@@ -322,11 +322,11 @@ class QuadcopterEnv(DirectRLEnv):
         
         #TODO: Feed input to controller and CHECK!!
         thrust, moment = self.velocity_controller.update_velocity_only(
-            robot_position=self._robot.data.root_pos_w,
-            robot_orientation=self._robot.data.root_quat_w,
-            robot_linvel=self._robot.data.root_lin_vel_w,
-            robot_angvel=self._robot.data.root_ang_vel_w,
-            command_actions=self._actions,
+            quat_w=self._robot.data.root_quat_w,
+            vel_w=self._robot.data.root_lin_vel_w,
+            omega_b=self._robot.data.root_ang_vel_w,
+            desired_vel_w=self._actions[:, 0:3],
+            desired_yaw_rate=self._actions[:, 3],
         )
         
         self._thrust[:, 0, 2] = thrust
@@ -599,7 +599,7 @@ class QuadcopterEnv(DirectRLEnv):
         self._robot.write_root_velocity_to_sim(default_root_state[:, 7:], env_ids)
         self._robot.write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
 
-        self._motor.reset(env_ids)
+        # self._motor.reset(env_ids)
 
     def _set_debug_vis_impl(self, debug_vis: bool):
         # create markers if necessary for the first tome
@@ -754,10 +754,13 @@ class Motor:
 class GeometricVelocityController:
 
     def __init__(self, num_env, mass, inertia, device):
-        self.mass = mass
-        self.J = inertia.unsqueeze(0).to(device)    # (1,3,3)
-        self.device = device
         self.num_env = num_env
+        self.mass = mass
+
+        # self.J = inertia.unsqueeze(0).to(device)    # (1,3,3)
+        self.J_expand = inertia.unsqueeze(0).expand(self.num_env, 3, 3).to(device)
+        self.device = device
+        
 
         # Position gains
         self.k_p = 8.0 
@@ -958,10 +961,15 @@ class GeometricVelocityController:
         # w, x, y, z = quat_w[:,0], quat_w[:,1], quat_w[:,2], quat_w[:,3]
         
         euler = euler_xyz_from_quat(quat_w)
-        if isinstance(euler, tuple):
-            # Each tensor shape: (1,) → stack to (3,) → then batch to (1,3)
-            self.current_euler = torch.cat(euler, dim=0)
+        # print("Quat shape: ", len(euler))
+        # print("Euler angles (rpy) shape: ", euler[0])
 
+        if isinstance(euler, tuple):
+            # Each tensor shape: (1,) → stack to (3,) → then batch to (env,3)
+            self.current_euler = torch.stack([e.squeeze(-1) for e in euler], dim=1)
+
+        # print("Current euler angles (rpy): ", self.current_euler.shape)
+        
         cy = torch.cos(self.current_euler[:, 2])
         sy = torch.sin(self.current_euler[:, 2])
 
@@ -971,7 +979,8 @@ class GeometricVelocityController:
         # cr = torch.cos(self.current_euler[:, 0])
         # sr = torch.sin(self.current_euler[:, 0])
 
-        b1_des = torch.tensor([[cy, sy, torch.zeros_like(cy)]], device=self.device)
+        # b1_des = torch.tensor([[cy, sy, torch.zeros_like(cy)]], device=self.device)
+        b1_des = torch.stack((cy, sy, torch.zeros_like(cy)), dim=1)  # shape (B,3)
 
         # b1_des = torch.tensor([[1.0, 0.0, 0.0]], device=self.device)  # yaw-free reference
         b2_c = torch.cross(b3_c, b1_des, dim=1)
@@ -1012,15 +1021,17 @@ class GeometricVelocityController:
         # 9) DESIRED BODY RATES
         # ---------------------------
         omega_c = torch.zeros_like(omega_b)
-        omega_c[:, 2] = desired_yaw_rate[:, 0]  # yaw-rate tracking
+        # print("Omega command shape: ", omega_c.shape)
+        # print("Desired yaw rate shape: ", desired_yaw_rate.shape)
+        omega_c[:, 2] = desired_yaw_rate[:]  # yaw-rate tracking
 
         omega_err = omega_b - omega_c
 
         # ---------------------------
         # 10) FEEDFORWARD
         # ---------------------------
-        J_expand = self.J.unsqueeze(0).expand(self.num_env, 3, 3)
-        J_omega_c = torch.bmm(J_expand, omega_c.unsqueeze(2)).squeeze(2)
+        
+        J_omega_c = torch.bmm(self.J_expand, omega_c.unsqueeze(2)).squeeze(2)
         feedforward = torch.cross(omega_b, J_omega_c, dim=1)
 
         # ---------------------------

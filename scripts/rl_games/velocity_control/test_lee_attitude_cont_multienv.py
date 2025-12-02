@@ -794,7 +794,8 @@ def main():
     
    
     cmd_pos = torch.tensor([[0.0, 0.0, 0.0]], device=sim.device)
-    cmd_vel = torch.tensor([[2.0, -1.0, 1.0]], device=sim.device)
+    # cmd_vel = torch.tensor([[2.0, -1.0, 1.0]], device=sim.device)
+    cmd_vel = torch.tensor([[0.0, 0.0, 0.0]], device=sim.device)
     cmd_yaw = torch.tensor([0.0], device=sim.device)
     cmd_yaw_rate = torch.tensor([0.0], device=sim.device)
 

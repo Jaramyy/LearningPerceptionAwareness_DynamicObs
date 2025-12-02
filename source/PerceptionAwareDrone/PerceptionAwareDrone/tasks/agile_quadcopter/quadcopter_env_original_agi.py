@@ -102,7 +102,7 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
 
     # simulation
     sim: SimulationCfg = SimulationCfg(
-        dt=1/150,
+        dt=1 / 100,
         render_interval=decimation,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
@@ -154,7 +154,7 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=2.5, replicate_physics=True)
     
     # events
-    # events: EventCfg = EventCfg()
+    events: EventCfg = EventCfg()
 
     # robot
     robot: ArticulationCfg = AGILE_CFG.replace(prim_path="/World/envs/env_.*/Robot")
@@ -175,11 +175,18 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
 
     # reward scales
     lin_vel_reward_scale = -0.05
-    ang_vel_reward_scale = -0.01
+    ang_vel_reward_scale = -0.002
     distance_to_goal_reward_scale = 60.0
+    action_rate_reward_scale = -0.5
+    velocity_direction = 15.0
+    reward_safety_static = 30.0  # 15.0
+    head_tracking = 15.0  # 15.0
+    potential_tracking = 40.0  # 60.0
+    penalty_height = -0.1
+    heading_reward_blended = 2.0
 
     #max velocity
-    max_velocity = 5.0  # m/s
+    max_velocity = 4.0  # m/s
     max_yaw_rate = 3.14  # rad/s
 
 
@@ -194,9 +201,6 @@ class QuadcopterEnv(DirectRLEnv):
         self._actions = torch.zeros(self.num_envs, gym.spaces.flatdim(self.single_action_space), device=self.device)
         self._thrust = torch.zeros(self.num_envs, 1, 3, device=self.device)
         self._moment = torch.zeros(self.num_envs, 1, 3, device=self.device)
-
-        self._lin_vel_cmd = torch.zeros(self.num_envs, 3, device=self.device)
-        self._yaw_vel_cmd = torch.zeros(self.num_envs, 1, device=self.device)
         # Goal position
         self._desired_pos_w = torch.zeros(self.num_envs, 3, device=self.device)
 
@@ -218,18 +222,6 @@ class QuadcopterEnv(DirectRLEnv):
         # add handle for debug visualization (this is set to a valid handle inside set_debug_vis)
         self.set_debug_vis(self.cfg.debug_vis)
 
-        Ixx = 0.00072172
-        Iyy = 0.00088563
-        Izz = 0.0012558
-        robot_inertia = torch.diag(torch.tensor([Ixx, Iyy, Izz], device=self.device))
-
-        self.velocity_controller = GeometricVelocityController(
-            num_env=self.num_envs,
-            mass=self._robot_mass,
-            inertia=robot_inertia,
-            device=self.device,
-        )
-
     def _setup_scene(self):
         self._robot = Articulation(self.cfg.robot)
         self.scene.articulations["robot"] = self._robot
@@ -247,34 +239,9 @@ class QuadcopterEnv(DirectRLEnv):
         light_cfg.func("/World/Light", light_cfg)
 
     def _pre_physics_step(self, actions: torch.Tensor):
-        # self._actions = actions.clone().clamp(-1.0, 1.0)
-        # self._thrust[:, 0, 2] = self.cfg.thrust_to_weight * self._robot_weight * (self._actions[:, 0] + 1.0) / 2.0
-        # self._moment[:, 0, :] = self.cfg.moment_scale * self._actions[:, 1:]
-
-        self._actions = actions.clone().clamp(-1.0, 1.0)  
-        # self._actions = torch.ones_like(actions)   # just for testing 
-        # self._actions[:, 1:] = self._actions[:, 1:]*0.0
-        # print(f"Actions received: {self._actions}")
-
-        self._yaw_vel_cmd[:, 0] = self._actions[:, 0] * self.cfg.max_yaw_rate # m/s
-        self._lin_vel_cmd[:, :] = self._actions[:, 1:] * self.cfg.max_velocity  # rad/s 
-        
-        
-        #TODO: Feed input to controller and CHECK!!
-        thrust, moment = self.velocity_controller.update_velocity_only(
-            quat_w=self._robot.data.root_link_quat_w,
-            vel_w=self._robot.data.root_lin_vel_w,
-            omega_b=self._robot.data.root_ang_vel_b,
-            desired_vel_w=self._lin_vel_cmd[:, :],
-            desired_yaw_rate=self._yaw_vel_cmd[:, 0],
-        )
-        # print(f" thrust: {thrust}, moment: {moment}")
-        self._thrust[:, :] = 0.0
-        self._moment[:, :] = 0.0
-        self._thrust[:, 0, 2] = thrust
-        self._moment[:, 0, :] = moment
-
-        
+        self._actions = actions.clone().clamp(-1.0, 1.0)
+        self._thrust[:, 0, 2] = self.cfg.thrust_to_weight * self._robot_weight * (self._actions[:, 0] + 1.0) / 2.0
+        self._moment[:, 0, :] = self.cfg.moment_scale * self._actions[:, 1:]
 
     def _apply_action(self):
         self._robot.set_external_force_and_torque(self._thrust, self._moment, body_ids=self._body_id)
@@ -313,7 +280,7 @@ class QuadcopterEnv(DirectRLEnv):
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
         time_out = self.episode_length_buf >= self.max_episode_length - 1
-        died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.3, self._robot.data.root_pos_w[:, 2] > 6.0)
+        died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.1, self._robot.data.root_pos_w[:, 2] > 2.0)
         return died, time_out
 
     def _reset_idx(self, env_ids: torch.Tensor | None):
@@ -375,296 +342,3 @@ class QuadcopterEnv(DirectRLEnv):
     def _debug_vis_callback(self, event):
         # update the markers
         self.goal_pos_visualizer.visualize(self._desired_pos_w)
-
-
-
-class GeometricVelocityController:
-
-    def __init__(self, num_env, mass, inertia, device):
-        self.num_env = num_env
-        self.mass = mass
-
-        # self.J = inertia.unsqueeze(0).to(device)    # (1,3,3)
-        self.J_expand = inertia.unsqueeze(0).expand(self.num_env, 3, 3).to(device)
-        self.device = device
-        
-
-        # Position gains
-        self.k_p = 8.0 
-        self.k_d = 25.0
-
-        self.k_d_xy = 22.0
-        self.k_d_z = 80.0
-        
-        # FOR 1/200
-        # self.k_p = 16.0 # WORKED at 16.0
-        # self.k_d = 180.0
-
-        # Attitude gains
-        self.kR = 2.5 #4.5
-        self.kW = 0.1 #0.3
-
-        # Gravity
-        self.g = torch.tensor([0., 0., -9.81], device=device).unsqueeze(0)
-
-
-    # --------------------
-    # Utility functions
-    # --------------------
-    def vee_map(self, M):
-        # Extract [M32 - M23, M13 - M31, M21 - M12]
-        return torch.stack((
-            M[:, 2, 1] - M[:, 1, 2],
-            M[:, 0, 2] - M[:, 2, 0],
-            M[:, 1, 0] - M[:, 0, 1],
-        ), dim=1)
-
-    def matrix_from_quat(self, q):
-        """ IsaacLab format: q = (w,x,y,z) """
-        w, x, y, z = q[:, 0], q[:, 1], q[:, 2], q[:, 3]
-
-        R = torch.zeros((q.shape[0], 3, 3), device=q.device)
-
-        R[:, 0, 0] = 1 - 2 * (y * y + z * z)
-        R[:, 0, 1] = 2 * (x * y - z * w)
-        R[:, 0, 2] = 2 * (x * z + y * w)
-
-        R[:, 1, 0] = 2 * (x * y + z * w)
-        R[:, 1, 1] = 1 - 2 * (x * x + z * z)
-        R[:, 1, 2] = 2 * (y * z - x * w)
-
-        R[:, 2, 0] = 2 * (x * z - y * w)
-        R[:, 2, 1] = 2 * (y * z + x * w)
-        R[:, 2, 2] = 1 - 2 * (x * x + y * y)
-
-        return R
-
-    def quat_rotate(self, q, v):
-        """Rotate vector v by quaternion q."""
-        R = self.matrix_from_quat(q)
-        return torch.bmm(R, v.unsqueeze(2)).squeeze(2)
-
-    # ----------------------------------------
-    # MAIN CONTROL STEP
-    # ----------------------------------------
-    def update(
-        self,
-        pos_w, vel_w, quat_w, omega_b,
-        desired_pos_w, desired_vel_w,
-        desired_yaw, desired_yaw_rate
-    ):
-        # ---------------------------
-        # 1) POSITION + VELOCITY ERRORS
-        # ---------------------------
-        pos_err = desired_pos_w - desired_pos_w
-        vel_err = desired_vel_w - vel_w
-
-        # ---------------------------
-        # 2) DESIRED ACCELERATION
-        # ---------------------------
-        # acc_des = self.k_d * vel_err + self.g
-        acc_des = torch.zeros_like(vel_w)
-        acc_des[:, 0] = self.k_d_xy * vel_err[:, 0]
-        acc_des[:, 1] = self.k_d_xy * vel_err[:, 1]
-        acc_des[:, 2] = self.k_d_z * vel_err[:, 2] + self.g[:, 2]
-
-        # ---------------------------
-        # 3) DESIRED BODY Z (b3c)
-        # ---------------------------
-        b3_c = acc_des / torch.norm(acc_des, dim=1, keepdim=True)
-
-        # ---------------------------
-        # 4) DESIRED BODY X,Y FROM YAW
-        # ---------------------------
-        cy = torch.cos(desired_yaw)
-        sy = torch.sin(desired_yaw)
-
-        b1_des = torch.tensor([[cy, sy, 0.0]], device=self.device)
-
-        b2_c = torch.cross(b3_c, b1_des, dim=1)
-        b2_c = b2_c / torch.norm(b2_c, dim=1, keepdim=True)
-
-        b1_c = torch.cross(b2_c, b3_c, dim=1)
-
-        # ---------------------------
-        # 5) DESIRED ROTATION MATRIX Rd
-        # ---------------------------
-        Rd = torch.zeros((1, 3, 3), device=self.device)
-        Rd[:, :, 0] = b1_c
-        Rd[:, :, 1] = b2_c
-        Rd[:, :, 2] = b3_c
-
-        # ---------------------------
-        # 6) CURRENT ROTATION MATRIX R
-        # ---------------------------
-        R = self.matrix_from_quat(quat_w)
-
-        # ---------------------------
-        # 7) THRUST COMMAND
-        # ---------------------------
-        # Project desired force onto current body z axis
-        b3 = R[:, :, 2]
-        thrust = self.mass * torch.sum(acc_des * b3, dim=1)
-
-        # ---------------------------
-        # 8) ROTATION ERROR
-        # ---------------------------
-        rotation_error = 0.5 * self.vee_map(
-            torch.bmm(Rd.transpose(1, 2), R) -
-            torch.bmm(R.transpose(1, 2), Rd)
-        )
-
-        # ---------------------------
-        # 9) DESIRED BODY RATES
-        # ---------------------------
-        omega_c = torch.zeros((1, 3), device=self.device)
-        omega_c[:, 2] = desired_yaw_rate
-
-        RRT = torch.bmm(R.transpose(1, 2), Rd)
-        omega_c_body = torch.bmm(RRT, omega_c.unsqueeze(2)).squeeze(2)
-
-        omega_err = omega_b - omega_c_body
-        print(f"Omega error: {omega_err}")
-
-        # ---------------------------
-        # 10) FEEDFORWARD TERM (Ω × JΩc)
-        # ---------------------------
-        J_omega_c = torch.bmm(self.J, omega_c.unsqueeze(2)).squeeze(2)
-        feedforward = torch.cross(omega_b, J_omega_c, dim=1)
-
-        # ---------------------------
-        # 11) TORQUE COMMAND
-        # ---------------------------
-        torque = -self.kR * rotation_error - self.kW * omega_err + feedforward
-
-        return thrust, torque
-    
-    def update_velocity_only(
-        self,
-        vel_w, quat_w, omega_b,
-        desired_vel_w,
-        desired_yaw_rate
-    ):
-        """
-        Velocity-only control with yaw-rate tracking.
-        Inputs:
-            vel_w          : current linear velocity (1,3)
-            quat_w         : current orientation quaternion (1,4)
-            omega_b        : current body angular velocity (1,3)
-            desired_vel_w  : commanded linear velocity (1,3)
-            desired_yaw_rate : commanded body-frame yaw-rate (rad/s)
-        Outputs:
-            thrust  : scalar thrust along body z-axis
-            torque  : body-frame torque (1,3)
-        """
-        # Ensure batch dims
-        # vel_w = vel_w.view(1,3)
-        # quat_w = quat_w.view(1,4)
-        # omega_b = omega_b.view(1,3)
-        # desired_vel_w = desired_vel_w.view(1,3)
-
-        # ---------------------------
-        # 1) VELOCITY ERROR
-        # ---------------------------
-        vel_err = desired_vel_w - vel_w
-
-        # ---------------------------
-        # 2) DESIRED ACCELERATION (velocity-only)
-        # ---------------------------
-        acc_des = torch.zeros_like(vel_w)  # force command
-        acc_des[:, 0] = self.k_d_xy * vel_err[:, 0]
-        acc_des[:, 1] = self.k_d_xy * vel_err[:, 1]
-        acc_des[:, 2] = self.k_d_z * vel_err[:, 2] + self.g[:, 2]  # include gravity
-
-        # ---------------------------
-        # 3) BODY Z (thrust direction)
-        # ---------------------------
-        b3_c = acc_des / (torch.norm(acc_des, dim=1, keepdim=True))
-
-        # ---------------------------
-        # 4) DESIRED BODY X/Y (arbitrary, yaw free)
-        # ---------------------------
-        # current yaw from quaternion
-        # w, x, y, z = quat_w[:,0], quat_w[:,1], quat_w[:,2], quat_w[:,3]
-        
-        euler = euler_xyz_from_quat(quat_w)
-        # print("Quat shape: ", len(euler))
-        # print("Euler angles (rpy) shape: ", euler[0])
-
-        if isinstance(euler, tuple):
-            # Each tensor shape: (1,) → stack to (3,) → then batch to (env,3)
-            self.current_euler = torch.stack([e.squeeze(-1) for e in euler], dim=1)
-
-        # print("Current euler angles (rpy): ", self.current_euler.shape)
-        
-        cy = torch.cos(self.current_euler[:, 2])
-        sy = torch.sin(self.current_euler[:, 2])
-
-        # cp = torch.cos(self.current_euler[:, 1])
-        # sp = torch.sin(self.current_euler[:, 1])
-
-        # cr = torch.cos(self.current_euler[:, 0])
-        # sr = torch.sin(self.current_euler[:, 0])
-
-        # b1_des = torch.tensor([[cy, sy, torch.zeros_like(cy)]], device=self.device)
-        b1_des = torch.stack((cy, sy, torch.zeros_like(cy)), dim=1)  # shape (B,3)
-
-        # b1_des = torch.tensor([[1.0, 0.0, 0.0]], device=self.device)  # yaw-free reference
-        b2_c = torch.cross(b3_c, b1_des, dim=1)
-        b2_c /= (torch.norm(b2_c, dim=1, keepdim=True))
-        b1_c = torch.cross(b2_c, b3_c, dim=1)
-
-        
-
-        # ---------------------------
-        # 5) DESIRED ROTATION MATRIX Rd
-        # ---------------------------
-        # Rd = torch.zeros((1,3,3), device=self.device)
-        # Rd[:,:,0] = b1_c
-        # Rd[:,:,1] = b2_c
-        # Rd[:,:,2] = b3_c
-        Rd = torch.stack((b1_c, b2_c, b3_c), dim=2)
-
-        # ---------------------------
-        # 6) CURRENT ROTATION MATRIX R
-        # ---------------------------
-        R = self.matrix_from_quat(quat_w)
-
-        # ---------------------------
-        # 7) THRUST
-        # ---------------------------
-        b3 = R[:, :, 2]  # current body z-axis
-        thrust = self.mass * torch.sum(acc_des * b3, dim=1)
-
-        # ---------------------------
-        # 8) ROTATION ERROR (roll/pitch only, yaw ignored)
-        # ---------------------------
-        rotation_error = 0.5 * self.vee_map(
-            torch.bmm(Rd.transpose(1,2), R) - torch.bmm(R.transpose(1,2), Rd)
-        )
-        rotation_error[:,2] = 0.0  # zero yaw error
-
-        # ---------------------------
-        # 9) DESIRED BODY RATES
-        # ---------------------------
-        omega_c = torch.zeros_like(omega_b)
-        # print("Omega command shape: ", omega_c.shape)
-        # print("Desired yaw rate shape: ", desired_yaw_rate.shape)
-        omega_c[:, 2] = desired_yaw_rate[:]  # yaw-rate tracking
-
-        omega_err = omega_b - omega_c
-
-        # ---------------------------
-        # 10) FEEDFORWARD
-        # ---------------------------
-        
-        J_omega_c = torch.bmm(self.J_expand, omega_c.unsqueeze(2)).squeeze(2)
-        feedforward = torch.cross(omega_b, J_omega_c, dim=1)
-
-        # ---------------------------
-        # 11) TORQUE
-        # ---------------------------
-        torque = -self.kR * rotation_error - self.kW * omega_err + feedforward
-
-        return thrust, torque
-

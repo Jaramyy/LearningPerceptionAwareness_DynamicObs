@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2025, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
@@ -17,14 +17,51 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sim import SimulationCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
-from isaaclab.utils.math import subtract_frame_transforms
+from isaaclab.utils.math import subtract_frame_transforms, quat_apply_yaw, quat_from_angle_axis, euler_xyz_from_quat
 
 ##
 # Pre-defined configs
 ##
-from isaaclab_assets import CRAZYFLIE_CFG  # isort: skip
+from .robot.agileDrone import AGILE_CFG    # isort: skip
 from isaaclab.markers import CUBOID_MARKER_CFG  # isort: skip
 
+#terrain
+from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG, OBSTACLE_RAND_POS
+
+import isaaclab.envs.mdp as mdp    
+from isaaclab.managers import EventTermCfg as EventTerm
+from isaaclab.managers import SceneEntityCfg
+
+# viewpoint
+from isaaclab.envs.ui  import ViewportCameraController
+from isaaclab.envs import ViewerCfg
+
+# sensor
+from isaaclab.sensors import RayCasterCfg, RayCaster, patterns
+from isaaclab.sensors import Imu, ImuCfg
+
+#lidar 
+import einops
+from isaacsim.util.debug_draw import _debug_draw
+
+#markers
+from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
+from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
+
+#goal
+import numpy as np
+
+@configclass
+class EventCfg:
+    add_base_mass = EventTerm(
+        func=mdp.randomize_rigid_body_mass,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="base_link"),
+            "mass_distribution_params": (-0.50, 0.5),
+            "operation": "add",
+        },
+    )
 
 class QuadcopterEnvWindow(BaseEnvWindow):
     """Window manager for the Quadcopter environment."""
@@ -53,10 +90,15 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     decimation = 2
     action_space = 4
     observation_space = 12
+    # observation_space = 17 #with 5 beams lidar
+    # observation_space = 12
     state_space = 0
     debug_vis = True
 
     ui_window_class_type = QuadcopterEnvWindow
+    
+    # viewer = ViewerCfg(eye=(-19.8, -23.8, 11.5), lookat=(-24.0, -8.5, -1.7), origin_type='env', env_index=2015)
+    viewer = ViewerCfg(eye=(-19.8, -23.8, 11.5), lookat=(-24.0, -8.5, -1.7), origin_type='env')
 
     # simulation
     sim: SimulationCfg = SimulationCfg(
@@ -70,34 +112,83 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
             restitution=0.0,
         ),
     )
-    terrain = TerrainImporterCfg(
-        prim_path="/World/ground",
-        terrain_type="plane",
-        collision_group=-1,
-        physics_material=sim_utils.RigidBodyMaterialCfg(
-            friction_combine_mode="multiply",
-            restitution_combine_mode="multiply",
-            static_friction=1.0,
-            dynamic_friction=1.0,
-            restitution=0.0,
-        ),
-        debug_vis=False,
-    )
 
+    # flat_terrain = False  # for generator terrain
+    flat_terrain = True
+    if flat_terrain:
+        # for flat and emtry terrain
+        terrain = TerrainImporterCfg(
+            prim_path="/World/ground",
+            terrain_type="plane",
+            collision_group=-1,
+            physics_material=sim_utils.RigidBodyMaterialCfg(
+                friction_combine_mode="multiply",
+                restitution_combine_mode="multiply",
+                static_friction=1.0,
+                dynamic_friction=1.0,
+                restitution=0.0,
+            ),
+            debug_vis=False,
+        )
+    else:
+        # for custom terrain
+        terrain = TerrainImporterCfg(
+            prim_path="/World/ground",
+            terrain_type="generator",
+            terrain_generator=ROUGH_TERRAINS_CFG,
+            max_init_terrain_level=9,
+            collision_group=-1,
+            physics_material=sim_utils.RigidBodyMaterialCfg(
+                friction_combine_mode="multiply",
+                restitution_combine_mode="multiply",
+                static_friction=1.0,
+                dynamic_friction=1.0,
+            ),
+            # visual_material=sim_utils.MdlFileCfg(
+            #     mdl_path="{NVIDIA_NUCLEUS_DIR}/Materials/Base/Architecture/Shingles_01.mdl",
+            #     project_uvw=True,
+            # ),
+            debug_vis=True,
+        )
     # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(
-        num_envs=4096, env_spacing=2.5, replicate_physics=True #clone_in_fabric=True
-    )
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=2.5, replicate_physics=True)
+    
+    # events
+    events: EventCfg = EventCfg()
 
     # robot
-    robot: ArticulationCfg = CRAZYFLIE_CFG.replace(prim_path="/World/envs/env_.*/Robot")
-    thrust_to_weight = 1.9
-    moment_scale = 0.01
+    robot: ArticulationCfg = AGILE_CFG.replace(prim_path="/World/envs/env_.*/Robot")
+
+    # sensor 
+    lidar_sensor = RayCasterCfg(
+        prim_path="/World/envs/env_.*/Robot/base_link",
+        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.15)),
+        attach_yaw_only=False,
+        # pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-50.0, 50.0),horizontal_res=1.67),     #For limited fov
+        pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-179.0, 179.0),horizontal_res=6.0),      #For full fov 
+        debug_vis=False,
+        mesh_prim_paths=["/World/ground"],
+    )
+
+    thrust_to_weight = 5.0
+    moment_scale = 0.7
 
     # reward scales
     lin_vel_reward_scale = -0.05
-    ang_vel_reward_scale = -0.01
-    distance_to_goal_reward_scale = 15.0
+    ang_vel_reward_scale = -0.002
+    distance_to_goal_reward_scale = 60.0
+    action_rate_reward_scale = -0.5
+    velocity_direction = 15.0
+    reward_safety_static = 30.0  # 15.0
+    head_tracking = 15.0  # 15.0
+    potential_tracking = 40.0  # 60.0
+    penalty_height = -0.1
+    heading_reward_blended = 2.0
+
+    #max velocity
+    max_velocity = 4.0  # m/s
+    max_yaw_rate = 3.14  # rad/s
+
 
 
 class QuadcopterEnv(DirectRLEnv):
@@ -122,8 +213,8 @@ class QuadcopterEnv(DirectRLEnv):
                 "distance_to_goal",
             ]
         }
-        # Get specific body indices
-        self._body_id = self._robot.find_bodies("body")[0]
+       # Get specific body indices
+        self._body_id = self._robot.find_bodies("base_link")[0]
         self._robot_mass = self._robot.root_physx_view.get_masses()[0].sum()
         self._gravity_magnitude = torch.tensor(self.sim.cfg.gravity, device=self.device).norm()
         self._robot_weight = (self._robot_mass * self._gravity_magnitude).item()

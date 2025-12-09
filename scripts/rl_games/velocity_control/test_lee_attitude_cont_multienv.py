@@ -728,6 +728,7 @@ def main():
     # robot_cfg = AGILE_CFG.replace(prim_path="/World/AgileDrone")
     robot_cfg = AGILE_CFG.replace(prim_path="/World/envs/env_.*/Robot")
     robot_cfg.spawn.func("/World/AgileDrone", robot_cfg.spawn, translation=robot_cfg.init_state.pos)
+    # robot_cfg.spawn.func("/World/AgileDrone", robot_cfg.spawn, translation=robot_cfg.init_state.pos)
     robot = Articulation(robot_cfg)
 
     scene.articulations["robot"] = robot
@@ -795,7 +796,7 @@ def main():
    
     cmd_pos = torch.tensor([[0.0, 0.0, 0.0]], device=sim.device)
     # cmd_vel = torch.tensor([[2.0, -1.0, 1.0]], device=sim.device)
-    cmd_vel = torch.tensor([[0.0, 0.0, 0.0]], device=sim.device)
+    cmd_vel = torch.tensor([[3.0, 0.0, 1.5]], device=sim.device)
     cmd_yaw = torch.tensor([0.0], device=sim.device)
     cmd_yaw_rate = torch.tensor([0.0], device=sim.device)
 

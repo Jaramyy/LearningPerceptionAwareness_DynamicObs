@@ -174,12 +174,12 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     moment_scale = 0.7
 
     # reward scales
-    lin_vel_reward_scale = -0.05
+    lin_vel_reward_scale = -0.015
     ang_vel_reward_scale = -0.01
     distance_to_goal_reward_scale = 60.0
 
     #max velocity
-    max_velocity = 5.0  # m/s
+    max_velocity = 4.0  # m/s
     max_yaw_rate = 3.14  # rad/s
 
 
@@ -215,12 +215,19 @@ class QuadcopterEnv(DirectRLEnv):
         self._gravity_magnitude = torch.tensor(self.sim.cfg.gravity, device=self.device).norm()
         self._robot_weight = (self._robot_mass * self._gravity_magnitude).item()
 
+        all_inertia_tensor = self._robot.root_physx_view.get_inertias()[0] # shape (num_envs, 3, 3)
+        robot_inertia = torch.sum(all_inertia_tensor,dim=0)
+        print("Inertia tensor of the robot:", robot_inertia)
+
         # add handle for debug visualization (this is set to a valid handle inside set_debug_vis)
         self.set_debug_vis(self.cfg.debug_vis)
 
-        Ixx = 0.00072172
-        Iyy = 0.00088563
-        Izz = 0.0012558
+        # Ixx = 0.00072172
+        Ixx = 7.6191e-04
+        # Iyy = 0.00088563
+        Iyy = 8.9651e-04
+        # Izz = 0.0012558
+        Izz = 1.2983e-03
         robot_inertia = torch.diag(torch.tensor([Ixx, Iyy, Izz], device=self.device))
 
         self.velocity_controller = GeometricVelocityController(
@@ -254,10 +261,18 @@ class QuadcopterEnv(DirectRLEnv):
         self._actions = actions.clone().clamp(-1.0, 1.0)  
         # self._actions = torch.ones_like(actions)   # just for testing 
         # self._actions[:, 1:] = self._actions[:, 1:]*0.0
-        # print(f"Actions received: {self._actions}")
+        # print(f"Actions received: {self._actions}")   
 
-        self._yaw_vel_cmd[:, 0] = self._actions[:, 0] * self.cfg.max_yaw_rate # m/s
-        self._lin_vel_cmd[:, :] = self._actions[:, 1:] * self.cfg.max_velocity  # rad/s 
+        # fake_action = torch.zeros_like(self._actions)
+        # fake_action[:, 0] = 0.5
+        # fake_action[:, 1:] = 1.0
+        
+
+        self._yaw_vel_cmd[:, 0] = self._actions[:, 0] * self.cfg.max_yaw_rate # rad/s
+        self._lin_vel_cmd[:, :] = self._actions[:, 1:] * self.cfg.max_velocity  # m/s
+        # self._lin_vel_cmd[:, :] = fake_action[:, 1:] * self.cfg.max_velocity  # m/s
+        # self._yaw_vel_cmd[:, 0] = fake_action[:, 0] * self.cfg.max_yaw_rate # rad/s
+
         
         
         #TODO: Feed input to controller and CHECK!!
@@ -313,7 +328,7 @@ class QuadcopterEnv(DirectRLEnv):
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
         time_out = self.episode_length_buf >= self.max_episode_length - 1
-        died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.3, self._robot.data.root_pos_w[:, 2] > 6.0)
+        died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.3, self._robot.data.root_pos_w[:, 2] > 4.0)
         return died, time_out
 
     def _reset_idx(self, env_ids: torch.Tensor | None):

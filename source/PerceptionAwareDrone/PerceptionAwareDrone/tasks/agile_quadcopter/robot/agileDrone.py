@@ -19,7 +19,8 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 AGILE_CFG = ArticulationCfg(
     prim_path="{ENV_REGEX_NS}/Robot",
     spawn=sim_utils.UsdFileCfg(
-        usd_path=f"/home/jaramy/thesis_ws/AgiDrone/agile_cam/Drone_Full_URDFV3/Drone_Full_URDFV3.usd",
+        # usd_path=f"/home/jaramy/thesis_ws/AgiDrone/agile_cam/Drone_Full_URDFV3/Drone_Full_URDFV3.usd",
+        usd_path=f"/home/jaramy/thesis_ws/AgiDrone/Drone_Full_URDFV3/Drone_Full_URDFV4_3.usd",
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
             max_depenetration_velocity=10.0,
@@ -42,10 +43,14 @@ AGILE_CFG = ArticulationCfg(
             ".*": 0.0,
         },
         joint_vel={
-            "JointProp1": 200.0,
-            "JointProp2": -200.0,
-            "JointProp3": 200.0,
-            "JointProp4": -200.0,
+            # "JointProp1": 200.0,
+            # "JointProp2": -200.0,
+            # "JointProp3": 200.0,
+            # "JointProp4": -200.0,
+            "m1_joint": 200.0,
+            "m2_joint": -200.0,
+            "m3_joint": 200.0,
+            "m4_joint": -200.0,
         },
     ),
     actuators={

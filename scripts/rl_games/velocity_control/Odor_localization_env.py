@@ -27,6 +27,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Vector3, Twist
 from olfaction_msgs.msg import GasSensor
 from olfaction_msgs.msg import Anemometer
+from std_msgs.msg import Float32MultiArray, Float32
 
 # -------------------- ROS publisher --------------------
 class PIDPlotPublisher(Node):
@@ -54,7 +55,7 @@ class VelocityCommandSubscriber(Node):
             self.listener_callback,
             10,
         )
-        self.subscription  # prevent unused variable warning
+        
         self.cmd_velocity = torch.zeros(3)
         self.cmd_ang_velocity = torch.zeros(3)
 
@@ -66,387 +67,58 @@ class VelocityCommandSubscriber(Node):
         self.cmd_ang_velocity[1] = msg.angular.y
         self.cmd_ang_velocity[2] = msg.angular.z
 
-class gasSubscriber(Node):
+class GagenSimSubscriber(Node):
     def __init__(self, name="gas_subscriber"):
         super().__init__(name)
-        self.subscription = self.create_subscription(
-            Vector3,
-            "/gas_concentration",
-            self.listener_callback,
-            10,
-        )
-        self.subscription  # prevent unused variable warning
-        self.gas_concentration = 0.0
 
-    def listener_callback(self, msg):
-        self.gas_concentration = msg.z  # Assuming gas concentration is published in the z field
-
-
-
-
-# -------------------- Allocation & Motor classes kept (unchanged) --------------------
-# (Use your existing Allocation and Motor classes from your script - unchanged)
-
-# Paste your Allocation and Motor classes here (I assume they're defined below in your file).
-# For brevity, I will reuse the names alloc_matrix and motor existing in your file.
-class Allocation:
-    def __init__(self, num_envs, device="cuda", dtype=torch.float32):
-        """
-        Initializes the allocation matrix for a quadrotor for multiple environments.
-
-        Parameters:
-        - num_envs (int): Number of environments
-        - arm_length (float): Distance from the center to the rotor
-        - thrust_coeff (float): Rotor thrust constant
-        - drag_coeff (float): Rotor torque constant
-        - device (str): 'cpu' or 'cuda'
-        - dtype (torch.dtype): Desired tensor dtype
-        """
+        self.gas_left_subscription_ = self.create_subscription(
+            GasSensor,
+            '/fake_pid_left/Sensor_reading',
+            self.gas_left_callback,
+            10)
         
-        arm_length: float = 0.130 #0.035
-        """Length of the arms of the drone in meters."""
+        self.gas_right_subscription_ = self.create_subscription(
+            GasSensor,
+            '/fake_pid_right/Sensor_reading',
+            self.gas_right_callback,
+            10)
         
-        drag_coef: float = 1.5e-9
-        """Drag torque coefficient."""
+        self.wind_subscription_ = self.create_subscription(
+            Anemometer,
+            '/fake_anemometer/WindSensor_reading',
+            self.wind_callback,
+            10)
         
-        thrust_coef: float = 5.327e-7 #2.25e-7
-        """Thrust coefficient.
-        Calculated with 5145 rad/s max angular velociy, thrust to weight: 4, mass: 0.6076 kg and gravity: 9.81 m/s^2.
-        thrust_coef = (4 * 0.6076 * 9.81) / (4 * 5145**2) = 2.25e-7."""
-        
-        self.omega_max: float = 5145.0
-        """Maximum angular velocity of the drone motors in rad/s.
-        Calculated with 1950KV motor, with 6S LiPo battery with 4.2V per cell.
-        1950 * 6 * 4.2 = 49,140 RPM ~= 5145 rad/s."""
-        
+        self.gas_left_data = GasSensor()
+        self.gas_right_data = GasSensor()
+        self.wind_data = Anemometer()
 
-        sqrt2_inv = 1.0 / torch.sqrt(torch.tensor(2.0, dtype=dtype, device=device))
-        A = torch.tensor(
-            [
-                [1.0, 1.0, 1.0, 1.0],
-                [arm_length * sqrt2_inv, -arm_length * sqrt2_inv, -arm_length * sqrt2_inv, arm_length * sqrt2_inv],
-                [-arm_length * sqrt2_inv, -arm_length * sqrt2_inv, arm_length * sqrt2_inv, arm_length * sqrt2_inv],
-                [drag_coef, -drag_coef, drag_coef, -drag_coef],
-            ],
-            dtype=dtype,
-            device=device,
-        )
-        self._allocation_matrix = A.unsqueeze(0).repeat(num_envs, 1, 1)
-        self._thrust_coeff = thrust_coef
+        self.gas_left_lowpass = Float32()
+        self.gas_right_lowpass = Float32()
 
-    def compute(self, omega):
-        """
-        Computes the total thrust and body torques given the rotor angular velocities.
-
-        Parameters:
-        - omega (torch.Tensor): Tensor of shape (num_envs, 4) representing rotor angular velocities
-
-        Returns:
-        - thrust_torque (torch.Tensor): Tensor of shape (num_envs, 4)
-        """
-
-        
-        thrusts_ref = self._thrust_coeff * omega**2
-        thrusts_ref_batched = thrusts_ref.unsqueeze(0)
-        # print(f"Thrusts reference: {thrusts_ref.unsqueeze(-1).shape}, Allocation matrix: {self._allocation_matrix.shape}")
-        # thrust_torque = torch.bmm(self._allocation_matrix, thrusts_ref_batched.unsqueeze(-1)).squeeze(-1)
-        # Ensure thrusts_ref_batched is 3D
-        
-        if thrusts_ref_batched.ndim == 1:
-            # [4] → [1, 4, 1]
-            thrusts_ref_batched = thrusts_ref_batched.unsqueeze(0).unsqueeze(-1)
-        elif thrusts_ref_batched.ndim == 2:
-            # [1, 4] or [B, 4] → [B, 4, 1]
-            thrusts_ref_batched = thrusts_ref_batched.unsqueeze(-1)
-        elif thrusts_ref_batched.ndim == 3 and thrusts_ref_batched.shape[1] == 1:
-            # [B, 1, 4] → [B, 4, 1]
-            thrusts_ref_batched = thrusts_ref_batched.transpose(1, 2)
-
-        thrust_torque = torch.bmm(self._allocation_matrix, thrusts_ref_batched).squeeze(-1)
-
-        
-        # thrust_torque = torch.matmul(thrusts_ref, self._allocation_matrix.T) 
-        return thrust_torque
+    def low_pass_filter(self, current_value, previous_value, alpha=0.001):
+        return float(alpha * current_value + (1 - alpha) * previous_value)
     
-    def get_omega_max(self):
-        """
-        Returns the maximum angular velocity of the motors.
+    def gas_left_callback(self, msg):
+        self.gas_left_data = msg.raw
+        self.gas_left_lowpass.data = self.low_pass_filter(self.gas_left_data, self.prev_gas_left, alpha=0.05)
+        self.prev_gas_left = self.gas_left_lowpass.data
+        # self.get_logger().info(f"Gas Left Data: {self.gas_left_data}")
 
-        Returns:
-        - omega_max (float): Maximum angular velocity in rad/s.
-        """
-        return self.omega_max
+    def gas_right_callback(self, msg):
+        self.gas_right_data = msg.raw
+        self.gas_right_lowpass.data = self.low_pass_filter(self.gas_right_data, self.prev_gas_right, alpha=0.05)
+        self.prev_gas_right = self.gas_right_lowpass.data
+        # self.get_logger().info(f"Gas Right Data: {self.gas_right_data}")
 
+    def wind_callback(self, msg):
+        wind_dir_rad = msg.wind_direction  # radians
+        wind_speed = msg.wind_speed  # m/s
+        # self.get_logger().info(f"Wind Direction: {wind_dir_rad}, Wind Speed: {wind_speed}")
 
-class Motor:
-    def __init__(self, num_envs, taus, init, max_rate, min_rate, dt, use, device="cpu", dtype=torch.float32):
-        """
-        Initializes the motor model.
+    def logger_training_data(self):
+        pass
 
-        Parameters:
-        - num_envs: Number of envs.
-        - taus: (4,) Tensor or list specifying time constants per motor.
-        - init: (4,) Tensor or list specifying the initial omega per motor. (rad/s)
-        - max_rate: (4,) Tensor or list specifying max rate of change of omega per motor. (rad/s^2)
-        - min_rate: (4,) Tensor or list specifying min rate of change of omega per motor. (rad/s^2)
-        - dt: Time step for integration.
-        - use: Boolean indicating whether to use motor dynamics.
-        - device: 'cpu' or 'cuda' for tensor operations.
-        - dtype: Data type for tensors.
-        """
-        self.num_envs = num_envs
-        self.num_motors = len(taus)
-        self.dt = dt
-        self.use = use
-        self.init = init
-        self.device = device
-        self.dtype = dtype
-
-        self.omega = torch.tensor(init, device=device).expand(num_envs, -1).clone()  # (num_envs, num_motors)
-
-        # Convert to tensors and expand for all drones
-        self.tau = torch.tensor(taus, device=device).expand(num_envs, -1)  # (num_envs, num_motors)
-        self.max_rate = torch.tensor(max_rate, device=device).expand(num_envs, -1)  # (num_envs, num_motors)
-        self.min_rate = torch.tensor(min_rate, device=device).expand(num_envs, -1)  # (num_envs, num_motors)
-
-    def compute(self, omega_ref):
-        """
-        Computes the new omega values based on reference omega and motor dynamics.
-
-        Parameters:
-        - omega_ref: (num_envs, num_motors) Tensor of reference omega values.
-
-        Returns:
-        - omega: (num_envs, num_motors) Tensor of updated omega values.
-        """
-
-        if not self.use:
-            self.omega = omega_ref
-            return self.omega
-
-        # Compute omega rate using first-order motor dynamics
-        omega_rate = (1.0 / self.tau) * (omega_ref - self.omega)  # (num_envs, num_motors)
-        omega_rate = omega_rate.clamp(self.min_rate, self.max_rate)
-
-        # Integrate
-        self.omega += self.dt * omega_rate
-        return self.omega
-
-    def reset(self, env_ids):
-        """
-        Resets the motor model to initial conditions.
-        """
-        self.omega[env_ids] = torch.tensor(self.init, device=self.device, dtype=self.dtype).expand(len(env_ids), -1)
-
-
-class PositionController:
-    def __init__(self, k_p=1.2, k_d=0.4, max_vel=2.0, device="cpu"):
-        self.k_p = k_p
-        self.k_d = k_d
-        self.max_vel = max_vel
-        self.device = device
-
-    def __call__(self, state_w, desired_pos_w):
-        pos = state_w["pos_w"]
-        vel = state_w["lin_vel_w"]
-        R_wb = state_w["rot_w_b"]
-
-        # Ensure shape is (3,)
-        if pos.ndim == 2 and pos.shape[0] == 1:
-            pos = pos.squeeze(0)
-        if vel.ndim == 2 and vel.shape[0] == 1:
-            vel = vel.squeeze(0)
-
-        # Position + velocity errors
-        pos_error = desired_pos_w - pos
-        vel_error = -vel
-
-        # PD output (world frame)
-        v_cmd_w = self.k_p * pos_error + self.k_d * vel_error
-
-        # Fix shape (1,3) → (3,)
-        if v_cmd_w.ndim == 2 and v_cmd_w.shape[0] == 1:
-            v_cmd_w = v_cmd_w.squeeze(0)
-
-        # Clamp
-        speed_xy = torch.norm(v_cmd_w[:2])
-        if speed_xy > self.max_vel:
-            v_cmd_w[:2] = v_cmd_w[:2] / speed_xy * self.max_vel
-
-        v_cmd_w[2] = torch.clamp(v_cmd_w[2], -self.max_vel, self.max_vel)
-
-        # Convert to body frame (v_b = R_wb @ v_w)
-        v_cmd_b = R_wb @ v_cmd_w
-
-        return v_cmd_b
-
-def compute_vee_map(skew_matrix):
-    # type: (Tensor) -> Tensor
-
-    # return vee map of skew matrix
-    vee_map = torch.stack(
-        [-skew_matrix[:, 1, 2], skew_matrix[:, 0, 2], -skew_matrix[:, 0, 1]], dim=1
-    )
-    return vee_map
-
-
-
-class GeometricPositionController:
-
-    def __init__(self, mass, inertia, device):
-        self.mass = mass
-        self.J = inertia.unsqueeze(0).to(device)    # (1,3,3)
-        self.device = device
-
-        # Position gains
-        self.k_p = 16.0 # WORKED at 16.0
-        self.k_d = 8.5
-
-        # Attitude gains
-        self.kR = 6.0 #4.5
-        self.kW = 0.5 #0.3
-
-        # Gravity
-        self.g = torch.tensor([0., 0., -9.81], device=device).unsqueeze(0)
-
-        self.current_euler = torch.zeros((1,3), device=device)
-
-
-    # --------------------
-    # Utility functions
-    # --------------------
-    def vee_map(self, M):
-        # Extract [M32 - M23, M13 - M31, M21 - M12]
-        return torch.stack((
-            M[:, 2, 1] - M[:, 1, 2],
-            M[:, 0, 2] - M[:, 2, 0],
-            M[:, 1, 0] - M[:, 0, 1],
-        ), dim=1)
-
-    def matrix_from_quat(self, q):
-        """ IsaacLab format: q = (w,x,y,z) """
-        w, x, y, z = q[:, 0], q[:, 1], q[:, 2], q[:, 3]
-
-        R = torch.zeros((q.shape[0], 3, 3), device=q.device)
-
-        R[:, 0, 0] = 1 - 2 * (y * y + z * z)
-        R[:, 0, 1] = 2 * (x * y - z * w)
-        R[:, 0, 2] = 2 * (x * z + y * w)
-
-        R[:, 1, 0] = 2 * (x * y + z * w)
-        R[:, 1, 1] = 1 - 2 * (x * x + z * z)
-        R[:, 1, 2] = 2 * (y * z - x * w)
-
-        R[:, 2, 0] = 2 * (x * z - y * w)
-        R[:, 2, 1] = 2 * (y * z + x * w)
-        R[:, 2, 2] = 1 - 2 * (x * x + y * y)
-
-        return R
-
-    def quat_rotate(self, q, v):
-        """Rotate vector v by quaternion q."""
-        R = self.matrix_from_quat(q)
-        return torch.bmm(R, v.unsqueeze(2)).squeeze(2)
-
-
-    # ----------------------------------------
-    # MAIN CONTROL STEP
-    # ----------------------------------------
-    def update(
-        self,
-        pos_w, vel_w, quat_w, omega_b,
-        desired_pos_w, desired_vel_w,
-        desired_yaw, desired_yaw_rate
-    ):
-
-        # Ensure batch dims
-        pos_w = pos_w.view(1, 3)
-        vel_w = vel_w.view(1, 3)
-        quat_w = quat_w.view(1, 4)
-        omega_b = omega_b.view(1, 3)
-        desired_pos_w = desired_pos_w.view(1, 3)
-        desired_vel_w = desired_vel_w.view(1, 3)
-
-        # ---------------------------
-        # 1) POSITION + VELOCITY ERRORS
-        # ---------------------------
-        pos_err = desired_pos_w - pos_w
-        vel_err = desired_vel_w - vel_w
-
-        # ---------------------------
-        # 2) DESIRED ACCELERATION
-        # ---------------------------
-        acc_des = self.k_p * pos_err + self.k_d * vel_err + self.g
-
-        # ---------------------------
-        # 3) DESIRED BODY Z (b3c)
-        # ---------------------------
-        b3_c = acc_des / torch.norm(acc_des, dim=1, keepdim=True)
-
-        # ---------------------------
-        # 4) DESIRED BODY X,Y FROM YAW
-        # ---------------------------
-        cy = torch.cos(desired_yaw)
-        sy = torch.sin(desired_yaw)
-
-        b1_des = torch.tensor([[cy, sy, 0.0]], device=self.device)
-
-        b2_c = torch.cross(b3_c, b1_des, dim=1)
-        b2_c = b2_c / torch.norm(b2_c, dim=1, keepdim=True)
-
-        b1_c = torch.cross(b2_c, b3_c, dim=1)
-
-        # ---------------------------
-        # 5) DESIRED ROTATION MATRIX Rd
-        # ---------------------------
-        Rd = torch.zeros((1, 3, 3), device=self.device)
-        Rd[:, :, 0] = b1_c
-        Rd[:, :, 1] = b2_c
-        Rd[:, :, 2] = b3_c
-
-        # ---------------------------
-        # 6) CURRENT ROTATION MATRIX R
-        # ---------------------------
-        R = self.matrix_from_quat(quat_w)
-
-        # ---------------------------
-        # 7) THRUST COMMAND
-        # ---------------------------
-        # Project desired force onto current body z axis
-        b3 = R[:, :, 2]
-        thrust = self.mass * torch.sum(acc_des * b3, dim=1)
-
-        # ---------------------------
-        # 8) ROTATION ERROR
-        # ---------------------------
-        rotation_error = 0.5 * self.vee_map(
-            torch.bmm(Rd.transpose(1, 2), R) -
-            torch.bmm(R.transpose(1, 2), Rd)
-        )
-
-        # ---------------------------
-        # 9) DESIRED BODY RATES
-        # ---------------------------
-        omega_c = torch.zeros((1, 3), device=self.device)
-        omega_c[:, 2] = desired_yaw_rate
-
-        RRT = torch.bmm(R.transpose(1, 2), Rd)
-        omega_c_body = torch.bmm(RRT, omega_c.unsqueeze(2)).squeeze(2)
-
-        omega_err = omega_b - omega_c_body
-
-        # ---------------------------
-        # 10) FEEDFORWARD TERM (Ω × JΩc)
-        # ---------------------------
-        J_omega_c = torch.bmm(self.J, omega_c.unsqueeze(2)).squeeze(2)
-        feedforward = torch.cross(omega_b, J_omega_c, dim=1)
-
-        # ---------------------------
-        # 11) TORQUE COMMAND
-        # ---------------------------
-        torque = -self.kR * rotation_error - self.kW * omega_err + feedforward
-
-        return thrust, torque
 
 class GeometricVelocityController:
 
@@ -782,14 +454,6 @@ def main():
     min_rate = (-50000.0, -50000.0, -50000.0, -50000.0)
     use_motor_model = False
 
-    # create allocation & motor (your classes)
-    alloc_matrix = Allocation(num_envs=1, device=sim.device)
-    motor = Motor(num_envs=1, taus=taus, init=init, max_rate=max_rate, min_rate=min_rate, dt=sim_dt, use=use_motor_model, device=sim.device)
-
-    # instantiate the new controller: provide mass and inertia J
-    # NOTE: replace this approximate J with your robot's true inertia if available.
-    # J_default = torch.diag(torch.tensor([0.01, 0.01, 0.02], device=sim.device))  # (3,3) approximate
-    # vac = VelocityAttitudeController(mass=float(robot_mass), J=J_default, g=9.81, k_v=2.0, k_R=4.0, k_omega=0.6, device=sim.device)
 
     # diagnostic publishers (assumes pid_publisher global)
     global pid_publisher

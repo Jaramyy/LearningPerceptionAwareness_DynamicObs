@@ -483,6 +483,9 @@ def main():
         device=sim.device
     )
 
+    velSub = VelocityCommandSubscriber()
+    gasInfoSub = GagenSimSubscriber()
+
     
    
     cmd_pos = torch.tensor([[0.0, 0.0, 0.0]], device=sim.device)

@@ -96,6 +96,10 @@ class GagenSimSubscriber(Node):
         self.gas_left_lowpass = Float32()
         self.gas_right_lowpass = Float32()
 
+        self.dataLog_gas_left = torch.zeros(1)
+        self.dataLog_gas_right = torch.zeros(1)
+        self.dataLog_wind_dir = torch.zeros(1)
+
     def low_pass_filter(self, current_value, previous_value, alpha=0.001):
         return float(alpha * current_value + (1 - alpha) * previous_value)
     
@@ -118,6 +122,15 @@ class GagenSimSubscriber(Node):
 
     def logger_training_data(self):
         pass
+
+class dataLogger(Node):
+    def __init__(self, name="data_logger"):
+        super().__init__(name)
+        timer_period = 0.1  # seconds
+        self.timer = self.create_timer(timer_period, self.timer_callback)
+
+    def timer_callback(self):
+        self.get_logger().info('Publishing training data')
 
 
 class GeometricVelocityController:

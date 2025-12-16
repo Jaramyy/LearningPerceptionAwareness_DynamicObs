@@ -19,7 +19,7 @@ from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.math import subtract_frame_transforms, quat_apply_yaw, quat_from_angle_axis, euler_xyz_from_quat
 
-##
+##z
 # Pre-defined configs
 ##
 from .robot.agileDrone import AGILE_CFG    # isort: skip
@@ -58,8 +58,41 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="base_link"),
-            "mass_distribution_params": (-0.50, 0.5),
+            "mass_distribution_params": (-0.2, 0.2),
             "operation": "add",
+        },
+    )
+
+    push_robot = EventTerm(
+        func=mdp.apply_external_force_torque,
+        mode="interval",
+        interval_range_s=(0.0, 0.2),
+        params={
+            "force_range": (-0.5, 0.5),
+            "torque_range": (-0.05, 0.05),
+        },
+    )
+
+    reset_base = EventTerm(
+        func=mdp.reset_root_state_uniform,
+        mode="reset",
+        params={
+            "pose_range": {
+                "x": (-3.5, -1.5),
+                "y": (-0.5, 0.5),
+                "z": (3.5, 1.0),
+                "roll": (-0.0, 0.0),
+                "pitch": (-0.0, 0.0),
+                "yaw": (-0.0, 0.0),
+            },
+            "velocity_range": {
+                "x": (0.0, 0.0),
+                "y": (0.0, 0.0),
+                "z": (0.0, 0.0),
+                "roll": (0.0, 0.0),
+                "pitch": (0.0, 0.0),
+                "yaw": (0.0, 0.0),
+            },
         },
     )
 
@@ -154,7 +187,7 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=2.5, replicate_physics=True)
     
     # events
-    # events: EventCfg = EventCfg()
+    events: EventCfg = EventCfg()
 
     # robot
     robot: ArticulationCfg = AGILE_CFG.replace(prim_path="/World/envs/env_.*/Robot")
@@ -178,6 +211,7 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     ang_vel_reward_scale = -0.003
     distance_to_goal_reward_scale = 60.0
     action_rate_reward_scale = -0.5
+    velocity_direction = 15.0
 
     #max velocity
     max_velocity = 4.0  # m/s
@@ -206,10 +240,11 @@ class QuadcopterEnv(DirectRLEnv):
         self._episode_sums = {
             key: torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
             for key in [
-                "lin_vel",
-                "ang_vel",
-                "distance_to_goal",
-                "action_rate",
+                "rew_lin_vel",
+                "rew_ang_vel",
+                "rew_distance_to_goal",
+                "rew_action_rate",
+                "rew_velocity_dir"
             ]
         }
        # Get specific body indices
@@ -270,7 +305,6 @@ class QuadcopterEnv(DirectRLEnv):
         # fake_action[:, 0] = 0.5
         # fake_action[:, 1:] = 1.0
         
-
         self._yaw_vel_cmd[:, 0] = self._actions[:, 0] * self.cfg.max_yaw_rate # rad/s
         self._lin_vel_cmd[:, :] = self._actions[:, 1:] * self.cfg.max_velocity  # m/s
         # self._lin_vel_cmd[:, :] = fake_action[:, 1:] * self.cfg.max_velocity  # m/s
@@ -321,11 +355,24 @@ class QuadcopterEnv(DirectRLEnv):
 
         distance_to_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1)
         distance_to_goal_mapped = 1 - torch.tanh(distance_to_goal / 0.8)
+
+
+        # target velocity direction reward
+        # desired_pos_b = 
+            
+
+        relative_err_pos_w = self._desired_pos_w - self._robot.data.root_pos_w
+        unit_relative_err_pos = relative_err_pos_w / (relative_err_pos_w.norm(dim=-1, keepdim=True) + 1e-6)
+        rew_vel_dir_w = self._robot.data.root_lin_vel_w * unit_relative_err_pos
+        rew_vel_dir_w = torch.sum(rew_vel_dir_w, dim=-1)
+
         rewards = {
-            "lin_vel": lin_vel * self.cfg.lin_vel_reward_scale * self.step_dt,
-            "ang_vel": ang_vel * self.cfg.ang_vel_reward_scale * self.step_dt,
-            "distance_to_goal": distance_to_goal_mapped * self.cfg.distance_to_goal_reward_scale * self.step_dt,
-            "action_rate": action_rate * self.cfg.action_rate_reward_scale * self.step_dt,
+            "rew_lin_vel": lin_vel * self.cfg.lin_vel_reward_scale * self.step_dt,
+            "rew_ang_vel": ang_vel * self.cfg.ang_vel_reward_scale * self.step_dt,
+            "rew_distance_to_goal": distance_to_goal_mapped * self.cfg.distance_to_goal_reward_scale * self.step_dt,
+            "rew_action_rate": action_rate * self.cfg.action_rate_reward_scale * self.step_dt,
+            "rew_velocity_dir": rew_vel_dir_w * self.cfg.velocity_direction * self.step_dt,
+
         }
         reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
 

@@ -208,10 +208,11 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
 
     # reward scales
     lin_vel_reward_scale = -0.5
-    ang_vel_reward_scale = -0.003
+    ang_vel_reward_scale = -0.0005
     distance_to_goal_reward_scale = 60.0
     action_rate_reward_scale = -0.5
-    velocity_direction = 15.0
+    velocity_direction = 35.0
+    head_tracking = 15.0
 
     #max velocity
     max_velocity = 4.0  # m/s
@@ -244,7 +245,8 @@ class QuadcopterEnv(DirectRLEnv):
                 "rew_ang_vel",
                 "rew_distance_to_goal",
                 "rew_action_rate",
-                "rew_velocity_dir"
+                "rew_velocity_dir",
+                "rew_head_tracking",
             ]
         }
        # Get specific body indices
@@ -366,12 +368,20 @@ class QuadcopterEnv(DirectRLEnv):
         rew_vel_dir_w = self._robot.data.root_lin_vel_w * unit_relative_err_pos
         rew_vel_dir_w = torch.sum(rew_vel_dir_w, dim=-1)
 
+
+        # heading tracking reward
+        self.ref_heading = torch.atan2(relative_err_pos_w[:, 1], relative_err_pos_w[:, 0])  # radian
+        self.robot_heading = self._robot.data.heading_w
+        self.angle_diff = self.ref_heading - self.robot_heading
+        head_tracking_path_rew = 1 - torch.tanh(torch.abs(self.angle_diff) / 0.5)
+
         rewards = {
             "rew_lin_vel": lin_vel * self.cfg.lin_vel_reward_scale * self.step_dt,
             "rew_ang_vel": ang_vel * self.cfg.ang_vel_reward_scale * self.step_dt,
             "rew_distance_to_goal": distance_to_goal_mapped * self.cfg.distance_to_goal_reward_scale * self.step_dt,
             "rew_action_rate": action_rate * self.cfg.action_rate_reward_scale * self.step_dt,
             "rew_velocity_dir": rew_vel_dir_w * self.cfg.velocity_direction * self.step_dt,
+            "rew_head_tracking": head_tracking_path_rew * self.cfg.head_tracking * self.step_dt,
 
         }
         reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
@@ -420,7 +430,7 @@ class QuadcopterEnv(DirectRLEnv):
 
         self._actions[env_ids] = 0.0
         # Sample new commands
-        self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-2.0, 2.0)
+        self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-15.0, 15.0)
         self._desired_pos_w[env_ids, :2] += self._terrain.env_origins[env_ids, :2]
         self._desired_pos_w[env_ids, 2] = torch.zeros_like(self._desired_pos_w[env_ids, 2]).uniform_(0.5, 1.5)
         # Reset robot state

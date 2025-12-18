@@ -639,9 +639,7 @@ class GeometricVelocityController:
         b2_c = torch.cross(b3_c, b1_des, dim=1)
         b2_c /= (torch.norm(b2_c, dim=1, keepdim=True))
         b1_c = torch.cross(b2_c, b3_c, dim=1)
-
         
-
         # ---------------------------
         # 5) DESIRED ROTATION MATRIX Rd
         # ---------------------------
@@ -779,7 +777,7 @@ def main():
     
    
     cmd_pos = torch.tensor([[0.0, 0.0, 0.0]], device=sim.device)
-    cmd_vel = torch.tensor([[2.0, -1.0, 1.0]], device=sim.device)
+    cmd_vel = torch.tensor([[-4.0, 0.0, 1.0]], device=sim.device)
     cmd_yaw = torch.tensor([0.0], device=sim.device)
     cmd_yaw_rate = torch.tensor([0.0], device=sim.device)
 

@@ -62,10 +62,17 @@ class VelocityCommandSubscriber(Node):
     def listener_callback(self, msg):
         self.cmd_velocity[0] = msg.linear.x
         self.cmd_velocity[1] = msg.linear.y
-        self.cmd_velocity[2] = msg.linear.z
-        self.cmd_ang_velocity[0] = msg.angular.x
-        self.cmd_ang_velocity[1] = msg.angular.y
+        self.cmd_velocity[2] = 0.0
+        self.cmd_ang_velocity[0] = 0.0
+        self.cmd_ang_velocity[1] = 0.0
         self.cmd_ang_velocity[2] = msg.angular.z
+
+    def get_cmd_velocity(self):
+        return self.cmd_velocity
+    
+    def get_cmd_ang_velocity(self):
+        return self.cmd_ang_velocity
+    
 
 class GagenSimSubscriber(Node):
     def __init__(self, name="gas_subscriber"):

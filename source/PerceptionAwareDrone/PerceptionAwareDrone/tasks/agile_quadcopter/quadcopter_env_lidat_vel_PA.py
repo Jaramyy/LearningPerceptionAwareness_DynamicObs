@@ -207,12 +207,12 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     moment_scale = 0.7
 
     # reward scales
-    lin_vel_reward_scale = -0.5
-    ang_vel_reward_scale = -0.0005
+    # lin_vel_reward_scale = -0.5
+    # ang_vel_reward_scale = -0.01
     distance_to_goal_reward_scale = 60.0
-    action_rate_reward_scale = -0.5
-    velocity_direction = 35.0
-    head_tracking = 15.0
+    action_rate_reward_scale = -15.0 #-0.5
+    velocity_direction = 30.0
+    head_tracking = 30.0
 
     #max velocity
     max_velocity = 4.0  # m/s
@@ -241,8 +241,8 @@ class QuadcopterEnv(DirectRLEnv):
         self._episode_sums = {
             key: torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
             for key in [
-                "rew_lin_vel",
-                "rew_ang_vel",
+                # "rew_lin_vel",
+                # "rew_ang_vel",
                 "rew_distance_to_goal",
                 "rew_action_rate",
                 "rew_velocity_dir",
@@ -357,12 +357,7 @@ class QuadcopterEnv(DirectRLEnv):
 
         distance_to_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1)
         distance_to_goal_mapped = 1 - torch.tanh(distance_to_goal / 0.8)
-
-
-        # target velocity direction reward
-        # desired_pos_b = 
-            
-
+        
         relative_err_pos_w = self._desired_pos_w - self._robot.data.root_pos_w
         unit_relative_err_pos = relative_err_pos_w / (relative_err_pos_w.norm(dim=-1, keepdim=True) + 1e-6)
         rew_vel_dir_w = self._robot.data.root_lin_vel_w * unit_relative_err_pos
@@ -374,10 +369,18 @@ class QuadcopterEnv(DirectRLEnv):
         self.robot_heading = self._robot.data.heading_w
         self.angle_diff = self.ref_heading - self.robot_heading
         head_tracking_path_rew = 1 - torch.tanh(torch.abs(self.angle_diff) / 0.5)
+        
+        
+        clipped_z = torch.clamp(
+                    self._robot.data.root_pos_w[:, 2],
+                    self.height_range[:, 0] ,  # allow small tolerance
+                    self.height_range[:, 1]
+                )
+        penalty_height = ((self._robot.data.root_pos_w[:, 2] - clipped_z) ** 2)  # shape (num_envs, 1)
 
         rewards = {
-            "rew_lin_vel": lin_vel * self.cfg.lin_vel_reward_scale * self.step_dt,
-            "rew_ang_vel": ang_vel * self.cfg.ang_vel_reward_scale * self.step_dt,
+            # "rew_lin_vel": lin_vel * self.cfg.lin_vel_reward_scale * self.step_dt,
+            # "rew_ang_vel": ang_vel * self.cfg.ang_vel_reward_scale * self.step_dt,
             "rew_distance_to_goal": distance_to_goal_mapped * self.cfg.distance_to_goal_reward_scale * self.step_dt,
             "rew_action_rate": action_rate * self.cfg.action_rate_reward_scale * self.step_dt,
             "rew_velocity_dir": rew_vel_dir_w * self.cfg.velocity_direction * self.step_dt,

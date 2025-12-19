@@ -62,7 +62,7 @@ class VelocityCommandSubscriber(Node):
     def listener_callback(self, msg):
         self.cmd_velocity[0] = msg.linear.x
         self.cmd_velocity[1] = msg.linear.y
-        self.cmd_velocity[2] = 0.0
+        self.cmd_velocity[2] = msg.linear.z
         self.cmd_ang_velocity[0] = 0.0
         self.cmd_ang_velocity[1] = 0.0
         self.cmd_ang_velocity[2] = msg.angular.z
@@ -476,7 +476,9 @@ def main():
 
 
     # diagnostic publishers (assumes pid_publisher global)
-    global velSub
+    pid_publisher = PIDPlotPublisher()
+    velSub = VelocityCommandSubscriber()
+    gasInfoSub = GagenSimSubscriber()
 
     # desired_vel_w = torch.zeros(1, 3, device=sim.device)  # for purely velocity control, could be set to zeros to hover
     # desired_pos = torch.tensor([[0.0, 0.0, 2.0]], device=sim.device)
@@ -513,6 +515,7 @@ def main():
     # main loop
     while simulation_app.is_running():
         start_time = time.time()
+        rclpy.spin_once(pid_publisher, timeout_sec=0.0)
         rclpy.spin_once(velSub, timeout_sec=0.0)
 
         with torch.inference_mode():
@@ -591,9 +594,6 @@ def main():
 # -------------------- Entry point --------------------
 if __name__ == "__main__":
     rclpy.init()
-    pid_publisher = PIDPlotPublisher()
-    velSub = VelocityCommandSubscriber()
-    gasInfoSub = GagenSimSubscriber()
     
     main()
     

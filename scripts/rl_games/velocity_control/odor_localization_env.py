@@ -51,7 +51,7 @@ class VelocityCommandSubscriber(Node):
         super().__init__(name)
         self.subscription = self.create_subscription(
             Twist,
-            "/cmd_vel",
+            "/PioneerP3DX/cmd_vel",
             self.listener_callback,
             10,
         )
@@ -66,7 +66,7 @@ class VelocityCommandSubscriber(Node):
         self.cmd_ang_velocity[0] = 0.0
         self.cmd_ang_velocity[1] = 0.0
         self.cmd_ang_velocity[2] = msg.angular.z
-
+    
     def get_cmd_velocity(self):
         return self.cmd_velocity
     
@@ -476,7 +476,7 @@ def main():
 
 
     # diagnostic publishers (assumes pid_publisher global)
-    global pid_publisher
+    global velSub
 
     # desired_vel_w = torch.zeros(1, 3, device=sim.device)  # for purely velocity control, could be set to zeros to hover
     # desired_pos = torch.tensor([[0.0, 0.0, 2.0]], device=sim.device)
@@ -503,9 +503,6 @@ def main():
         device=sim.device
     )
 
-    velSub = VelocityCommandSubscriber()
-    gasInfoSub = GagenSimSubscriber()
-
     
    
     cmd_pos = torch.tensor([[0.0, 0.0, 0.0]], device=sim.device)
@@ -516,7 +513,7 @@ def main():
     # main loop
     while simulation_app.is_running():
         start_time = time.time()
-        rclpy.spin_once(pid_publisher, timeout_sec=0.0)
+        rclpy.spin_once(velSub, timeout_sec=0.0)
 
         with torch.inference_mode():
             
@@ -531,6 +528,9 @@ def main():
             #     desired_yaw=cmd_yaw,
             #     desired_yaw_rate=cmd_yaw_rate
             # )
+            print("Getting cmd_vel from subscriber...")
+            cmd_vel = velSub.get_cmd_velocity().to(sim.device).unsqueeze(0)
+            print(f"Commanded Velocity: {cmd_vel}")
 
             thrust, torque = controller.update_velocity_only(
                 pos_w=robot.data.root_pos_w,
@@ -565,12 +565,12 @@ def main():
             # torques[:, :] = processed_actions[0, 1:].unsqueeze(0)
 
             # publish diagnostics (vel err, commanded force, etc.)
-            pid_publisher.publish_vec(pid_publisher.pub_error, ((cmd_vel - robot.data.root_lin_vel_w).squeeze(0)).cpu())
+            # pid_publisher.publish_vec(pid_publisher.pub_error, ((cmd_vel - robot.data.root_lin_vel_w).squeeze(0)).cpu())
             # pid_publisher.publish_vec(pid_publisher.pub_cmd, (f_w.squeeze(0)).cpu())
-            pid_publisher.publish_vec(pid_publisher.pub_vel, robot.data.root_lin_vel_w.squeeze(0).cpu())
+            # pid_publisher.publish_vec(pid_publisher.pub_vel, robot.data.root_lin_vel_w.squeeze(0).cpu())
             # pid_publisher.publish_vec(pid_publisher.pub_target, v_des_w.squeeze(0).cpu())
             # publish yaw rate 
-            pid_publisher.publish_vec(pid_publisher.pub_target, robot.data.root_ang_vel_b.squeeze(0).cpu())
+            # pid_publisher.publish_vec(pid_publisher.pub_target, robot.data.root_ang_vel_b.squeeze(0).cpu())
 
             robot.set_external_force_and_torque(forces, torques, body_ids=body_id)
             robot.write_data_to_sim()
@@ -584,7 +584,7 @@ def main():
         loop_duration = time.time() - start_time
         inference_time = 0.01 # 0.03
         remaining_time = inference_time - loop_duration
-        print("loop time: {:.4f}, remaining time to wait: {:.4f}".format(loop_duration, remaining_time))
+        # print("loop time: {:.4f}, remaining time to wait: {:.4f}".format(loop_duration, remaining_time))
         if remaining_time > 0.0:
             time.sleep(remaining_time)
 
@@ -592,6 +592,8 @@ def main():
 if __name__ == "__main__":
     rclpy.init()
     pid_publisher = PIDPlotPublisher()
+    velSub = VelocityCommandSubscriber()
+    gasInfoSub = GagenSimSubscriber()
     
     main()
     

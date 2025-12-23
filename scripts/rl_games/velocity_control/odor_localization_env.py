@@ -29,6 +29,9 @@ from olfaction_msgs.msg import GasSensor
 from olfaction_msgs.msg import Anemometer
 from std_msgs.msg import Float32MultiArray, Float32
 
+from geometry_msgs.msg import TransformStamped
+from tf2_ros import TransformBroadcaster
+
 # -------------------- ROS publisher --------------------
 class PIDPlotPublisher(Node):
     def __init__(self, name="vel_pid_pub"):
@@ -129,6 +132,29 @@ class GagenSimSubscriber(Node):
 
     def logger_training_data(self):
         pass
+
+class publishTF(Node):
+    def __init__(self, name="tf_publisher"):
+        super().__init__(name)
+        self.broadcaster = TransformBroadcaster(self)
+        self.parent_frame = "world"
+        self.child_frame = "drone_base_link"
+
+
+    def publish_transform(self, translation, rotation, parent_frame="world", child_frame="drone_base_link"):
+        t = TransformStamped()
+        t.header.stamp = self.get_clock().now().to_msg()
+        t.header.frame_id = parent_frame
+        t.child_frame_id = child_frame
+        t.transform.translation.x = float(translation[0])
+        t.transform.translation.y = float(translation[1])
+        t.transform.translation.z = float(translation[2])
+        t.transform.rotation.x = float(rotation[0])
+        t.transform.rotation.y = float(rotation[1])
+        t.transform.rotation.z = float(rotation[2])
+        t.transform.rotation.w = float(rotation[3])
+
+        self.broadcaster.sendTransform(t)
 
 class dataLogger(Node):
     def __init__(self, name="data_logger"):
@@ -479,6 +505,7 @@ def main():
     pid_publisher = PIDPlotPublisher()
     velSub = VelocityCommandSubscriber()
     gasInfoSub = GagenSimSubscriber()
+    pubTF = publishTF()
 
     # desired_vel_w = torch.zeros(1, 3, device=sim.device)  # for purely velocity control, could be set to zeros to hover
     # desired_pos = torch.tensor([[0.0, 0.0, 2.0]], device=sim.device)
@@ -517,6 +544,7 @@ def main():
         start_time = time.time()
         rclpy.spin_once(pid_publisher, timeout_sec=0.0)
         rclpy.spin_once(velSub, timeout_sec=0.0)
+        rclpy.spin_once(pubTF, timeout_sec=0.0)
 
         with torch.inference_mode():
             
@@ -542,6 +570,13 @@ def main():
                 omega_b=robot.data.root_ang_vel_b,
                 desired_vel_w=cmd_vel,
                 desired_yaw_rate=cmd_yaw_rate
+            )
+
+            pubTF.publish_transform(
+                translation=robot.data.root_pos_w.squeeze(0).cpu().numpy(),
+                rotation=robot.data.root_link_quat_w.squeeze(0).cpu().numpy(),
+                parent_frame="world",
+                child_frame="drone_base_link"
             )
 
 

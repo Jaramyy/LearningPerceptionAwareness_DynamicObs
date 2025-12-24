@@ -1,0 +1,20 @@
+digraph G {
+"PioneerP3DX_base_link" -> "tdlas_frame"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"map" -> "PioneerP3DX_base_link"[label=" Broadcaster: default_authority\nAverage rate: 32.769\nBuffer length: 5.005\nMost recent transform: 1766560805.645301\nOldest transform: 1766560800.640639\n"];
+"PioneerP3DX_base_link" -> "PioneerP3DX_pid_frame_right"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"PioneerP3DX_base_link" -> "PioneerP3DX_anemometer_frame"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"PioneerP3DX_base_link" -> "PioneerP3DX_pid_frame_left"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"PioneerP3DX_base_link" -> "PioneerP3DX_body"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"PioneerP3DX_base_link" -> "PioneerP3DX_hokuyo_front"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"PioneerP3DX_base_link" -> "PioneerP3DX_left_wheel"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"PioneerP3DX_base_link" -> "PioneerP3DX_right_wheel"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"PioneerP3DX_body" -> "PioneerP3DX_green_button"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"PioneerP3DX_body" -> "PioneerP3DX_neck"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"PioneerP3DX_body" -> "PioneerP3DX_red_button"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"PioneerP3DX_head" -> "PioneerP3DX_screen"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"PioneerP3DX_neck" -> "PioneerP3DX_head"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1766560805.6522925"[ shape=plaintext ] ;
+}->"map";
+}

@@ -54,7 +54,8 @@ class VelocityCommandSubscriber(Node):
         super().__init__(name)
         self.subscription = self.create_subscription(
             Twist,
-            "/PioneerP3DX/cmd_vel",
+            # "/PioneerP3DX/cmd_vel",
+            "/cmd_vel",
             self.listener_callback,
             10,
         )
@@ -536,7 +537,8 @@ def main():
    
     cmd_pos = torch.tensor([[0.0, 0.0, 0.0]], device=sim.device)
     cmd_vel = torch.tensor([[2.0, -1.0, 1.0]], device=sim.device)
-    cmd_yaw = torch.tensor([0.0], device=sim.device)
+    # cmd_yaw = torch.tensor([0.0], device=sim.device)
+    cmd_yaw = torch.tensor([[0.0, 0.0, 0.0]], device=sim.device)
     cmd_yaw_rate = torch.tensor([0.0], device=sim.device)
 
     # main loop
@@ -559,8 +561,10 @@ def main():
             #     desired_yaw=cmd_yaw,
             #     desired_yaw_rate=cmd_yaw_rate
             # )
-            print("Getting cmd_vel from subscriber...")
+            # print("Getting cmd_vel from subscriber...")
             cmd_vel = velSub.get_cmd_velocity().to(sim.device).unsqueeze(0)
+            cmd_yaw = velSub.get_cmd_ang_velocity().to(sim.device).unsqueeze(0)
+            print(f"Commanded Yaw Rate: {cmd_yaw}")
             print(f"Commanded Velocity: {cmd_vel}")
 
             thrust, torque = controller.update_velocity_only(
@@ -569,14 +573,14 @@ def main():
                 quat_w=robot.data.root_link_quat_w,   # (1,4)
                 omega_b=robot.data.root_ang_vel_b,
                 desired_vel_w=cmd_vel,
-                desired_yaw_rate=cmd_yaw_rate
+                desired_yaw_rate=cmd_yaw[0,2]  # yaw rate around body z-axis
             )
 
             pubTF.publish_transform(
                 translation=robot.data.root_pos_w.squeeze(0).cpu().numpy(),
                 rotation=robot.data.root_link_quat_w.squeeze(0).cpu().numpy(),
-                parent_frame="world",
-                child_frame="drone_base_link"
+                parent_frame="map",
+                child_frame="PioneerP3DX_base_link"
             )
 
 

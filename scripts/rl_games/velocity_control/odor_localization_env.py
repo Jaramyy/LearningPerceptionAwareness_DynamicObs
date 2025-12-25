@@ -540,7 +540,7 @@ def main():
     cmd_yaw = torch.tensor([[0.0, 0.0, 0.0]], device=sim.device)
     cmd_yaw_rate = torch.tensor([0.0], device=sim.device)
 
-    altitude_desired = 2.0
+    altitude_desired = 0.5
     atl_error_integral = 0.0
     kp_altitude = 2.0
     ki_altitude = 1.0

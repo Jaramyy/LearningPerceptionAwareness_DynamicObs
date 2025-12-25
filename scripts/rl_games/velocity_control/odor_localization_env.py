@@ -150,11 +150,10 @@ class publishTF(Node):
         t.transform.translation.x = float(translation[0])
         t.transform.translation.y = float(translation[1])
         t.transform.translation.z = float(translation[2])
-        t.transform.rotation.x = float(rotation[0])
-        t.transform.rotation.y = float(rotation[1])
-        t.transform.rotation.z = float(rotation[2])
-        t.transform.rotation.w = float(rotation[3])
-
+        t.transform.rotation.x = float(rotation[1])
+        t.transform.rotation.y = float(rotation[2])
+        t.transform.rotation.z = float(rotation[3])
+        t.transform.rotation.w = float(rotation[0])
         self.broadcaster.sendTransform(t)
 
 class dataLogger(Node):
@@ -541,6 +540,12 @@ def main():
     cmd_yaw = torch.tensor([[0.0, 0.0, 0.0]], device=sim.device)
     cmd_yaw_rate = torch.tensor([0.0], device=sim.device)
 
+    altitude_desired = 2.0
+    atl_error_integral = 0.0
+    kp_altitude = 2.0
+    ki_altitude = 1.0
+    kd_altitude = 3.0
+
     # main loop
     while simulation_app.is_running():
         start_time = time.time()
@@ -564,8 +569,13 @@ def main():
             # print("Getting cmd_vel from subscriber...")
             cmd_vel = velSub.get_cmd_velocity().to(sim.device).unsqueeze(0)
             cmd_yaw = velSub.get_cmd_ang_velocity().to(sim.device).unsqueeze(0)
-            print(f"Commanded Yaw Rate: {cmd_yaw}")
-            print(f"Commanded Velocity: {cmd_vel}")
+            # print(f"Commanded Yaw Rate: {cmd_yaw}")
+            # print(f"Commanded Velocity: {cmd_vel}")
+            
+            z_vel_error = altitude_desired - robot.data.root_pos_w[0,2]
+            atl_error_integral += z_vel_error * sim_dt
+            cmd_vel[0, 2] = (kp_altitude * z_vel_error) #+ (ki_altitude * atl_error_integral) - (kd_altitude * robot.data.root_lin_vel_w[0,2])
+            # print(f"Altitude Control Velocity Command: {cmd_vel[0,2]}")
 
             thrust, torque = controller.update_velocity_only(
                 pos_w=robot.data.root_pos_w,

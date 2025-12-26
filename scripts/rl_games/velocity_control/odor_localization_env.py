@@ -116,14 +116,14 @@ class GagenSimSubscriber(Node):
     
     def gas_left_callback(self, msg):
         self.gas_left_data = msg.raw
-        self.gas_left_lowpass.data = self.low_pass_filter(self.gas_left_data, self.prev_gas_left, alpha=0.05)
-        self.prev_gas_left = self.gas_left_lowpass.data
+        # self.gas_left_lowpass.data = self.low_pass_filter(self.gas_left_data, self.prev_gas_left, alpha=0.05)
+        # self.prev_gas_left = self.gas_left_lowpass.data
         # self.get_logger().info(f"Gas Left Data: {self.gas_left_data}")
 
     def gas_right_callback(self, msg):
         self.gas_right_data = msg.raw
-        self.gas_right_lowpass.data = self.low_pass_filter(self.gas_right_data, self.prev_gas_right, alpha=0.05)
-        self.prev_gas_right = self.gas_right_lowpass.data
+        # self.gas_right_lowpass.data = self.low_pass_filter(self.gas_right_data, self.prev_gas_right, alpha=0.05)
+        # self.prev_gas_right = self.gas_right_lowpass.data
         # self.get_logger().info(f"Gas Right Data: {self.gas_right_data}")
 
     def wind_callback(self, msg):
@@ -156,15 +156,7 @@ class publishTF(Node):
         t.transform.rotation.w = float(rotation[0])
         self.broadcaster.sendTransform(t)
 
-class dataLogger(Node):
-    def __init__(self, name="data_logger"):
-        super().__init__(name)
-        timer_period = 0.1  # seconds
-        self.timer = self.create_timer(timer_period, self.timer_callback)
-
-    def timer_callback(self):
-        self.get_logger().info('Publishing training data')
-
+cl
 
 class GeometricVelocityController:
 
@@ -552,6 +544,7 @@ def main():
         rclpy.spin_once(pid_publisher, timeout_sec=0.0)
         rclpy.spin_once(velSub, timeout_sec=0.0)
         rclpy.spin_once(pubTF, timeout_sec=0.0)
+        rclpy.spin_once(gasInfoSub, timeout_sec=0.0)
 
         with torch.inference_mode():
             

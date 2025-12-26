@@ -19,9 +19,9 @@ from isaaclab.sim import SimulationContext
 
 from isaaclab_assets import CRAZYFLIE_CFG  # isort:skip
 from PerceptionAwareDrone.tasks.agile_quadcopter.robot.agileDrone import AGILE_CFG
-
 from isaaclab.utils.math import subtract_frame_transforms, matrix_from_quat,quat_from_matrix , normalize, quat_rotate, euler_xyz_from_quat, quat_mul,quat_inv
 
+# ROS2 imports
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Vector3, Twist
@@ -31,6 +31,10 @@ from std_msgs.msg import Float32MultiArray, Float32
 
 from geometry_msgs.msg import TransformStamped
 from tf2_ros import TransformBroadcaster
+
+# Model training imports
+from torch.utils.data import TensorDataset
+import numpy as np
 
 # -------------------- ROS publisher --------------------
 class PIDPlotPublisher(Node):
@@ -156,7 +160,20 @@ class publishTF(Node):
         t.transform.rotation.w = float(rotation[0])
         self.broadcaster.sendTransform(t)
 
-cl
+class insect_MLP(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super(insect_MLP, self).__init__()
+        self.fc1 = nn.Linear(input_size, hidden_size)
+        self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.fc3 = nn.Linear(hidden_size, output_size)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x = self.relu(self.fc1(x))
+        x = self.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+    
 
 class GeometricVelocityController:
 
@@ -586,6 +603,26 @@ def main():
                 child_frame="PioneerP3DX_base_link"
             )
 
+            # colloct data transition for training
+            # gas_left = gasInfoSub.gas_left_data.data
+            # gas_right = gasInfoSub.gas_right_data.data
+            # wind_dir = gasInfoSub.wind_data.wind_direction
+            # gasInfoSub.dataLog_gas_left = torch.cat((gasInfoSub.dataLog_gas_left, torch.tensor([gas_left], device=sim.device)), dim=0)
+            # gasInfoSub.dataLog_gas_right = torch.cat((gasInfoSub.dataLog_gas_right, torch.tensor([gas_right], device=sim.device)), dim=0)
+            # gasInfoSub.dataLog_wind_dir = torch.cat((gasInfoSub.dataLog_wind_dir, torch.tensor([wind_dir], device=sim.device)), dim=0)      
+
+            # #trainning data logging
+            # if count % 100 == 0:
+            #     torch.save(gasInfoSub.dataLog_gas_left, 'gas_left_data.pt')
+            #     torch.save(gasInfoSub.dataLog_gas_right, 'gas_right_data.pt')
+            #     torch.save(gasInfoSub.dataLog_wind_dir, 'wind_dir_data.pt')
+            #     print("Training data saved.")
+            # count += 1
+
+
+
+
+
 
             # print(f"Thrust: {thrust}, Torque: {torque}")
 
@@ -624,6 +661,13 @@ def main():
             robot.update(sim_dt)
             
             # cmd_yaw = torch.tensor([torch.tensor(0.2*sim_time)], device=sim.device)
+
+        # trainning model
+        # insect_model = insect_MLP(input_size=3, hidden_size=16, output_size=2).to(sim.device)
+        # dummy input: gas_left, gas_right, wind_dir
+        # dummy_input = torch.tensor([[gas_left, gas_right, wind_dir]], device=sim.device)
+        # output = insect_model(dummy_input)
+        # print(f"Insect MLP Output: {output}")
 
         # simple timing
         loop_duration = time.time() - start_time

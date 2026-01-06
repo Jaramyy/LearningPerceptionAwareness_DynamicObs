@@ -209,9 +209,9 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     # reward scales
     # lin_vel_reward_scale = -0.5
     # ang_vel_reward_scale = -0.01
-    distance_to_goal_reward_scale = 60.0
-    action_rate_reward_scale = -15.0 #-0.5
-    velocity_direction = 30.0
+    distance_to_goal_reward_scale = 15.0
+    action_rate_reward_scale = -1.0 #-0.5
+    velocity_direction = 10.0
     head_tracking = 30.0
 
     #max velocity
@@ -228,7 +228,8 @@ class QuadcopterEnv(DirectRLEnv):
 
         # Total thrust and moment applied to the base of the quadcopter
         self._actions = torch.zeros(self.num_envs, gym.spaces.flatdim(self.single_action_space), device=self.device)
-        self.previous_action = torch.zeros(self.num_envs, gym.spaces.flatdim(self.single_action_space), device=self.device)
+        # self.previous_action = torch.zeros(self.num_envs, gym.spaces.flatdim(self.single_action_space), device=self.device)
+        self.previous_action = torch.zeros(self.num_envs, 3, device=self.device)
         self._thrust = torch.zeros(self.num_envs, 1, 3, device=self.device)
         self._moment = torch.zeros(self.num_envs, 1, 3, device=self.device)
 
@@ -236,6 +237,8 @@ class QuadcopterEnv(DirectRLEnv):
         self._yaw_vel_cmd = torch.zeros(self.num_envs, 1, device=self.device)
         # Goal position
         self._desired_pos_w = torch.zeros(self.num_envs, 3, device=self.device)
+        self.height_range = torch.zeros(self.num_envs, 2 , device=self.device)
+
 
         # Logging
         self._episode_sums = {
@@ -247,6 +250,7 @@ class QuadcopterEnv(DirectRLEnv):
                 "rew_action_rate",
                 "rew_velocity_dir",
                 "rew_head_tracking",
+                "rew_height_penalty",
             ]
         }
        # Get specific body indices
@@ -353,7 +357,11 @@ class QuadcopterEnv(DirectRLEnv):
     def _get_rewards(self) -> torch.Tensor:
         lin_vel = torch.sum(torch.square(self._robot.data.root_lin_vel_b), dim=1)
         ang_vel = torch.sum(torch.square(self._robot.data.root_ang_vel_b), dim=1)
-        action_rate = torch.sum(torch.square(self._actions - self.previous_action), dim=1)
+        # action_rate = torch.sum(torch.square(self._actions - self.previous_action), dim=1)
+
+        action_rate = torch.sum(torch.square(self._robot.data.root_lin_vel_w - self.previous_action), dim=1)
+
+        
 
         distance_to_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1)
         distance_to_goal_mapped = 1 - torch.tanh(distance_to_goal / 0.8)
@@ -368,6 +376,7 @@ class QuadcopterEnv(DirectRLEnv):
         self.ref_heading = torch.atan2(relative_err_pos_w[:, 1], relative_err_pos_w[:, 0])  # radian
         self.robot_heading = self._robot.data.heading_w
         self.angle_diff = self.ref_heading - self.robot_heading
+        # print(self.angle_diff)
         head_tracking_path_rew = 1 - torch.tanh(torch.abs(self.angle_diff) / 0.5)
         
         
@@ -385,11 +394,14 @@ class QuadcopterEnv(DirectRLEnv):
             "rew_action_rate": action_rate * self.cfg.action_rate_reward_scale * self.step_dt,
             "rew_velocity_dir": rew_vel_dir_w * self.cfg.velocity_direction * self.step_dt,
             "rew_head_tracking": head_tracking_path_rew * self.cfg.head_tracking * self.step_dt,
+            "rew_height_penalty": -penalty_height * 10.0 * self.step_dt,
 
         }
         reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
 
-        self.previous_action = self._actions.clone()
+        # self.previous_action = self._actions.clone()
+        self.previous_action = self._robot.data.root_lin_vel_w.clone()
+
 
         # Logging
         for key, value in rewards.items():
@@ -432,10 +444,19 @@ class QuadcopterEnv(DirectRLEnv):
             self.episode_length_buf = torch.randint_like(self.episode_length_buf, high=int(self.max_episode_length))
 
         self._actions[env_ids] = 0.0
+        self.previous_action[env_ids] = 0.0
         # Sample new commands
         self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-15.0, 15.0)
         self._desired_pos_w[env_ids, :2] += self._terrain.env_origins[env_ids, :2]
         self._desired_pos_w[env_ids, 2] = torch.zeros_like(self._desired_pos_w[env_ids, 2]).uniform_(0.5, 1.5)
+
+        desired_heights = self._desired_pos_w[:, 2]
+        margin = 0.5
+        self.height_range = torch.stack([
+            desired_heights - margin,
+            desired_heights + margin
+        ], dim=-1)
+
         # Reset robot state
         joint_pos = self._robot.data.default_joint_pos[env_ids]
         joint_vel = self._robot.data.default_joint_vel[env_ids]

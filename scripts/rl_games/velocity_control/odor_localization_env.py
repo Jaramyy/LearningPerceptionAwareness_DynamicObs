@@ -104,28 +104,31 @@ class GagenSimSubscriber(Node):
             self.wind_callback,
             10)
         
-        self.gas_left_data = GasSensor()
-        self.gas_right_data = GasSensor()
+        self.gas_left_raw = GasSensor()
+        self.gas_right_raw = GasSensor()
         self.wind_data = Anemometer()
 
-        self.gas_left_lowpass = Float32()
-        self.gas_right_lowpass = Float32()
 
-        self.dataLog_gas_left = torch.zeros(1)
-        self.dataLog_gas_right = torch.zeros(1)
-        self.dataLog_wind_dir = torch.zeros(1)
+        self.gas_left = torch.zeros(1)
+        self.gas_right = torch.zeros(1)
+        self.wind_dir = torch.zeros(1)
+        self.wind_spd = torch.zeros(1)
 
     def low_pass_filter(self, current_value, previous_value, alpha=0.001):
         return float(alpha * current_value + (1 - alpha) * previous_value)
     
     def gas_left_callback(self, msg):
-        self.gas_left_data = msg.raw
+        self.gas_left_raw = msg.raw
+        self.gas_left = torch.tensor([self.gas_left_raw])
+        # print(f"Gas Left Data: {self.gas_left}")
+        
         # self.gas_left_lowpass.data = self.low_pass_filter(self.gas_left_data, self.prev_gas_left, alpha=0.05)
         # self.prev_gas_left = self.gas_left_lowpass.data
         # self.get_logger().info(f"Gas Left Data: {self.gas_left_data}")
 
     def gas_right_callback(self, msg):
-        self.gas_right_data = msg.raw
+        self.gas_right_raw = msg.raw
+        self.gas_right = torch.tensor([self.gas_right_raw])
         # self.gas_right_lowpass.data = self.low_pass_filter(self.gas_right_data, self.prev_gas_right, alpha=0.05)
         # self.prev_gas_right = self.gas_right_lowpass.data
         # self.get_logger().info(f"Gas Right Data: {self.gas_right_data}")
@@ -134,10 +137,21 @@ class GagenSimSubscriber(Node):
         wind_dir_rad = msg.wind_direction  # radians
         wind_speed = msg.wind_speed  # m/s
         # self.get_logger().info(f"Wind Direction: {wind_dir_rad}, Wind Speed: {wind_speed}")
+        self.wind_dir = torch.tensor([wind_dir_rad])
+        self.wind_spd = torch.tensor([wind_speed])
 
-    def logger_training_data(self):
-        pass
-
+    def get_gas_left(self):
+        return self.gas_left
+    
+    def get_gas_right(self):
+        return self.gas_right
+    
+    def get_wind_direction(self):
+        return self.wind_dir
+    
+    def get_wind_speed(self):
+        return self.wind_spd
+    
 class publishTF(Node):
     def __init__(self, name="tf_publisher"):
         super().__init__(name)
@@ -555,6 +569,9 @@ def main():
     ki_altitude = 1.0
     kd_altitude = 3.0
 
+
+    episode_buffer = []
+
     # main loop
     while simulation_app.is_running():
         start_time = time.time()
@@ -602,6 +619,28 @@ def main():
                 parent_frame="map",
                 child_frame="PioneerP3DX_base_link"
             )
+
+            # gas_left = gasInfoSub.get_gas_left().to(sim.device)
+            gas_left = gasInfoSub.get_gas_left()
+            gas_right = gasInfoSub.get_gas_right()
+            wind_dir = gasInfoSub.get_wind_direction()
+            wind_spd = gasInfoSub.get_wind_speed()
+
+            print(f"Gas Left: {gas_left.item():.4f}, Gas Right: {gas_right.item():.4f}, Wind Dir: {wind_dir.item():.4f}, Wind Spd: {wind_spd.item():.4f}")
+
+            # log_data = torch.cat((gas_left, gas_right, wind_dir, wind_spd), dim=0).unsqueeze(0)
+            sample_data = np.array([gas_left.item(), gas_right.item(), wind_dir.item(), wind_spd.item()])
+            # print(f"Log Data Shape: {log_data.shape}")
+            episode_buffer.append(sample_data)
+            if count % 500 == 0:
+                # Save episode data
+                episode_array = np.stack(episode_buffer, axis=0)
+                np.save(f'episode_data_{count//500}.npy', episode_array)
+                print(f"Saved episode_data_{count//500}.npy with shape {episode_array.shape}")
+                episode_buffer.clear()
+            count += 1
+                
+
 
             # colloct data transition for training
             # gas_left = gasInfoSub.gas_left_data.data

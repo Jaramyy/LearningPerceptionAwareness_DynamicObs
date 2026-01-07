@@ -571,6 +571,11 @@ def main():
 
 
     episode_buffer = []
+    
+    default_root_state = robot.data.default_root_state.clone()
+    default_root_state[:, :3] += torch.tensor([7.0, 3.0, 0.5], device=sim.device)
+    robot.write_root_pose_to_sim(default_root_state[:, :7])
+    robot.write_root_velocity_to_sim(default_root_state[:, 7:])
 
     # main loop
     while simulation_app.is_running():
@@ -629,10 +634,10 @@ def main():
             print(f"Gas Left: {gas_left.item():.4f}, Gas Right: {gas_right.item():.4f}, Wind Dir: {wind_dir.item():.4f}, Wind Spd: {wind_spd.item():.4f}")
 
             # log_data = torch.cat((gas_left, gas_right, wind_dir, wind_spd), dim=0).unsqueeze(0)
-            sample_data = np.array([gas_left.item(), gas_right.item(), wind_dir.item(), wind_spd.item()])
+            sample_data = np.array([gas_left.item(), gas_right.item(), wind_dir.item(), wind_spd.item(), cmd_vel[0,0].item(), cmd_vel[0,1].item(), cmd_vel[0,2].item(), cmd_yaw[0,2].item()])
             # print(f"Log Data Shape: {log_data.shape}")
             episode_buffer.append(sample_data)
-            if count % 500 == 0:
+            if count % 1000 == 0:
                 # Save episode data
                 episode_array = np.stack(episode_buffer, axis=0)
                 np.save(f'episode_data_{count//500}.npy', episode_array)

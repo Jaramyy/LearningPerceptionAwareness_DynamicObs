@@ -19,7 +19,7 @@ from isaaclab.sim import SimulationContext
 
 from isaaclab_assets import CRAZYFLIE_CFG  # isort:skip
 from PerceptionAwareDrone.tasks.agile_quadcopter.robot.agileDrone import AGILE_CFG
-from isaaclab.utils.math import subtract_frame_transforms, matrix_from_quat,quat_from_matrix , normalize, quat_rotate, euler_xyz_from_quat, quat_mul,quat_inv
+from isaaclab.utils.math import quat_from_euler_xyz,subtract_frame_transforms, matrix_from_quat,quat_from_matrix , normalize, quat_rotate, euler_xyz_from_quat, quat_mul,quat_inv
 
 # ROS2 imports
 import rclpy
@@ -59,7 +59,8 @@ class VelocityCommandSubscriber(Node):
         self.subscription = self.create_subscription(
             Twist,
             # "/PioneerP3DX/cmd_vel",
-            "/cmd_vel",
+            # "/cmd_vel",
+            "/insect_cmd_vel",
             self.listener_callback,
             10,
         )
@@ -563,7 +564,7 @@ def main():
     cmd_yaw = torch.tensor([[0.0, 0.0, 0.0]], device=sim.device)
     cmd_yaw_rate = torch.tensor([0.0], device=sim.device)
 
-    altitude_desired = 0.5
+    altitude_desired = 0.2
     atl_error_integral = 0.0
     kp_altitude = 2.0
     ki_altitude = 1.0
@@ -573,7 +574,9 @@ def main():
     episode_buffer = []
     
     default_root_state = robot.data.default_root_state.clone()
-    default_root_state[:, :3] += torch.tensor([7.0, 3.0, 0.5], device=sim.device)
+    default_root_state[:, :3] += torch.tensor([7.0, 3.0, 0.5], device=sim.device) 
+    # rotate to face negative x direction
+    default_root_state[:, 3:7] = quat_from_euler_xyz(torch.tensor([0.0]), torch.tensor([0.0]), torch.tensor([3.14159]))
     robot.write_root_pose_to_sim(default_root_state[:, :7])
     robot.write_root_velocity_to_sim(default_root_state[:, 7:])
 

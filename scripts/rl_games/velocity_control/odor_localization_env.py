@@ -29,7 +29,7 @@ from olfaction_msgs.msg import GasSensor
 from olfaction_msgs.msg import Anemometer
 from std_msgs.msg import Float32MultiArray, Float32
 
-from geometry_msgs.msg import TransformStamped
+from geometry_msgs.msg import TransformStamped, PoseStamped
 from tf2_ros import TransformBroadcaster
 
 # Model training imports
@@ -189,6 +189,26 @@ class insect_MLP(nn.Module):
         x = self.fc3(x)
         return x
     
+class setpose_from_goal_pose_topic(Node):
+    def __init__(self, name="setpose_from_goal_pose"):
+        super().__init__(name)
+        self.subscription = self.create_subscription(
+            PoseStamped,
+            "/PioneerP3DX/goal_pose",
+            self.listener_callback,
+            10,
+        )
+        self.goal_position = torch.zeros(2)
+
+    def listener_callback(self, msg):
+        self.goal_position[0] = msg.pose.position.x
+        self.goal_position[1] = msg.pose.position.y
+        # self.goal_position[2] = msg.pose.position.z
+        print(f"Getting goal position: {self.goal_position}")
+
+    def get_goal_position(self):
+        return self.goal_position
+
 
 class GeometricVelocityController:
 
@@ -530,6 +550,7 @@ def main():
     velSub = VelocityCommandSubscriber()
     gasInfoSub = GagenSimSubscriber()
     pubTF = publishTF()
+    setPose = setpose_from_goal_pose_topic()
 
     # desired_vel_w = torch.zeros(1, 3, device=sim.device)  # for purely velocity control, could be set to zeros to hover
     # desired_pos = torch.tensor([[0.0, 0.0, 2.0]], device=sim.device)
@@ -564,7 +585,7 @@ def main():
     cmd_yaw = torch.tensor([[0.0, 0.0, 0.0]], device=sim.device)
     cmd_yaw_rate = torch.tensor([0.0], device=sim.device)
 
-    altitude_desired = 0.2
+    altitude_desired = 0.4
     atl_error_integral = 0.0
     kp_altitude = 2.0
     ki_altitude = 1.0
@@ -587,6 +608,16 @@ def main():
         rclpy.spin_once(velSub, timeout_sec=0.0)
         rclpy.spin_once(pubTF, timeout_sec=0.0)
         rclpy.spin_once(gasInfoSub, timeout_sec=0.0)
+        rclpy.spin_once(setPose, timeout_sec=0.0)
+
+        # check for goal position update
+        lastest_pose = setPose.get_goal_position()
+        if lastest_pose.norm().item() > 0.0:
+            default_root_state[:, :2] = lastest_pose.to(sim.device)
+            robot.write_root_pose_to_sim(default_root_state[:, :7])
+            robot.write_root_velocity_to_sim(default_root_state[:, 7:])
+            print(f"Updated robot position to: {lastest_pose}")
+
 
         with torch.inference_mode():
             

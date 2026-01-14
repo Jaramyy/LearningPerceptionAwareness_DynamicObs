@@ -285,6 +285,9 @@ class QuadcopterEnv(DirectRLEnv):
         self._robot = Articulation(self.cfg.robot)
         self.scene.articulations["robot"] = self._robot
 
+        self._lidar_sensor = RayCaster(self.cfg.lidar_sensor)
+        self.scene.sensors["lidar_sensor"] = self._lidar_sensor
+
         self.cfg.terrain.num_envs = self.scene.cfg.num_envs
         self.cfg.terrain.env_spacing = self.scene.cfg.env_spacing
         self._terrain = self.cfg.terrain.class_type(self.cfg.terrain)
@@ -342,6 +345,29 @@ class QuadcopterEnv(DirectRLEnv):
         desired_pos_b, _ = subtract_frame_transforms(
             self._robot.data.root_pos_w, self._robot.data.root_quat_w, self._desired_pos_w
         )
+
+        self.lidar_scan = (
+            (
+                self._lidar_sensor.data.ray_hits_w
+                - self._lidar_sensor.data.pos_w.unsqueeze(1)
+            )
+            .norm(dim=-1)
+            .clamp_max(self.lidar_range)
+            .reshape(self.num_envs, 1, self.lidar_resolution)
+        )
+
+        # lidar potential field
+        vec_to_obstacles = (self._lidar_sensor.data.ray_hits_w - self._lidar_sensor.data.pos_w.unsqueeze(1)) .clamp_max(self.lidar_range * 2.0)
+        dists_to_obstacle = vec_to_obstacles.norm(dim=-1)
+        closest_idx = torch.argmin(dists_to_obstacle, dim=1)
+        env_idx = torch.arange(vec_to_obstacles.shape[0])
+        nearest_dist = dists_to_obstacle[env_idx, closest_idx]
+        
+        sigma = 0.7  # Standard deviation of Gaussian function
+        gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
+        potential = 0.5 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
+
+
         obs = torch.cat(
             [
                 self._robot.data.root_lin_vel_b,

@@ -595,7 +595,7 @@ def main():
     episode_buffer = []
     
     default_root_state = robot.data.default_root_state.clone()
-    default_root_state[:, :3] += torch.tensor([7.0, 3.0, 0.5], device=sim.device) 
+    default_root_state[:, :3] += torch.tensor([7.0, 3.0, altitude_desired], device=sim.device) 
     # rotate to face negative x direction
     default_root_state[:, 3:7] = quat_from_euler_xyz(torch.tensor([0.0]), torch.tensor([0.0]), torch.tensor([3.14159]))
     robot.write_root_pose_to_sim(default_root_state[:, :7])
@@ -614,6 +614,7 @@ def main():
         lastest_pose = setPose.get_goal_position()
         if lastest_pose.norm().item() > 0.0:
             default_root_state[:, :2] = lastest_pose.to(sim.device)
+            default_root_state[:, 2] = altitude_desired
             robot.write_root_pose_to_sim(default_root_state[:, :7])
             robot.write_root_velocity_to_sim(default_root_state[:, 7:])
             print(f"Updated robot position to: {lastest_pose}")

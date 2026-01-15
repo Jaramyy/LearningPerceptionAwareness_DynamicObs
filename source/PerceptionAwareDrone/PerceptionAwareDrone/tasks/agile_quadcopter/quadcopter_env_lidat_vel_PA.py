@@ -122,9 +122,10 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     episode_length_s = 10.0
     decimation = 2
     action_space = 4
-    observation_space = 12
+    # observation_space = 12 #without lidar
     # observation_space = 17 #with 5 beams lidar
     # observation_space = 12
+    observation_space = 12 + 60 + 1 + 2  # with 60 beams lidar + potential field
     state_space = 0
     debug_vis = True
 
@@ -240,6 +241,10 @@ class QuadcopterEnv(DirectRLEnv):
         self.height_range = torch.zeros(self.num_envs, 2 , device=self.device)
 
 
+                #lidar
+        self.lidar_resolution = (60)
+        self.lidar_range = 5.0
+
         # Logging
         self._episode_sums = {
             key: torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
@@ -346,6 +351,12 @@ class QuadcopterEnv(DirectRLEnv):
             self._robot.data.root_pos_w, self._robot.data.root_quat_w, self._desired_pos_w
         )
 
+        desired_dist = desired_pos_b.norm(dim=-1, keepdim=True)
+        unit_desird_pos_b = desired_pos_b / (desired_dist + 1e-6)
+
+        desired_dist_2d = desired_pos_b[:, :2].norm(dim=-1, keepdim=True)
+        desired_dist_z = desired_pos_b[:, 2].unsqueeze(1)
+
         self.lidar_scan = (
             (
                 self._lidar_sensor.data.ray_hits_w
@@ -373,7 +384,12 @@ class QuadcopterEnv(DirectRLEnv):
                 self._robot.data.root_lin_vel_b,
                 self._robot.data.root_ang_vel_b,
                 self._robot.data.projected_gravity_b,
-                desired_pos_b,
+                # desired_pos_b,
+                unit_desird_pos_b,  # 3
+                desired_dist_2d,  # 1
+                desired_dist_z,  # 1
+                self.lidar_scan.squeeze(1),
+                potential.unsqueeze(-1),
             ],
             dim=-1,
         )

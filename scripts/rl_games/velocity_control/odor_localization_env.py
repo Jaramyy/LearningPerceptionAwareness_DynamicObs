@@ -199,8 +199,12 @@ class setpose_from_goal_pose_topic(Node):
             10,
         )
         self.goal_position = torch.zeros(2)
+        self.updated = False
 
     def listener_callback(self, msg):
+        # if not self.updated:
+            # self.get_logger().info("Received first goal position message.")
+            # self.updated = not self.updated
         self.goal_position[0] = msg.pose.position.x
         self.goal_position[1] = msg.pose.position.y
         # self.goal_position[2] = msg.pose.position.z
@@ -600,7 +604,7 @@ def main():
     default_root_state[:, 3:7] = quat_from_euler_xyz(torch.tensor([0.0]), torch.tensor([0.0]), torch.tensor([3.14159]))
     robot.write_root_pose_to_sim(default_root_state[:, :7])
     robot.write_root_velocity_to_sim(default_root_state[:, 7:])
-
+    lastest_pose = torch.zeros(2)
     # main loop
     while simulation_app.is_running():
         start_time = time.time()
@@ -610,14 +614,27 @@ def main():
         rclpy.spin_once(gasInfoSub, timeout_sec=0.0)
         rclpy.spin_once(setPose, timeout_sec=0.0)
 
-        # check for goal position update
-        lastest_pose = setPose.get_goal_position()
-        if lastest_pose.norm().item() > 0.0:
-            default_root_state[:, :2] = lastest_pose.to(sim.device)
+        # check for goal position changing update
+        set_pose = setPose.get_goal_position()
+        print(f"Set Pose from topic: {set_pose}")
+        print(f"Lastest Pose: {lastest_pose}")
+        if not torch.equal(set_pose, lastest_pose):
+            default_root_state[:, 0] = set_pose[0].to(sim.device)
+            default_root_state[:, 1] = set_pose[1].to(sim.device)
             default_root_state[:, 2] = altitude_desired
             robot.write_root_pose_to_sim(default_root_state[:, :7])
             robot.write_root_velocity_to_sim(default_root_state[:, 7:])
-            print(f"Updated robot position to: {lastest_pose}")
+            print(f"Updated robot position to: {set_pose}")
+            lastest_pose = set_pose.clone()
+        # else:
+            
+
+        # if lastest_pose.norm().item() > 0.0:
+        #     default_root_state[:, :2] = lastest_pose.to(sim.device)
+        #     default_root_state[:, 2] = altitude_desired
+        #     robot.write_root_pose_to_sim(default_root_state[:, :7])
+        #     robot.write_root_velocity_to_sim(default_root_state[:, 7:])
+        #     print(f"Updated robot position to: {lastest_pose}")
 
 
         with torch.inference_mode():
@@ -666,13 +683,13 @@ def main():
             wind_dir = gasInfoSub.get_wind_direction()
             wind_spd = gasInfoSub.get_wind_speed()
 
-            print(f"Gas Left: {gas_left.item():.4f}, Gas Right: {gas_right.item():.4f}, Wind Dir: {wind_dir.item():.4f}, Wind Spd: {wind_spd.item():.4f}")
+            # print(f"Gas Left: {gas_left.item():.4f}, Gas Right: {gas_right.item():.4f}, Wind Dir: {wind_dir.item():.4f}, Wind Spd: {wind_spd.item():.4f}")
 
             # log_data = torch.cat((gas_left, gas_right, wind_dir, wind_spd), dim=0).unsqueeze(0)
             sample_data = np.array([gas_left.item(), gas_right.item(), wind_dir.item(), wind_spd.item(), cmd_vel[0,0].item(), cmd_vel[0,1].item(), cmd_vel[0,2].item(), cmd_yaw[0,2].item()])
             # print(f"Log Data Shape: {log_data.shape}")
             episode_buffer.append(sample_data)
-            if count % 1000 == 0:
+            if count % 10000 == 0:
                 # Save episode data
                 episode_array = np.stack(episode_buffer, axis=0)
                 np.save(f'episode_data_{count//500}.npy', episode_array)

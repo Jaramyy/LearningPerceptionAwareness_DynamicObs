@@ -31,6 +31,7 @@ from std_msgs.msg import Float32MultiArray, Float32
 
 from geometry_msgs.msg import TransformStamped, PoseStamped
 from tf2_ros import TransformBroadcaster
+from nav_msgs.msg import Path   
 
 # Model training imports
 from torch.utils.data import TensorDataset
@@ -160,6 +161,10 @@ class publishTF(Node):
         self.parent_frame = "world"
         self.child_frame = "drone_base_link"
 
+        # path = Path()
+        self.pub_path = self.create_publisher(Path, '/drone_path', 10)
+
+
 
     def publish_transform(self, translation, rotation, parent_frame="world", child_frame="drone_base_link"):
         t = TransformStamped()
@@ -174,6 +179,26 @@ class publishTF(Node):
         t.transform.rotation.z = float(rotation[3])
         t.transform.rotation.w = float(rotation[0])
         self.broadcaster.sendTransform(t)
+
+        path = Path()
+        path.header.stamp = self.get_clock().now().to_msg()
+        path.header.frame_id = parent_frame
+        
+        pose = PoseStamped()
+        pose.header.stamp = self.get_clock().now().to_msg()
+        pose.header.frame_id = parent_frame
+        pose.pose.position.x = float(translation[0])
+        pose.pose.position.y = float(translation[1])
+        pose.pose.position.z = float(translation[2])
+        pose.pose.orientation.x = float(rotation[1])
+        pose.pose.orientation.y = float(rotation[2])
+        pose.pose.orientation.z = float(rotation[3])
+        pose.pose.orientation.w = float(rotation[0])
+        
+        path.poses.append(pose)
+        self.pub_path.publish(path)
+
+
 
 class insect_MLP(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
@@ -604,7 +629,13 @@ def main():
     default_root_state[:, 3:7] = quat_from_euler_xyz(torch.tensor([0.0]), torch.tensor([0.0]), torch.tensor([3.14159]))
     robot.write_root_pose_to_sim(default_root_state[:, :7])
     robot.write_root_velocity_to_sim(default_root_state[:, 7:])
+    
     lastest_pose = torch.zeros(2)
+
+    gas_source_location = torch.tensor([1.45, 3.0, 0.8])
+    done = False
+    trial_num = 0
+
     # main loop
     while simulation_app.is_running():
         start_time = time.time()
@@ -616,8 +647,8 @@ def main():
 
         # check for goal position changing update
         set_pose = setPose.get_goal_position()
-        print(f"Set Pose from topic: {set_pose}")
-        print(f"Lastest Pose: {lastest_pose}")
+        # print(f"Set Pose from topic: {set_pose}")
+        # print(f"Lastest Pose: {lastest_pose}")
         if not torch.equal(set_pose, lastest_pose):
             default_root_state[:, 0] = set_pose[0].to(sim.device)
             default_root_state[:, 1] = set_pose[1].to(sim.device)
@@ -676,6 +707,7 @@ def main():
                 parent_frame="map",
                 child_frame="PioneerP3DX_base_link"
             )
+            
 
             # gas_left = gasInfoSub.get_gas_left().to(sim.device)
             gas_left = gasInfoSub.get_gas_left()
@@ -686,15 +718,38 @@ def main():
             # print(f"Gas Left: {gas_left.item():.4f}, Gas Right: {gas_right.item():.4f}, Wind Dir: {wind_dir.item():.4f}, Wind Spd: {wind_spd.item():.4f}")
 
             # log_data = torch.cat((gas_left, gas_right, wind_dir, wind_spd), dim=0).unsqueeze(0)
-            sample_data = np.array([gas_left.item(), gas_right.item(), wind_dir.item(), wind_spd.item(), cmd_vel[0,0].item(), cmd_vel[0,1].item(), cmd_vel[0,2].item(), cmd_yaw[0,2].item()])
+            pos = robot.data.root_pos_w.squeeze(0).cpu().numpy()
+            sample_data = np.array([gas_left.item(), gas_right.item(), wind_dir.item(), wind_spd.item(), cmd_vel[0,0].item(), cmd_vel[0,1].item(), cmd_vel[0,2].item(), cmd_yaw[0,2].item(), pos[0], pos[1], pos[2]])
             # print(f"Log Data Shape: {log_data.shape}")
             episode_buffer.append(sample_data)
-            if count % 10000 == 0:
+            
+            distance_to_source = torch.norm(robot.data.root_pos_w.squeeze(0) - gas_source_location.to(sim.device)).item()
+            print(f"Distance to gas source: {distance_to_source:.4f} m")
+            if distance_to_source < 1.0:
+                # randomize start position for next trial
+                if set_pose.norm().item() == 0.0:
+                    print("No set pose received, randomizing start position.")
+                    default_root_state = robot.data.default_root_state.clone()
+                    default_root_state[:, 0] = torch.tensor([7.0], device=sim.device)
+                    default_root_state[:, 1] = torch.tensor([3.0], device=sim.device).uniform_(-1.0, 1.0)
+                    default_root_state[:, 2] = altitude_desired
+                else:
+                    print("\n\n\n\nUsing set pose for next trial start position.\n\n\n")
+                    default_root_state[:, 1] = set_pose[1].to(sim.device).uniform_(-1.0, 1.0)
+                robot.write_root_pose_to_sim(default_root_state[:, :7])
+                robot.write_root_velocity_to_sim(default_root_state[:, 7:])
+                
+                trial_num += 1
+                print(f"Trial {trial_num} completed. Reaching gas source.")
+            
+            if trial_num >= 5:
+                print("Completed 5 trials.")
                 # Save episode data
                 episode_array = np.stack(episode_buffer, axis=0)
                 np.save(f'episode_data_{count//500}.npy', episode_array)
                 print(f"Saved episode_data_{count//500}.npy with shape {episode_array.shape}")
                 episode_buffer.clear()
+                trial_num = 0
             count += 1
                 
 

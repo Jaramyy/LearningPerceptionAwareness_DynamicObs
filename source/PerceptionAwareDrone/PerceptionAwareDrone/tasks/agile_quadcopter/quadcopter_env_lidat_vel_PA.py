@@ -1,3 +1,5 @@
+#python3 scripts/rl_games/train.py --task Isaac-Agile-Lidar-Vel-PA-v0 --num_envs 4096
+
 # Copyright (c) 2022-2025, The Isaac Lab Project Developers.
 # All rights reserved.
 #
@@ -147,8 +149,8 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
         ),
     )
 
-    # flat_terrain = False  # for generator terrain
-    flat_terrain = True
+    flat_terrain = False  # for generator terrain
+    # flat_terrain = True
     if flat_terrain:
         # for flat and emtry terrain
         terrain = TerrainImporterCfg(
@@ -211,9 +213,10 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     # lin_vel_reward_scale = -0.5
     # ang_vel_reward_scale = -0.01
     distance_to_goal_reward_scale = 15.0
-    action_rate_reward_scale = -1.0 #-0.5
+    action_rate_reward_scale = -0.1 #-0.5
     velocity_direction = 10.0
     head_tracking = 30.0
+    reward_safety_static = 20.0
 
     #max velocity
     max_velocity = 4.0  # m/s
@@ -245,6 +248,10 @@ class QuadcopterEnv(DirectRLEnv):
         self.lidar_resolution = (60)
         self.lidar_range = 5.0
 
+
+        self.my_visualizer = self.define_markers()
+        self.robot_visualizer = self.define_robot_markers()
+
         # Logging
         self._episode_sums = {
             key: torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
@@ -256,6 +263,7 @@ class QuadcopterEnv(DirectRLEnv):
                 "rew_velocity_dir",
                 "rew_head_tracking",
                 "rew_height_penalty",
+                "rew_reward_safety_static",
             ]
         }
        # Get specific body indices
@@ -419,8 +427,14 @@ class QuadcopterEnv(DirectRLEnv):
         self.robot_heading = self._robot.data.heading_w
         self.angle_diff = self.ref_heading - self.robot_heading
         # print(self.angle_diff)
-        head_tracking_path_rew = 1 - torch.tanh(torch.abs(self.angle_diff) / 0.5)
+        head_tracking_path_rew = 0.7 - torch.tanh(torch.abs(self.angle_diff) / 0.9)
         
+        ref_heading_marker_orientations = quat_from_angle_axis(self.ref_heading, torch.tensor([0.0, 0.0, 1.0], device=self.device))
+        self.robot_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=ref_heading_marker_orientations)
+
+        robot_heading_marker_orientations = quat_from_angle_axis(self.robot_heading, torch.tensor([0.0, 0.0, 1.0], device=self.device))
+        self.my_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=robot_heading_marker_orientations)
+        # self.robot_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=self._robot.data.root_quat_w)
         
         clipped_z = torch.clamp(
                     self._robot.data.root_pos_w[:, 2],
@@ -428,6 +442,9 @@ class QuadcopterEnv(DirectRLEnv):
                     self.height_range[:, 1]
                 )
         penalty_height = ((self._robot.data.root_pos_w[:, 2] - clipped_z) ** 2)  # shape (num_envs, 1)
+
+        # lidar safety reward
+        reward_safety_static = 1 - torch.tanh((self.lidar_range - self.lidar_scan).clamp(min=1e-6, max=self.lidar_range)).mean(dim=2).squeeze(1)
 
         rewards = {
             # "rew_lin_vel": lin_vel * self.cfg.lin_vel_reward_scale * self.step_dt,
@@ -437,6 +454,8 @@ class QuadcopterEnv(DirectRLEnv):
             "rew_velocity_dir": rew_vel_dir_w * self.cfg.velocity_direction * self.step_dt,
             "rew_head_tracking": head_tracking_path_rew * self.cfg.head_tracking * self.step_dt,
             "rew_height_penalty": -penalty_height * 10.0 * self.step_dt,
+            "rew_reward_safety_static": reward_safety_static * self.cfg.reward_safety_static * self.step_dt,
+
 
         }
         reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
@@ -455,7 +474,16 @@ class QuadcopterEnv(DirectRLEnv):
         died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.3, self._robot.data.root_pos_w[:, 2] > 4.0)
         
         uprightness = self._robot.data.projected_gravity_b[:, 2] >= 0.0
-        died = died | uprightness
+
+        static_collision = einops.reduce(self.lidar_scan, "n 1 w -> n 1", "min") < 0.4  # 0.3 collision radius
+        reach_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1) < 0.02
+
+        relative_err_pos_w = self._desired_pos_w - self._robot.data.root_pos_w
+        ref_heading = torch.atan2(relative_err_pos_w[:, 1], relative_err_pos_w[:, 0])  # radian
+        angle_diff = ref_heading - self._robot.data.heading_w
+        opposite_direction_heading = torch.abs(angle_diff) > 3.0
+
+        died = died | uprightness | static_collision.squeeze(1) | reach_goal | opposite_direction_heading
         return died, time_out
 
     def _reset_idx(self, env_ids: torch.Tensor | None):
@@ -526,6 +554,42 @@ class QuadcopterEnv(DirectRLEnv):
     def _debug_vis_callback(self, event):
         # update the markers
         self.goal_pos_visualizer.visualize(self._desired_pos_w)
+        
+    def define_markers(self) -> VisualizationMarkers:
+        """Define markers with various different shapes."""
+        marker_cfg = VisualizationMarkersCfg(
+            prim_path="/Visuals/myMarkers",
+            markers={
+                # "frame": sim_utils.UsdFileCfg(
+                #     usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
+                #     scale=(0.5, 0.5, 0.5),
+                # ),
+                "arrow_x": sim_utils.UsdFileCfg(
+                    usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+                    scale=(0.1, 0.1, 1.0),
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
+                ),
+            },
+        )
+        return VisualizationMarkers(marker_cfg)
+    
+    def define_robot_markers(self) -> VisualizationMarkers:
+        """Define markers with various different shapes."""
+        marker_cfg = VisualizationMarkersCfg(
+            prim_path="/Visuals/myMarkers",
+            markers={
+                # "frame": sim_utils.UsdFileCfg(
+                #     usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
+                #     scale=(0.5, 0.5, 0.5),
+                # ),
+                "arrow_x": sim_utils.UsdFileCfg(
+                    usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+                    scale=(0.1, 0.1, 1.0),
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),
+                ),
+            },
+        )
+        return VisualizationMarkers(marker_cfg)
 
 
 

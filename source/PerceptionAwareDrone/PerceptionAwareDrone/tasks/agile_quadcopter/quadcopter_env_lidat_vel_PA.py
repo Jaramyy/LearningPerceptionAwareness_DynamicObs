@@ -212,11 +212,12 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     # reward scales
     # lin_vel_reward_scale = -0.5
     # ang_vel_reward_scale = -0.01
-    distance_to_goal_reward_scale = 15.0
-    action_rate_reward_scale = -0.1 #-0.5
+    distance_to_goal_reward_scale = 35.0
+    action_rate_reward_scale = -0.1 #-0.05
     velocity_direction = 10.0
     head_tracking = 30.0
     reward_safety_static = 20.0
+    potential_field_PA = 35.0 #32.0
 
     #max velocity
     max_velocity = 4.0  # m/s
@@ -251,6 +252,7 @@ class QuadcopterEnv(DirectRLEnv):
 
         self.my_visualizer = self.define_markers()
         self.robot_visualizer = self.define_robot_markers()
+        self.nearest_obs_visualizer = self.define_nearest_obs_markers()
 
         # Logging
         self._episode_sums = {
@@ -264,6 +266,7 @@ class QuadcopterEnv(DirectRLEnv):
                 "rew_head_tracking",
                 "rew_height_penalty",
                 "rew_reward_safety_static",
+                "rew_potential_field_PA"
             ]
         }
        # Get specific body indices
@@ -411,8 +414,6 @@ class QuadcopterEnv(DirectRLEnv):
 
         action_rate = torch.sum(torch.square(self._robot.data.root_lin_vel_w - self.previous_action), dim=1)
 
-        
-
         distance_to_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1)
         distance_to_goal_mapped = 1 - torch.tanh(distance_to_goal / 0.8)
         
@@ -421,14 +422,14 @@ class QuadcopterEnv(DirectRLEnv):
         rew_vel_dir_w = self._robot.data.root_lin_vel_w * unit_relative_err_pos
         rew_vel_dir_w = torch.sum(rew_vel_dir_w, dim=-1)
 
-
         # heading tracking reward
         self.ref_heading = torch.atan2(relative_err_pos_w[:, 1], relative_err_pos_w[:, 0])  # radian
         self.robot_heading = self._robot.data.heading_w
         self.angle_diff = self.ref_heading - self.robot_heading
-        # print(self.angle_diff)
         head_tracking_path_rew = 0.7 - torch.tanh(torch.abs(self.angle_diff) / 0.9)
         
+
+        # debug visualization
         ref_heading_marker_orientations = quat_from_angle_axis(self.ref_heading, torch.tensor([0.0, 0.0, 1.0], device=self.device))
         self.robot_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=ref_heading_marker_orientations)
 
@@ -436,6 +437,7 @@ class QuadcopterEnv(DirectRLEnv):
         self.my_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=robot_heading_marker_orientations)
         # self.robot_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=self._robot.data.root_quat_w)
         
+        # height penalty
         clipped_z = torch.clamp(
                     self._robot.data.root_pos_w[:, 2],
                     self.height_range[:, 0] ,  # allow small tolerance
@@ -446,6 +448,46 @@ class QuadcopterEnv(DirectRLEnv):
         # lidar safety reward
         reward_safety_static = 1 - torch.tanh((self.lidar_range - self.lidar_scan).clamp(min=1e-6, max=self.lidar_range)).mean(dim=2).squeeze(1)
 
+
+        # lidar potential field adapt heading reward
+        vec_to_obstacles = (self._lidar_sensor.data.ray_hits_w - self._lidar_sensor.data.pos_w.unsqueeze(1)).clamp_max(self.lidar_range * 2.0)
+        dists = vec_to_obstacles.norm(dim=-1)
+        closest_idx = torch.argmin(dists, dim=1)
+        env_idx = torch.arange(vec_to_obstacles.shape[0])
+
+        nearest_vec = vec_to_obstacles[env_idx, closest_idx]
+        nearest_dist = dists[env_idx, closest_idx]
+        
+        nearest_angle = torch.atan2(nearest_vec[:, 1], nearest_vec[:, 0])
+        nearest_quat = quat_from_angle_axis(nearest_angle, torch.tensor([0, 0, 1], device=self.device, dtype=torch.float32).repeat(self.num_envs, 1))
+
+        robot_heading_vector = quat_apply_yaw(
+            self._robot.data.root_state_w[:, 3:7].to(torch.float32),
+            torch.tensor([1, 0, 0], device=self.device, dtype=torch.float32).repeat(self.num_envs, 1),
+        )
+
+        nearest_vec_norm = nearest_vec / (nearest_vec.norm(dim=-1, keepdim=True) + 1e-6)
+
+        # TODO: Edit this part to use the robot's heading vector
+        cos_facing_obstacle = torch.sum(robot_heading_vector * nearest_vec_norm, dim=1)  # in [-1, 1]
+        # dot_vec = torch.abs(torch.sum(robot_heading_vector * nearest_vec, dim=1))
+        
+        sigma = 0.7  # Standard deviation of Gaussian function
+        gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
+        potential = 0.5 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
+        # print("potential ", potential[2015])
+        
+        # TODO: Edit this part to use the robot's heading vector
+        rew_potential_pa = potential * cos_facing_obstacle
+        #potential_rew = potential * dot_vec
+
+        self.nearest_obs_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=nearest_quat)
+
+        goal_heading_error = torch.abs(self.angle_diff)
+        goal_heading_reward = 1 - torch.tanh(goal_heading_error / 0.5)
+        heading_reward_blended = (1 - potential) * goal_heading_reward + potential * cos_facing_obstacle
+
+
         rewards = {
             # "rew_lin_vel": lin_vel * self.cfg.lin_vel_reward_scale * self.step_dt,
             # "rew_ang_vel": ang_vel * self.cfg.ang_vel_reward_scale * self.step_dt,
@@ -455,6 +497,7 @@ class QuadcopterEnv(DirectRLEnv):
             "rew_head_tracking": head_tracking_path_rew * self.cfg.head_tracking * self.step_dt,
             "rew_height_penalty": -penalty_height * 10.0 * self.step_dt,
             "rew_reward_safety_static": reward_safety_static * self.cfg.reward_safety_static * self.step_dt,
+            "rew_potential_field_PA": rew_potential_pa * self.cfg.potential_field_PA * self.step_dt,
 
 
         }
@@ -586,6 +629,24 @@ class QuadcopterEnv(DirectRLEnv):
                     usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
                     scale=(0.1, 0.1, 1.0),
                     visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),
+                ),
+            },
+        )
+        return VisualizationMarkers(marker_cfg)
+    
+    def define_nearest_obs_markers(self) -> VisualizationMarkers:
+        """Define markers with various different shapes."""
+        marker_cfg = VisualizationMarkersCfg(
+            prim_path="/Visuals/myMarkers",
+            markers={
+                # "frame": sim_utils.UsdFileCfg(
+                #     usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
+                #     scale=(0.5, 0.5, 0.5),
+                # ),
+                "arrow_x": sim_utils.UsdFileCfg(
+                    usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+                    scale=(0.1, 0.1, 1.0),
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 0.0, 1.0)),
                 ),
             },
         )

@@ -213,11 +213,12 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     # lin_vel_reward_scale = -0.5
     # ang_vel_reward_scale = -0.01
     distance_to_goal_reward_scale = 35.0
-    action_rate_reward_scale = -0.1 #-0.05
-    velocity_direction = 10.0
+    action_rate_reward_scale = -0.001 #-0.05
+    velocity_direction = 25.0
     head_tracking = 30.0
-    reward_safety_static = 20.0
-    potential_field_PA = 35.0 #32.0
+    reward_safety_static = 25.0
+    potential_field_PA = 30.0 #32.0
+    head_tracking_PA = 30.0
 
     #max velocity
     max_velocity = 4.0  # m/s
@@ -263,10 +264,11 @@ class QuadcopterEnv(DirectRLEnv):
                 "rew_distance_to_goal",
                 "rew_action_rate",
                 "rew_velocity_dir",
-                "rew_head_tracking",
+                # "rew_head_tracking",
                 "rew_height_penalty",
                 "rew_reward_safety_static",
-                "rew_potential_field_PA"
+                "rew_potential_field_PA",
+                "rew_heading_tracking_PA",
             ]
         }
        # Get specific body indices
@@ -379,15 +381,15 @@ class QuadcopterEnv(DirectRLEnv):
         )
 
         # lidar potential field
-        vec_to_obstacles = (self._lidar_sensor.data.ray_hits_w - self._lidar_sensor.data.pos_w.unsqueeze(1)) .clamp_max(self.lidar_range * 2.0)
+        vec_to_obstacles = (self._lidar_sensor.data.ray_hits_w - self._lidar_sensor.data.pos_w.unsqueeze(1)) .clamp_max(self.lidar_range)
         dists_to_obstacle = vec_to_obstacles.norm(dim=-1)
         closest_idx = torch.argmin(dists_to_obstacle, dim=1)
         env_idx = torch.arange(vec_to_obstacles.shape[0])
         nearest_dist = dists_to_obstacle[env_idx, closest_idx]
         
-        sigma = 0.7  # Standard deviation of Gaussian function
+        sigma = 0.9  # Standard deviation of Gaussian function
         gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
-        potential = 0.5 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
+        potential = 0.25 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
 
 
         obs = torch.cat(
@@ -450,7 +452,7 @@ class QuadcopterEnv(DirectRLEnv):
 
 
         # lidar potential field adapt heading reward
-        vec_to_obstacles = (self._lidar_sensor.data.ray_hits_w - self._lidar_sensor.data.pos_w.unsqueeze(1)).clamp_max(self.lidar_range * 2.0)
+        vec_to_obstacles = (self._lidar_sensor.data.ray_hits_w - self._lidar_sensor.data.pos_w.unsqueeze(1)).clamp_max(2.5)
         dists = vec_to_obstacles.norm(dim=-1)
         closest_idx = torch.argmin(dists, dim=1)
         env_idx = torch.arange(vec_to_obstacles.shape[0])
@@ -458,34 +460,54 @@ class QuadcopterEnv(DirectRLEnv):
         nearest_vec = vec_to_obstacles[env_idx, closest_idx]
         nearest_dist = dists[env_idx, closest_idx]
         
-        nearest_angle = torch.atan2(nearest_vec[:, 1], nearest_vec[:, 0])
-        nearest_quat = quat_from_angle_axis(nearest_angle, torch.tensor([0, 0, 1], device=self.device, dtype=torch.float32).repeat(self.num_envs, 1))
-
         robot_heading_vector = quat_apply_yaw(
             self._robot.data.root_state_w[:, 3:7].to(torch.float32),
             torch.tensor([1, 0, 0], device=self.device, dtype=torch.float32).repeat(self.num_envs, 1),
         )
-
-        nearest_vec_norm = nearest_vec / (nearest_vec.norm(dim=-1, keepdim=True) + 1e-6)
-
-        # TODO: Edit this part to use the robot's heading vector
-        cos_facing_obstacle = torch.sum(robot_heading_vector * nearest_vec_norm, dim=1)  # in [-1, 1]
-        # dot_vec = torch.abs(torch.sum(robot_heading_vector * nearest_vec, dim=1))
-        
-        sigma = 0.7  # Standard deviation of Gaussian function
-        gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
-        potential = 0.5 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
-        # print("potential ", potential[2015])
-        
-        # TODO: Edit this part to use the robot's heading vector
-        rew_potential_pa = potential * cos_facing_obstacle
-        #potential_rew = potential * dot_vec
+        #check if robot still in potential field range, if not set nearest vec to goal direction
+        # in_field_range = nearest_dist < (self.lidar_range * 2.0)
+        # nearest_vec = torch.where(
+        #     in_field_range.unsqueeze(-1),
+        #     nearest_vec,
+        #     -unit_relative_err_pos * 5.0,  # scale to match typical obstacle distance
+        # )
+        nearest_angle = torch.atan2(nearest_vec[:, 1], nearest_vec[:, 0])
+        nearest_quat = quat_from_angle_axis(nearest_angle, torch.tensor([0, 0, 1], device=self.device, dtype=torch.float32).repeat(self.num_envs, 1))
 
         self.nearest_obs_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=nearest_quat)
 
-        goal_heading_error = torch.abs(self.angle_diff)
-        goal_heading_reward = 1 - torch.tanh(goal_heading_error / 0.5)
-        heading_reward_blended = (1 - potential) * goal_heading_reward + potential * cos_facing_obstacle
+        nearest_vec_norm = nearest_vec / (nearest_vec.norm(dim=-1, keepdim=True) + 1e-6)
+        robot_vec_heading_norm = robot_heading_vector / (robot_heading_vector.norm(dim=-1, keepdim=True) + 1e-6)
+        # cosine_similarity = torch.dot(nearest_vec_norm, robot_vec_heading_norm)/torch.norm(nearest_vec_norm)*torch.norm(robot_vec_heading_norm)
+        cosine_similarity = torch.nn.functional.cosine_similarity(
+            nearest_vec_norm,
+            robot_vec_heading_norm,
+            dim=1,
+            eps=1e-8,
+        )
+
+        cos_facing_obstacle = torch.sum(robot_heading_vector * nearest_vec_norm, dim=1)  # in [-1, 1]
+        # dot_vec = torch.abs(torch.sum(robot_heading_vector * nearest_vec, dim=1))
+        
+        # sigma = 0.7  # Standard deviation of Gaussian function
+        # gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
+        # potential = 0.5 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
+        sigma = 0.9  # Standard deviation of Gaussian function
+        gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
+        potential = 0.25 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
+        
+        rew_potential_pa = potential * cosine_similarity
+        # rew_potential_pa = potential * torch.abs(cosine_similarity)
+        #potential_rew = potential * dot_vec
+
+        # goal_heading_error = torch.abs(self.angle_diff)
+        # goal_heading_reward = 1 - torch.tanh(goal_heading_error / 0.5)
+        # blend_factor = (1 - potential)
+        # print("blend factor ", blend_factor[2])
+        # print("potential value ", potential[2])
+        # print("head tracking reward ",  head_tracking_path_rew[2])
+        # print("potential field reward ", rew_potential_pa[2])
+        rew_heading_reward_blended = (1 - potential) * head_tracking_path_rew +  potential * torch.abs(cosine_similarity)
 
 
         rewards = {
@@ -494,10 +516,11 @@ class QuadcopterEnv(DirectRLEnv):
             "rew_distance_to_goal": distance_to_goal_mapped * self.cfg.distance_to_goal_reward_scale * self.step_dt,
             "rew_action_rate": action_rate * self.cfg.action_rate_reward_scale * self.step_dt,
             "rew_velocity_dir": rew_vel_dir_w * self.cfg.velocity_direction * self.step_dt,
-            "rew_head_tracking": head_tracking_path_rew * self.cfg.head_tracking * self.step_dt,
+            # "rew_head_tracking": head_tracking_path_rew * self.cfg.head_tracking * self.step_dt,
             "rew_height_penalty": -penalty_height * 10.0 * self.step_dt,
             "rew_reward_safety_static": reward_safety_static * self.cfg.reward_safety_static * self.step_dt,
             "rew_potential_field_PA": rew_potential_pa * self.cfg.potential_field_PA * self.step_dt,
+            "rew_heading_tracking_PA": rew_heading_reward_blended * self.cfg.head_tracking_PA * self.step_dt,
 
 
         }
@@ -519,12 +542,12 @@ class QuadcopterEnv(DirectRLEnv):
         uprightness = self._robot.data.projected_gravity_b[:, 2] >= 0.0
 
         static_collision = einops.reduce(self.lidar_scan, "n 1 w -> n 1", "min") < 0.4  # 0.3 collision radius
-        reach_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1) < 0.02
+        reach_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1) < 0.15
 
         relative_err_pos_w = self._desired_pos_w - self._robot.data.root_pos_w
         ref_heading = torch.atan2(relative_err_pos_w[:, 1], relative_err_pos_w[:, 0])  # radian
         angle_diff = ref_heading - self._robot.data.heading_w
-        opposite_direction_heading = torch.abs(angle_diff) > 3.0
+        opposite_direction_heading = torch.abs(angle_diff) > 2.0944  # 120 degrees
 
         died = died | uprightness | static_collision.squeeze(1) | reach_goal | opposite_direction_heading
         return died, time_out

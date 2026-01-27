@@ -44,7 +44,7 @@ from isaaclab.sensors import Imu, ImuCfg
 
 #lidar 
 import einops
-from isaacsim.util.debug_draw import _debug_draw
+# from isaacsim.util.debug_draw import _debug_draw
 
 #markers
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
@@ -217,12 +217,12 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     velocity_direction = 25.0
     head_tracking = 30.0
     reward_safety_static = 25.0
-    potential_field_PA = 30.0 #32.0
+    potential_field_PA = 45.0 #32.0
     head_tracking_PA = 30.0
 
     #max velocity
-    max_velocity = 4.0  # m/s
-    max_yaw_rate = 3.14  # rad/s
+    max_velocity = 2.0 #4.0  # m/s
+    max_yaw_rate = 6.28 #3.14  # rad/s
 
 
 
@@ -250,7 +250,8 @@ class QuadcopterEnv(DirectRLEnv):
         self.lidar_resolution = (60)
         self.lidar_range = 5.0
 
-
+        # if headless mode is off, setup debug visualization
+        # if not self.headless:
         self.my_visualizer = self.define_markers()
         self.robot_visualizer = self.define_robot_markers()
         self.nearest_obs_visualizer = self.define_nearest_obs_markers()
@@ -496,7 +497,7 @@ class QuadcopterEnv(DirectRLEnv):
         gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
         potential = 0.25 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
         
-        rew_potential_pa = potential * cosine_similarity
+        rew_potential_pa = (2*potential) * (2*cosine_similarity)
         # rew_potential_pa = potential * torch.abs(cosine_similarity)
         #potential_rew = potential * dot_vec
 

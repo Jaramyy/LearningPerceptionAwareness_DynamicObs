@@ -217,7 +217,7 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     velocity_direction = 25.0
     head_tracking = 30.0
     reward_safety_static = 25.0
-    potential_field_PA = 30.0 #32.0
+    potential_field_PA = 40.0 #32.0
     head_tracking_PA = 30.0
 
     #max velocity
@@ -584,7 +584,7 @@ class QuadcopterEnv(DirectRLEnv):
         # Sample new commands
         self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-15.0, 15.0)
         self._desired_pos_w[env_ids, :2] += self._terrain.env_origins[env_ids, :2]
-        self._desired_pos_w[env_ids, 2] = torch.zeros_like(self._desired_pos_w[env_ids, 2]).uniform_(0.5, 1.5)
+        self._desired_pos_w[env_ids, 2] = torch.zeros_like(self._desired_pos_w[env_ids, 2]).uniform_(1.5, 1.6)
 
         desired_heights = self._desired_pos_w[:, 2]
         margin = 0.5

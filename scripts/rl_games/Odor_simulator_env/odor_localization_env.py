@@ -635,7 +635,7 @@ def main():
     gas_source_location = torch.tensor([1.45, 3.0, 0.8])
     done = False
     trial_num = 0
-
+    file_idx = 0
     # main loop
     while simulation_app.is_running():
         start_time = time.time()
@@ -731,11 +731,11 @@ def main():
                     print("No set pose received, randomizing start position.")
                     default_root_state = robot.data.default_root_state.clone()
                     default_root_state[:, 0] = torch.tensor([7.0], device=sim.device)
-                    default_root_state[:, 1] = torch.tensor([3.0], device=sim.device).uniform_(-1.0, 1.0)
+                    default_root_state[:, 1] = torch.tensor([3.0], device=sim.device) + torch.empty(1, device=sim.device).uniform_(-2.0, 2.0)
                     default_root_state[:, 2] = altitude_desired
                 else:
                     print("\n\n\n\nUsing set pose for next trial start position.\n\n\n")
-                    default_root_state[:, 1] = set_pose[1].to(sim.device).uniform_(-1.0, 1.0)
+                    default_root_state[:, 1] = set_pose[1] + torch.empty(1, device=sim.device).uniform_(-2.0, 2.0)
                 robot.write_root_pose_to_sim(default_root_state[:, :7])
                 robot.write_root_velocity_to_sim(default_root_state[:, 7:])
                 
@@ -746,11 +746,14 @@ def main():
                 print("Completed 5 trials.")
                 # Save episode data
                 episode_array = np.stack(episode_buffer, axis=0)
-                np.save(f'episode_data_{count//500}.npy', episode_array)
+                filename = f"episode_data_{file_idx:05d}.npy" 
+                # np.save(f'episode_data_{count//500}.npy', episode_array)
+                np.save(filename, episode_array)
                 print(f"Saved episode_data_{count//500}.npy with shape {episode_array.shape}")
                 episode_buffer.clear()
                 trial_num = 0
-            count += 1
+                file_idx += 1
+            # count += 1
                 
 
 

@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter1d
 
 
-path_dataset = "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/dataset_numpy/trial_1_15-1-26/episode_data_20.npy"
+# path_dataset = "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/dataset_numpy/trial_1_15-1-26/episode_data_20.npy"
+path_dataset = "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/dataset_numpy/test_trial_/episode_data_00000.npy"
 # Load the .npy file
 data = np.load(path_dataset)
 print(data.shape)
@@ -39,10 +40,11 @@ smoothed_vy = gaussian_filter1d(vy, sigma=sigma)
 # plt.title("Velocity Z over Time")
 # plt.show()
 
-
+sigma = 8 
 gas_left = data[:, 0]
 gas_right = data[:, 1]
-
+smoothed_gas_left = gaussian_filter1d(gas_left, sigma=sigma)
+smoothed_gas_right = gaussian_filter1d(gas_right, sigma=sigma)
 
 # plt.figure()
 # plt.plot(gas_left)
@@ -94,11 +96,11 @@ norm_vxy = np.sqrt(smoothed_vx**2 + smoothed_vy**2)
 
 plt.figure()
 plt.subplot(5, 1, 1)
-plt.plot(gas_left)
+plt.plot(smoothed_gas_left)
 plt.ylabel("Gas Left")
 
 plt.subplot(5, 1, 2)
-plt.plot(gas_right)
+plt.plot(smoothed_gas_right)
 plt.xlabel("Timestep")
 plt.ylabel("Gas Right")
 

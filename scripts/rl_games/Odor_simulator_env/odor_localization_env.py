@@ -684,6 +684,16 @@ def main():
             # print("Getting cmd_vel from subscriber...")
             cmd_vel = velSub.get_cmd_velocity().to(sim.device).unsqueeze(0)
             cmd_yaw = velSub.get_cmd_ang_velocity().to(sim.device).unsqueeze(0)
+
+            #covert global frame cmd_vel to body frame
+            current_yaw = euler_xyz_from_quat(robot.data.root_link_quat_w)[2]
+            cy = torch.cos(-current_yaw)
+            sy = torch.sin(-current_yaw)
+            rotation_matrix = torch.tensor([[cy, -sy, 0.0],
+                                            [sy, cy, 0.0],
+                                            [0.0, 0.0, 1.0]], device=sim.device)
+            cmd_vel = torch.matmul(rotation_matrix, cmd_vel.squeeze(0).unsqueeze(1)).unsqueeze(0)
+
             # print(f"Commanded Yaw Rate: {cmd_yaw}")
             # print(f"Commanded Velocity: {cmd_vel}")
             

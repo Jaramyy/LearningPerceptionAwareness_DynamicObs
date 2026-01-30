@@ -212,13 +212,13 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     # reward scales
     # lin_vel_reward_scale = -0.5
     # ang_vel_reward_scale = -0.01
-    distance_to_goal_reward_scale = 35.0
+    distance_to_goal_reward_scale = 50.0
     action_rate_reward_scale = -0.001 #-0.05
     velocity_direction = 25.0
     head_tracking = 30.0
     reward_safety_static = 25.0
-    potential_field_PA = 45.0 #32.0
-    head_tracking_PA = 30.0
+    potential_field_PA = 25.0 #32.0
+    head_tracking_PA = 32.0
 
     #max velocity
     max_velocity = 2.0 #4.0  # m/s
@@ -388,7 +388,7 @@ class QuadcopterEnv(DirectRLEnv):
         env_idx = torch.arange(vec_to_obstacles.shape[0])
         nearest_dist = dists_to_obstacle[env_idx, closest_idx]
         
-        sigma = 0.9  # Standard deviation of Gaussian function
+        sigma = 3.0 #0.9  # Standard deviation of Gaussian function
         gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
         potential = 0.25 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
 
@@ -493,11 +493,11 @@ class QuadcopterEnv(DirectRLEnv):
         # sigma = 0.7  # Standard deviation of Gaussian function
         # gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
         # potential = 0.5 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
-        sigma = 0.9  # Standard deviation of Gaussian function
+        sigma = 3.0 #0.9  # Standard deviation of Gaussian function
         gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
         potential = 0.25 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
         
-        rew_potential_pa = (2*potential) * (2*cosine_similarity)
+        rew_potential_pa = (2*potential) * (1*cosine_similarity)
         # rew_potential_pa = potential * torch.abs(cosine_similarity)
         #potential_rew = potential * dot_vec
 
@@ -548,8 +548,7 @@ class QuadcopterEnv(DirectRLEnv):
         relative_err_pos_w = self._desired_pos_w - self._robot.data.root_pos_w
         ref_heading = torch.atan2(relative_err_pos_w[:, 1], relative_err_pos_w[:, 0])  # radian
         angle_diff = ref_heading - self._robot.data.heading_w
-        opposite_direction_heading = torch.abs(angle_diff) > 2.0944  # 120 degrees
-
+        opposite_direction_heading = torch.abs(angle_diff) >  1.57  # 90 degrees
         died = died | uprightness | static_collision.squeeze(1) | reach_goal | opposite_direction_heading
         return died, time_out
 

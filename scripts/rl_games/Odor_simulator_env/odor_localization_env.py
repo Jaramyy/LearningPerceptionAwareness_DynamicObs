@@ -687,12 +687,15 @@ def main():
 
             #covert global frame cmd_vel to body frame
             current_yaw = euler_xyz_from_quat(robot.data.root_link_quat_w)[2]
+            print(f"Current Yaw: {current_yaw.item():.4f} rad")
             cy = torch.cos(-current_yaw)
             sy = torch.sin(-current_yaw)
-            rotation_matrix = torch.tensor([[cy, -sy, 0.0],
-                                            [sy, cy, 0.0],
-                                            [0.0, 0.0, 1.0]], device=sim.device)
-            cmd_vel = torch.matmul(rotation_matrix, cmd_vel.squeeze(0).unsqueeze(1)).unsqueeze(0)
+            # rotation_matrix = torch.tensor([[cy, -sy, 0.0],
+                                            # [sy, cy, 0.0],
+                                            # [0.0, 0.0, 1.0]], device=sim.device)
+            # cmd_vel = torch.matmul(rotation_matrix, cmd_vel.squeeze(0).unsqueeze(1)).unsqueeze(0)
+            cmd_vel[0,0] = cy * velSub.get_cmd_velocity()[0].to(sim.device) + sy * velSub.get_cmd_velocity()[1].to(sim.device)
+            cmd_vel[0,1] = -sy * velSub.get_cmd_velocity()[0].to(sim.device) + cy * velSub.get_cmd_velocity()[1].to(sim.device)
 
             # print(f"Commanded Yaw Rate: {cmd_yaw}")
             # print(f"Commanded Velocity: {cmd_vel}")
@@ -752,8 +755,8 @@ def main():
                 trial_num += 1
                 print(f"Trial {trial_num} completed. Reaching gas source.")
             
-            if trial_num >= 5:
-                print("Completed 5 trials.")
+            if trial_num >= 3:
+                print("Completed 3 trials.")
                 # Save episode data
                 episode_array = np.stack(episode_buffer, axis=0)
                 filename = f"episode_data_{file_idx:05d}.npy" 

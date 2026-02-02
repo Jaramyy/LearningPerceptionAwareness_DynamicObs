@@ -218,10 +218,10 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     head_tracking = 30.0
     reward_safety_static = 25.0
     potential_field_PA = 25.0 #32.0
-    head_tracking_PA = 32.0
+    head_tracking_PA = 35.0
 
     #max velocity
-    max_velocity = 2.0 #4.0  # m/s
+    max_velocity = 2.5 #4.0  # m/s
     max_yaw_rate = 6.28 #3.14  # rad/s
 
 
@@ -548,7 +548,7 @@ class QuadcopterEnv(DirectRLEnv):
         relative_err_pos_w = self._desired_pos_w - self._robot.data.root_pos_w
         ref_heading = torch.atan2(relative_err_pos_w[:, 1], relative_err_pos_w[:, 0])  # radian
         angle_diff = ref_heading - self._robot.data.heading_w
-        opposite_direction_heading = torch.abs(angle_diff) >  1.57  # 90 degrees
+        opposite_direction_heading = torch.abs(angle_diff) >  1.05  # 60 degrees
         died = died | uprightness | static_collision.squeeze(1) | reach_goal | opposite_direction_heading
         return died, time_out
 

@@ -18,7 +18,7 @@ CONFIG_IMITATION = {
     'num_iterations' : 2000,
     "minibatch_size" : 32768,
     'batch_size': 32768,  # num_step = 2048, num_env = 4096
-    'max_samples': 65536,
+    'max_samples': 4096, #65536,
     'num_steps': 128,
     'best_checkpoint_path': './best_model.pth',
 }
@@ -26,7 +26,7 @@ CONFIG_IMITATION = {
 
 
 class StudentPolicy(nn.Module):
-    def __init__(self, input_size=71, hidden_size=64, output_size=4):
+    def __init__(self, input_size=69, hidden_size=64, output_size=4):
         super(StudentPolicy, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.dropout1 = nn.Dropout(0.05)

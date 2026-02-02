@@ -115,6 +115,7 @@ def train_student_policy(student_policy, dataloader, val_loader, optimizer, loss
             # action_batch = torch.clamp(action_batch, min=-1.0, max=1.0)
 
             # Forward pass
+            print("obs_batch shape:", obs_batch.shape)
             predictions = student_policy(obs_batch)
             if torch.isnan(predictions).any() or torch.isinf(predictions).any():
                 print("NaN or Inf detected in predictions. Skipping this batch.")
@@ -130,13 +131,11 @@ def train_student_policy(student_policy, dataloader, val_loader, optimizer, loss
             loss.backward()
             # torch.nn.utils.clip_grad_norm_(student_policy.parameters(), max_norm=1.0)
             optimizer.step()
-            train_loss.append(loss)
+            train_loss.append(loss.item())
         
-        
-        
-        avg_train_loss = torch.stack(train_loss).mean().item()
+        # avg_train_loss = torch.stack(train_loss).mean().item()
+        avg_train_loss = torch.tensor(train_loss).mean().item()
         train_losses.append(avg_train_loss)
-
         scheduler.step(avg_train_loss)
 
         print(f"Epoch {epoch+1} train loss: {avg_train_loss:.4f}")
@@ -357,8 +356,15 @@ def main():
                         altitude = obs[:,12]
                         # robot_orientation = obs[:, 9:12]
                         # guilding_pos_b = obs[:, 12:15]
+                        
+                        # lidar_scan_full = (
+                            # env.env.scene["lidar_sensor"].data.ray_hits_w
+                            # - env.env.scene["lidar_sensor"].data.pos_w.unsqueeze(1)
+                        # ).norm(dim=-1).clamp_max(10) # Shape [envs, beams] max range 10m
+                        # indices = torch.linspace(0, lidar_scan_full.shape[1] - 1, steps=5).long()
+                        # lidar_scan_5 = lidar_scan_full[:, indices]
 
-                        lidar_scan = (env.env.scene["lidar_sensor"].data.ray_hits_w - env.env.scene["lidar_sensor"].data.pos_w.unsqueeze(1)).norm(dim=-1).clamp_max(10).reshape(env.unwrapped.num_envs, 5)
+                        lidar_scan = (env.env.scene["lidar_sensor"].data.ray_hits_w - env.env.scene["lidar_sensor"].data.pos_w.unsqueeze(1)).norm(dim=-1).clamp_max(10)
                         
                         # drone_state = torch.cat((lin_vel, ang_vel, desired_pos_b, guilding_pos_b, lidar_scan), dim=1)
 
@@ -366,6 +372,7 @@ def main():
                         student_input = drone_state
                         
                         if iteration < 5:  # 2 iterations, use teacher's action
+                            # print("obs shape ",obs.shape)
                             actions = agent.get_action(obs, is_deterministic=agent.is_deterministic) # Shape [envs, action_dim], [2,4]
                             teacher_actions = actions
                             # print("action shape ",actions.shape)

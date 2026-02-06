@@ -81,9 +81,10 @@ from datetime import datetime
 import dragger_imitation.imitation as imitation
 
 
-def train_student_policy(student_policy, dataloader, val_loader, optimizer, loss_fn, config, scheduler):
+def train_student_policy(student_policy, dataloader, val_loader, optimizer, loss_fn, config, scheduler, checkpoint_dir='checkpoints'):
     train_losses = []
     learning_rates = []
+    best_val_loss = float('inf')
     
     for epoch in range(config['epochs']):
         train_loss = []
@@ -138,23 +139,74 @@ def train_student_policy(student_policy, dataloader, val_loader, optimizer, loss
         train_losses.append(avg_train_loss)
         scheduler.step(avg_train_loss)
 
+        
+
         print(f"Epoch {epoch+1} train loss: {avg_train_loss:.4f}")
 
 
-# Validation
+        # # Validation
+        # student_policy.eval()
+        # val_loss = []
+        # with torch.no_grad():
+        #     for obs_batch, action_batch in val_loader:
+        #         # obs_batch = torch.clamp(obs_batch, min=-10.0, max=10.0)
+        #         # action_batch = torch.clamp(action_batch, min=-1.0, max=1.0)
+        #         predictions = student_policy(obs_batch)
+        #         loss = loss_fn(predictions, action_batch)
+        #         val_loss.append(loss)
+            
+        #     avg_val_loss = torch.stack(val_loss).mean().item()
+        #     val_loss.append(avg_val_loss)
+        #     print(f"Epoch {epoch+1} val loss: {avg_val_loss:.4f}")
+
         student_policy.eval()
-        val_loss = []
+        val_losses = []
+
         with torch.no_grad():
             for obs_batch, action_batch in val_loader:
-                # obs_batch = torch.clamp(obs_batch, min=-10.0, max=10.0)
-                # action_batch = torch.clamp(action_batch, min=-1.0, max=1.0)
                 predictions = student_policy(obs_batch)
                 loss = loss_fn(predictions, action_batch)
-                val_loss.append(loss)
-            
-            avg_val_loss = torch.stack(val_loss).mean().item()
-            val_loss.append(avg_val_loss)
-            print(f"Epoch {epoch+1} val loss: {avg_val_loss:.4f}")
+                val_losses.append(loss)
+
+        avg_val_loss = torch.stack(val_losses).mean().item()
+        print(f"Epoch {epoch+1} val loss: {avg_val_loss:.6f}")
+
+        # -----------------------
+        # Save checkpoint every 10 epochs
+        # -----------------------
+        if (epoch + 1) % 10 == 0:
+            checkpoint_path = os.path.join(
+                checkpoint_dir,
+                f"checkpoint_epoch_{epoch+1}.pt"
+            )
+            torch.save({
+                'epoch': epoch + 1,
+                'model_state_dict': student_policy.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'scheduler_state_dict': scheduler.state_dict(),
+                'train_loss': avg_train_loss,
+                'val_loss': avg_val_loss,
+            }, checkpoint_path)
+
+            print(f"Saved periodic checkpoint → {checkpoint_path}")
+
+        # -----------------------
+        # Save BEST checkpoint
+        # -----------------------
+        if avg_val_loss < best_val_loss:
+            best_val_loss = avg_val_loss
+            best_model_path = os.path.join(checkpoint_dir, "best_model.pt")
+
+            torch.save({
+                'epoch': epoch + 1,
+                'model_state_dict': student_policy.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'scheduler_state_dict': scheduler.state_dict(),
+                'train_loss': avg_train_loss,
+                'val_loss': avg_val_loss,
+            }, best_model_path)
+
+            print(f"🔥 New BEST model saved → {best_model_path}")
 
         wandb.log({'train_loss': avg_train_loss, 'val_loss': avg_val_loss, 'lr': current_lr})
 
@@ -349,14 +401,27 @@ def main():
                 while len(new_data) < imitation.CONFIG_IMITATION['max_samples']:  
                     with torch.inference_mode():
                         obs = agent.obs_to_torch(obs)
-                        lin_vel = obs[:, :3]
-                        ang_vel = obs[:, 3:6]
+                        # lin_vel = obs[:, :3]
+                        # ang_vel = obs[:, 3:6]
                         # robot_orientation = obs[:, 9:12]
-                        desired_pos_b = obs[:, 9:12]
-                        altitude = obs[:,12]
+                        # desired_pos_b = obs[:, 9:12]
+                        # altitude = obs[:,12]
                         # robot_orientation = obs[:, 9:12]
                         # guilding_pos_b = obs[:, 12:15]
-                        
+                        IDX = {
+                            "lin_vel": slice(0,3),
+                            "ang_vel": slice(3,6),
+                            "grav": slice(6,9),
+                            "desired_pos": slice(9,12),
+                            "dist2d": 12,
+                            "distz": 13,
+                        }
+
+                        lin_vel = obs[:, IDX["lin_vel"]]
+                        ang_vel = obs[:, IDX["ang_vel"]]
+                        desired_pos_b = obs[:, IDX["desired_pos"]]
+                        dist_2d = obs[:, IDX["dist2d"]].unsqueeze(1)
+                        dist_z  = obs[:, IDX["distz"]].unsqueeze(1)
                         # lidar_scan_full = (
                             # env.env.scene["lidar_sensor"].data.ray_hits_w
                             # - env.env.scene["lidar_sensor"].data.pos_w.unsqueeze(1)
@@ -364,11 +429,11 @@ def main():
                         # indices = torch.linspace(0, lidar_scan_full.shape[1] - 1, steps=5).long()
                         # lidar_scan_5 = lidar_scan_full[:, indices]
 
-                        lidar_scan = (env.env.scene["lidar_sensor"].data.ray_hits_w - env.env.scene["lidar_sensor"].data.pos_w.unsqueeze(1)).norm(dim=-1).clamp_max(10)
+                        lidar_scan = (env.env.scene["lidar_sensor_student"].data.ray_hits_w - env.env.scene["lidar_sensor_student"].data.pos_w.unsqueeze(1)).norm(dim=-1).clamp_max(10)
                         
                         # drone_state = torch.cat((lin_vel, ang_vel, desired_pos_b, guilding_pos_b, lidar_scan), dim=1)
 
-                        drone_state = torch.cat((lin_vel, ang_vel, desired_pos_b, lidar_scan), dim=1)
+                        drone_state = torch.cat((lin_vel, ang_vel, desired_pos_b, dist_2d, dist_z, lidar_scan), dim=1)
                         student_input = drone_state
                         
                         if iteration < 5:  # 2 iterations, use teacher's action

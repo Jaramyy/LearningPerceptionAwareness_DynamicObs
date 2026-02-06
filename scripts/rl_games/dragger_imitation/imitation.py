@@ -11,22 +11,24 @@ import numpy as np
 CONFIG_IMITATION = {
     'architecture': 'feedforward',
     'lr': 0.001,
-    'scheduler_factor': 1e-2,
-    'scheduler_patience': 2,  # 2
+    'scheduler_factor': 0.5,
+    'scheduler_patience': 10,  # 2
     'scheduler_min_lr': 1e-4,
     'epochs': 5,
     'num_iterations' : 2000,
     "minibatch_size" : 32768,
     'batch_size': 32768,  # num_step = 2048, num_env = 4096
-    'max_samples': 4096, #65536,
+    'max_samples': 8192, #65536,
     'num_steps': 128,
     'best_checkpoint_path': './best_model.pth',
 }
 
 
+# lidar 60 beams --> input size = 69
+# lidat 20 beams --> input size = 49
 
 class StudentPolicy(nn.Module):
-    def __init__(self, input_size=69, hidden_size=64, output_size=4):
+    def __init__(self, input_size=31, hidden_size=64, output_size=4):
         super(StudentPolicy, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.dropout1 = nn.Dropout(0.05)

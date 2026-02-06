@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter1d
 
 
-path_dataset = "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/dataset_numpy/trial_1_15-1-26/episode_data_20.npy"
+# path_dataset = "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/dataset_numpy/trial_1_15-1-26/episode_data_20.npy"
+path_dataset = "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/dataset_numpy/test_trial_/episode_data_00000.npy"
 # Load the .npy file
 data = np.load(path_dataset)
 print(data.shape)
@@ -119,3 +120,5 @@ plt.ylabel("norm vel")
 
 
 plt.show()
+
+

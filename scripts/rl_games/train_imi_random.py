@@ -190,7 +190,7 @@ def train_student_policy(student_policy, dataloader, val_loader, optimizer, loss
                 'val_loss': avg_val_loss,
             }, best_model_path)
             print(f"Saved new best model at epoch {epoch+1} with val loss {best_val_loss:.4f}")
-
+        
         wandb.log({'train_loss': avg_train_loss, 'val_loss': avg_val_loss, 'lr': current_lr})
 
 

@@ -206,6 +206,17 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
         mesh_prim_paths=["/World/ground"],
     )
 
+    # sensor 
+    lidar_sensor_student = RayCasterCfg(
+        prim_path="/World/envs/env_.*/Robot/base_link",
+        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.15)),
+        attach_yaw_only=False,
+        # pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-50.0, 50.0),horizontal_res=1.67),     #For limited fov
+        pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-50.0, 50.0),horizontal_res=5.0),      #For full fov 
+        debug_vis=False,
+        mesh_prim_paths=["/World/ground"],
+    )
+
     thrust_to_weight = 5.0
     moment_scale = 0.7
 
@@ -248,6 +259,7 @@ class QuadcopterEnv(DirectRLEnv):
 
                 #lidar
         self.lidar_resolution = (60)
+        self.lidar_student_resolution = (20)
         self.lidar_range = 5.0
 
         # if headless mode is off, setup debug visualization
@@ -306,6 +318,9 @@ class QuadcopterEnv(DirectRLEnv):
 
         self._lidar_sensor = RayCaster(self.cfg.lidar_sensor)
         self.scene.sensors["lidar_sensor"] = self._lidar_sensor
+
+        self._lidar_sensor_student = RayCaster(self.cfg.lidar_sensor_student)
+        self.scene.sensors["lidar_sensor_student"] = self._lidar_sensor_student
 
         self.cfg.terrain.num_envs = self.scene.cfg.num_envs
         self.cfg.terrain.env_spacing = self.scene.cfg.env_spacing
@@ -542,13 +557,22 @@ class QuadcopterEnv(DirectRLEnv):
         
         uprightness = self._robot.data.projected_gravity_b[:, 2] >= 0.0
 
-        static_collision = einops.reduce(self.lidar_scan, "n 1 w -> n 1", "min") < 0.4  # 0.3 collision radius
+        self.lidar_scan_student = (
+            (
+                self._lidar_sensor_student.data.ray_hits_w
+                - self._lidar_sensor_student.data.pos_w.unsqueeze(1)
+            )
+            .norm(dim=-1)
+            .clamp_max(self.lidar_range)
+            .reshape(self.num_envs, 1, self.lidar_student_resolution)
+        )
+        static_collision = einops.reduce(self.lidar_scan_student, "n 1 w -> n 1", "min") < 0.4  # 0.3 collision radius
         reach_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1) < 0.15
 
         relative_err_pos_w = self._desired_pos_w - self._robot.data.root_pos_w
         ref_heading = torch.atan2(relative_err_pos_w[:, 1], relative_err_pos_w[:, 0])  # radian
         angle_diff = ref_heading - self._robot.data.heading_w
-        opposite_direction_heading = torch.abs(angle_diff) >  1.57  # 90 degrees
+        opposite_direction_heading = torch.abs(angle_diff) > 4.71239   # 270 degrees
         died = died | uprightness | static_collision.squeeze(1) | reach_goal | opposite_direction_heading
         return died, time_out
 

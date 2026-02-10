@@ -121,3 +121,47 @@ plt.ylabel("norm vel")
 
 
 plt.show()
+
+from matplotlib.widgets import Slider
+
+pos_x = data[:, 8]
+pos_y = data[:, 9]
+
+start_idx = 0
+init_window = 500
+
+fig, ax = plt.subplots()
+plt.subplots_adjust(bottom=0.30)
+
+# initial plot
+(line,) = ax.plot(pos_x[:init_window], pos_y[:init_window])
+marker = ax.scatter(pos_x[0], pos_y[0])
+
+ax.set_xlabel("X")
+ax.set_ylabel("Y")
+ax.set_title("XY Trajectory (Window Size Slider)")
+ax.axis("equal")
+
+# --- window size slider ---
+ax_win = plt.axes([0.2, 0.15, 0.6, 0.03])
+win_slider = Slider(
+    ax=ax_win,
+    label="Window Size",
+    valmin=50,
+    valmax=len(pos_x),
+    valinit=init_window,
+    valstep=50,
+)
+
+def update_window(val):
+    w = int(win_slider.val)
+    end = min(start_idx + w, len(pos_x))
+    line.set_data(pos_x[start_idx:end], pos_y[start_idx:end])
+    marker.set_offsets([pos_x[start_idx], pos_y[start_idx]])
+    ax.relim()
+    ax.autoscale_view()
+    fig.canvas.draw_idle()
+
+win_slider.on_changed(update_window)
+
+plt.show()

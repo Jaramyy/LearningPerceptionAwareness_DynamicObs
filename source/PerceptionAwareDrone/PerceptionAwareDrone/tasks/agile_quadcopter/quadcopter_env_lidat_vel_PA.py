@@ -488,7 +488,6 @@ class QuadcopterEnv(DirectRLEnv):
 
         cos_facing_obstacle = torch.sum(robot_heading_vector * nearest_vec_norm, dim=1)  # in [-1, 1]
         # dot_vec = torch.abs(torch.sum(robot_heading_vector * nearest_vec, dim=1))
-        
         # sigma = 0.7  # Standard deviation of Gaussian function
         # gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
         # potential = 0.5 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))

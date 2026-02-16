@@ -755,14 +755,14 @@ def main():
                 trial_num += 1
                 print(f"Trial {trial_num} completed. Reaching gas source.")
             
-            if trial_num >= 3:
-                print("Completed 3 trials.")
+            if trial_num >= 1:
+                print("Completed 1 trial.")
                 # Save episode data
                 episode_array = np.stack(episode_buffer, axis=0)
                 filename = f"episode_data_{file_idx:05d}.npy" 
                 # np.save(f'episode_data_{count//500}.npy', episode_array)
                 np.save(filename, episode_array)
-                print(f"Saved episode_data_{count//500}.npy with shape {episode_array.shape}")
+                print(f"Saved episode_data_{file_idx:05d}.npy with shape {episode_array.shape}")
                 episode_buffer.clear()
                 trial_num = 0
                 file_idx += 1

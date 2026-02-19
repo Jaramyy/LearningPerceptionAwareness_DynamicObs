@@ -1,5 +1,6 @@
 # (Your original license header omitted for brevity in this paste)
 import argparse
+# from tokenize import String
 import torch
 import torch.nn as nn
 import time
@@ -28,6 +29,7 @@ from geometry_msgs.msg import Vector3, Twist
 from olfaction_msgs.msg import GasSensor
 from olfaction_msgs.msg import Anemometer
 from std_msgs.msg import Float32MultiArray, Float32
+from std_msgs.msg import String
 
 from geometry_msgs.msg import TransformStamped, PoseStamped
 from tf2_ros import TransformBroadcaster
@@ -524,6 +526,43 @@ class GeometricVelocityController:
 
         return thrust, torque
     
+class RecordingControlSubscriber(Node):
+    def __init__(self):
+        super().__init__("recording_control_subscriber")
+
+        self.subscription = self.create_subscription(
+            String,
+            "/dataset_recording_control",
+            self.listener_callback,
+            10,
+        )
+
+        self.recording = False
+        self.filename = "episode_data_00000.npy"
+
+    def listener_callback(self, msg: String):
+        command = msg.data.strip()
+
+        if command.startswith("start"):
+            parts = command.split()
+
+            if len(parts) > 1:
+                self.filename = parts[1]
+                # if not self.filename.endswith(".npy"):
+                #     self.filename += ".npy"
+
+            self.recording = True
+            # self.get_logger().info(f"Recording STARTED → {self.filename}")
+
+        elif command == "stop":
+            self.recording = False
+            self.get_logger().info("Recording STOPPED")
+
+    def is_recording(self):
+        return self.recording
+
+    def get_filename(self):
+        return self.filename
 
 # -------------------- Main --------------------
 def main():
@@ -580,6 +619,7 @@ def main():
     gasInfoSub = GagenSimSubscriber()
     pubTF = publishTF()
     setPose = setpose_from_goal_pose_topic()
+    recordControl = RecordingControlSubscriber()
 
     # desired_vel_w = torch.zeros(1, 3, device=sim.device)  # for purely velocity control, could be set to zeros to hover
     # desired_pos = torch.tensor([[0.0, 0.0, 2.0]], device=sim.device)
@@ -644,6 +684,7 @@ def main():
         rclpy.spin_once(pubTF, timeout_sec=0.0)
         rclpy.spin_once(gasInfoSub, timeout_sec=0.0)
         rclpy.spin_once(setPose, timeout_sec=0.0)
+        rclpy.spin_once(recordControl, timeout_sec=0.0)
 
         # check for goal position changing update
         set_pose = setPose.get_goal_position()
@@ -687,7 +728,7 @@ def main():
 
             #covert global frame cmd_vel to body frame
             current_yaw = euler_xyz_from_quat(robot.data.root_link_quat_w)[2]
-            print(f"Current Yaw: {current_yaw.item():.4f} rad")
+            # print(f"Current Yaw: {current_yaw.item():.4f} rad")
             cy = torch.cos(-current_yaw)
             sy = torch.sin(-current_yaw)
             # rotation_matrix = torch.tensor([[cy, -sy, 0.0],
@@ -734,10 +775,14 @@ def main():
             pos = robot.data.root_pos_w.squeeze(0).cpu().numpy()
             sample_data = np.array([gas_left.item(), gas_right.item(), wind_dir.item(), wind_spd.item(), cmd_vel[0,0].item(), cmd_vel[0,1].item(), cmd_vel[0,2].item(), cmd_yaw[0,2].item(), pos[0], pos[1], pos[2]])
             # print(f"Log Data Shape: {log_data.shape}")
-            episode_buffer.append(sample_data)
+            if recordControl.is_recording():
+                # print only one time when recording starts
+                if len(episode_buffer) == 0:
+                    print(f"Recording data to {recordControl.get_filename()}...")
+                episode_buffer.append(sample_data)
             
             distance_to_source = torch.norm(robot.data.root_pos_w.squeeze(0) - gas_source_location.to(sim.device)).item()
-            print(f"Distance to gas source: {distance_to_source:.4f} m")
+            # print(f"Distance to gas source: {distance_to_source:.4f} m")
             if distance_to_source < 1.0:
                 # randomize start position for next trial
                 if set_pose.norm().item() == 0.0:
@@ -759,13 +804,24 @@ def main():
                 print("Completed 1 trial.")
                 # Save episode data
                 episode_array = np.stack(episode_buffer, axis=0)
-                filename = f"episode_data_{file_idx:05d}.npy" 
+                # filename = f"episode_data_{file_idx:05d}.npy" 
                 # np.save(f'episode_data_{count//500}.npy', episode_array)
+                filename = recordControl.get_filename()
+                filename = filename + f"_trial{file_idx:02d}.npy"
                 np.save(filename, episode_array)
-                print(f"Saved episode_data_{file_idx:05d}.npy with shape {episode_array.shape}")
+                print(f"Saved {filename} with shape {episode_array.shape}")
                 episode_buffer.clear()
                 trial_num = 0
                 file_idx += 1
+
+            # if not recordControl.is_recording() and len(episode_buffer) > 0:
+            #     episode_array = np.stack(episode_buffer, axis=0)
+            #     filename = recordControl.get_filename()
+            #     np.save(filename, episode_array)
+
+            #     print(f"Saved {filename} with shape {episode_array.shape}")
+
+            #     episode_buffer.clear()
             # count += 1
                 
 

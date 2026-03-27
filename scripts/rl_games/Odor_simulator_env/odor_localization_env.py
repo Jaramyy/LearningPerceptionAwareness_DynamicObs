@@ -278,7 +278,7 @@ class GeometricVelocityController:
         # self.kR = 2.5 #4.5
         self.kW = 0.1 #0.3
 
-        self.kR = 2.5 #4.5
+        self.kR = 1.5 #4.5
         self.kv = 50.0  # velocity error gain for velocity-only control
 
         # Gravity
@@ -464,7 +464,8 @@ class GeometricVelocityController:
         e3 = e3.expand(ev.shape[0], -1)                                  # (B,3)
 
         # A: desired total acceleration/force direction term, (B,3)
-        A = (-self.kv * ev) - (self.mass * self.g * e3)
+        A = (-self.kv * ev) - (self.mass * self.g * e3 * 1.85) 
+        # A = (self.kv * ev) + (self.mass * self.g * e3)
 
         # Re3: world-frame body z-axis (B,3)
         Re3 = torch.matmul(R, e3.unsqueeze(-1)).squeeze(-1)              # (B,3)

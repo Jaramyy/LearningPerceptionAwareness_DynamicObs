@@ -278,8 +278,8 @@ class GeometricVelocityController:
         # self.kR = 2.5 #4.5
         self.kW = 0.1 #0.3
 
-        self.kR = 1.5 #4.5
-        self.kv = 50.0  # velocity error gain for velocity-only control
+        self.kR = 1.25 #4.5
+        self.kv = 35.0  # velocity error gain for velocity-only control
 
         # Gravity
         self.g = torch.tensor([0., 0., -9.81], device=device).unsqueeze(0)
@@ -453,6 +453,12 @@ class GeometricVelocityController:
         # ---------------------------
         # 1) VELOCITY ERROR
         # ---------------------------
+        # rotate x 180 degress around body z-axis to match ROS convention
+        # desired_vel_w_ros = desired_vel_w.clone()
+        # desired_vel_w_ros[:, 0] = -desired_vel_w_ros[:, 0]
+        # desired_vel_w_ros[:, 1] = -desired_vel_w_ros[:, 1]
+        # desired_vel_w_ros[:, 2] = desired_vel_w_ros[:, 2]
+
         ev = vel_w - desired_vel_w
 
         # ---------------------------
@@ -464,7 +470,7 @@ class GeometricVelocityController:
         e3 = e3.expand(ev.shape[0], -1)                                  # (B,3)
 
         # A: desired total acceleration/force direction term, (B,3)
-        A = (-self.kv * ev) - (self.mass * self.g * e3 * 1.85) 
+        A = (-self.kv * ev) - (self.mass * self.g * e3 * 1.89) 
         # A = (self.kv * ev) + (self.mass * self.g * e3)
 
         # Re3: world-frame body z-axis (B,3)
@@ -725,9 +731,9 @@ def main():
     episode_buffer = []
     
     default_root_state = robot.data.default_root_state.clone()
-    default_root_state[:, :3] += torch.tensor([7.0, 3.0, altitude_desired], device=sim.device) 
+    # default_root_state[:, :3] += torch.tensor([7.0, 3.0, altitude_desired], device=sim.device) 
     # rotate to face negative x direction
-    default_root_state[:, 3:7] = quat_from_euler_xyz(torch.tensor([0.0]), torch.tensor([0.0]), torch.tensor([3.14159]))
+    # default_root_state[:, 3:7] = quat_from_euler_xyz(torch.tensor([0.0]), torch.tensor([0.0]), torch.tensor([3.14159]))
     robot.write_root_pose_to_sim(default_root_state[:, :7])
     robot.write_root_velocity_to_sim(default_root_state[:, 7:])
     
@@ -825,7 +831,7 @@ def main():
             episode_buffer.append(sample_data)
             
             distance_to_source = torch.norm(robot.data.root_pos_w.squeeze(0) - gas_source_location.to(sim.device)).item()
-            print(f"Distance to gas source: {distance_to_source:.4f} m")
+            # print(f"Distance to gas source: {distance_to_source:.4f} m")
             if distance_to_source < 1.0:
                 # randomize start position for next trial
                 if set_pose.norm().item() == 0.0:

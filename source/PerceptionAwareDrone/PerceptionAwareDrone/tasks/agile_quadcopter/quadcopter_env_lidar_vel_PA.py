@@ -216,12 +216,12 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     action_rate_reward_scale = -0.001 #-0.05
     velocity_direction = 25.0
     head_tracking = 30.0
-    reward_safety_static = 25.0
+    reward_safety_static = 30.0
     potential_field_PA = 25.0 #32.0
     head_tracking_PA = 32.0
 
     #max velocity
-    max_velocity = 2.0 #4.0  # m/s
+    max_velocity = 2.0 #2.0  # m/s
     max_yaw_rate = 6.28 #3.14  # rad/s
 
 
@@ -280,23 +280,26 @@ class QuadcopterEnv(DirectRLEnv):
 
         all_inertia_tensor = self._robot.root_physx_view.get_inertias()[0] # shape (num_envs, 3, 3)
         robot_inertia = torch.sum(all_inertia_tensor,dim=0)
-        print("Inertia tensor of the robot:", robot_inertia)
+        print("Inertia tensor of the robot1:", robot_inertia)    
 
         # add handle for debug visualization (this is set to a valid handle inside set_debug_vis)
         self.set_debug_vis(self.cfg.debug_vis)
 
-        # Ixx = 0.00072172
-        Ixx = 7.6191e-04
-        # Iyy = 0.00088563
-        Iyy = 8.9651e-04
-        # Izz = 0.0012558
-        Izz = 1.2983e-03
-        robot_inertia = torch.diag(torch.tensor([Ixx, Iyy, Izz], device=self.device))
+        
+        # Ixx = 7.6191e-04
+        Ixx = robot_inertia[0]
+        # Iyy = 8.9651e-04
+        Iyy = robot_inertia[4]
+        # Izz = 1.2983e-03
+        Izz = robot_inertia[8]
+        
+        input_robot_inertia = torch.diag(torch.tensor([ robot_inertia[0], robot_inertia[4],  robot_inertia[8]], device=self.device))
+        print("Inertia tensor of the robot2:", input_robot_inertia)
 
         self.velocity_controller = GeometricVelocityController(
             num_env=self.num_envs,
             mass=self._robot_mass,
-            inertia=robot_inertia,
+            inertia=input_robot_inertia,
             device=self.device,
         )
 
@@ -341,7 +344,7 @@ class QuadcopterEnv(DirectRLEnv):
         
         
         #TODO: Feed input to controller and CHECK!!
-        thrust, moment = self.velocity_controller.update_velocity_only(
+        thrust, moment = self.velocity_controller.update_velocity_only_edit(
             quat_w=self._robot.data.root_link_quat_w,
             vel_w=self._robot.data.root_lin_vel_w,
             omega_b=self._robot.data.root_ang_vel_b,
@@ -510,6 +513,7 @@ class QuadcopterEnv(DirectRLEnv):
         # print("potential field reward ", rew_potential_pa[2])
         rew_heading_reward_blended = (1 - potential) * head_tracking_path_rew +  potential * torch.abs(cosine_similarity)
 
+        penalty_shaking_roll_pitch = 
 
         rewards = {
             # "rew_lin_vel": lin_vel * self.cfg.lin_vel_reward_scale * self.step_dt,
@@ -518,7 +522,7 @@ class QuadcopterEnv(DirectRLEnv):
             "rew_action_rate": action_rate * self.cfg.action_rate_reward_scale * self.step_dt,
             "rew_velocity_dir": rew_vel_dir_w * self.cfg.velocity_direction * self.step_dt,
             # "rew_head_tracking": head_tracking_path_rew * self.cfg.head_tracking * self.step_dt,
-            "rew_height_penalty": -penalty_height * 10.0 * self.step_dt,
+            "rew_height_penalty": -penalty_height * 0.5 * self.step_dt,
             "rew_reward_safety_static": reward_safety_static * self.cfg.reward_safety_static * self.step_dt,
             "rew_potential_field_PA": rew_potential_pa * self.cfg.potential_field_PA * self.step_dt,
             "rew_heading_tracking_PA": rew_heading_reward_blended * self.cfg.head_tracking_PA * self.step_dt,
@@ -538,17 +542,17 @@ class QuadcopterEnv(DirectRLEnv):
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
         time_out = self.episode_length_buf >= self.max_episode_length - 1
-        died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.3, self._robot.data.root_pos_w[:, 2] > 4.0)
+        died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.35, self._robot.data.root_pos_w[:, 2] > 10.0)
         
         uprightness = self._robot.data.projected_gravity_b[:, 2] >= 0.0
 
-        static_collision = einops.reduce(self.lidar_scan, "n 1 w -> n 1", "min") < 0.4  # 0.3 collision radius
+        static_collision = einops.reduce(self.lidar_scan, "n 1 w -> n 1", "min") < 0.2  # 0.3 collision radius
         reach_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1) < 0.15
 
         relative_err_pos_w = self._desired_pos_w - self._robot.data.root_pos_w
         ref_heading = torch.atan2(relative_err_pos_w[:, 1], relative_err_pos_w[:, 0])  # radian
         angle_diff = ref_heading - self._robot.data.heading_w
-        opposite_direction_heading = torch.abs(angle_diff) >  1.57  # 90 degrees
+        opposite_direction_heading = torch.abs(angle_diff) >  0.8  #45 degress # 90 degrees
         died = died | uprightness | static_collision.squeeze(1) | reach_goal | opposite_direction_heading
         return died, time_out
 
@@ -584,10 +588,10 @@ class QuadcopterEnv(DirectRLEnv):
         # Sample new commands
         self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-15.0, 15.0)
         self._desired_pos_w[env_ids, :2] += self._terrain.env_origins[env_ids, :2]
-        self._desired_pos_w[env_ids, 2] = torch.zeros_like(self._desired_pos_w[env_ids, 2]).uniform_(0.5, 1.5)
+        self._desired_pos_w[env_ids, 2] = torch.zeros_like(self._desired_pos_w[env_ids, 2]).uniform_(1.5, 3.5)
 
         desired_heights = self._desired_pos_w[:, 2]
-        margin = 0.5
+        margin = 0.15
         self.height_range = torch.stack([
             desired_heights - margin,
             desired_heights + margin
@@ -684,6 +688,8 @@ class GeometricVelocityController:
         self.mass = mass
 
         # self.J = inertia.unsqueeze(0).to(device)    # (1,3,3)
+        # self.J = inertia.unsqueeze(0).to(device)  
+        self.J = inertia.unsqueeze(0).expand(self.num_env, 3, 3).to(device)
         self.J_expand = inertia.unsqueeze(0).expand(self.num_env, 3, 3).to(device)
         self.device = device
         
@@ -700,8 +706,11 @@ class GeometricVelocityController:
         # self.k_d = 180.0
 
         # Attitude gains
-        self.kR = 2.5 #4.5
+        # self.kR = 2.5 #4.5
         self.kW = 0.1 #0.3
+
+        self.kR = 0.625 #4.5
+        self.kv = 35.0  # velocity error gain for velocity-only control
 
         # Gravity
         self.g = torch.tensor([0., 0., -9.81], device=device).unsqueeze(0)
@@ -837,6 +846,85 @@ class GeometricVelocityController:
         torque = -self.kR * rotation_error - self.kW * omega_err + feedforward
 
         return thrust, torque
+    
+    def update_velocity_only_edit(
+        self,
+        vel_w, quat_w, omega_b,
+        desired_vel_w,
+        desired_yaw_rate
+    ):
+        """
+        Velocity-only control with yaw-rate tracking.
+        Inputs:
+            pos_w          : current position (1,3) [unused, velocity-only]
+            vel_w          : current linear velocity (1,3)
+            quat_w         : current orientation quaternion (1,4)
+            omega_b        : current body angular velocity (1,3)
+            desired_vel_w  : commanded linear velocity (1,3)
+            desired_yaw_rate : commanded body-frame yaw-rate (rad/s)
+        Outputs:
+            thrust  : scalar thrust along body z-axis
+            torque  : body-frame torque (1,3)
+        """
+        # vel_w = vel_w.view(1,3)
+        # quat_w = quat_w.view(1,4)
+        # omega_b = omega_b.view(1,3)
+        # desired_vel_w = desired_vel_w.view(1,3)
+        R = self.matrix_from_quat(quat_w)
+        
+        # ---------------------------
+        # 1) VELOCITY ERROR
+        # ---------------------------
+        ev = vel_w - desired_vel_w
+
+        # ---------------------------
+        # 2) Thrust magnitude (PD on velocity error + gravity compensation)
+        # ---------------------------
+        eps = 1e-8
+        # ev: (B,3)
+        e3 = torch.tensor([0., 0., 1.], device=self.device).view(1,3)      # (1,3)
+        e3 = e3.expand(ev.shape[0], -1)                                  # (B,3)
+
+        # A: desired total acceleration/force direction term, (B,3)
+        A = (-self.kv * ev) - (self.mass * self.g * e3 * 1.85) 
+        # A = (self.kv * ev) + (self.mass * self.g * e3)
+
+        # Re3: world-frame body z-axis (B,3)
+        Re3 = torch.matmul(R, e3.unsqueeze(-1)).squeeze(-1)              # (B,3)
+
+        # thrust per batch (scalar per item)
+        # f = dot(A, Re3)  (see sign conventions in your controller)
+        f = torch.sum(A * Re3, dim=1)                                    # (B,)
+
+        # desired body axes
+        A_norm = torch.norm(A, dim=1, keepdim=True).clamp_min(eps)       # (B,1)
+        b3c = A / A_norm                                                # (B,3)
+
+        b1d = R[:, :, 0]                                                 # (B,3)  (current body x-axis)
+
+        C = torch.cross(b3c, b1d, dim=1)                                 # (B,3)
+        C_norm = torch.norm(C, dim=1, keepdim=True).clamp_min(eps)       # (B,1)
+
+        b2c = C / C_norm                                                 # (B,3)
+        b1c = -torch.cross(b3c, C, dim=1) / C_norm                       # (B,3)
+
+        # Compose desired rotation matrix Rc with columns [b1c, b2c, b3c]
+        Rc = torch.stack((b1c, b2c, b3c), dim=2)                         # (B,3,3)
+        omega_c = torch.zeros_like(omega_b)
+        omega_c[:,2] = desired_yaw_rate  # yaw-rate tracking
+
+
+        er = 0.5*self.vee_map(Rc.transpose(1,2) @ R - R.transpose(1,2) @ Rc)
+        eOmega = omega_b - omega_c
+
+
+        J_omega_c = torch.bmm(self.J, omega_c.unsqueeze(2)).squeeze(2)
+
+        M = (-self.kR * er) - (self.kW * eOmega) + torch.cross(omega_b, J_omega_c, dim=1) 
+
+        # print(f"Velocity error: {ev}, Thrust command: {f}")
+
+        return f, M
     
     def update_velocity_only(
         self,

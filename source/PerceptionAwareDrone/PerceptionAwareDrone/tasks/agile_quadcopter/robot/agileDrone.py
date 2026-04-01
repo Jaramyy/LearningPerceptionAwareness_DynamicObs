@@ -19,9 +19,10 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 AGILE_CFG = ArticulationCfg(
     prim_path="{ENV_REGEX_NS}/Robot",
     spawn=sim_utils.UsdFileCfg(
-        # usd_path=f"/home/jaramy/thesis_ws/AgiDrone/agile_cam/Drone_Full_URDFV3/Drone_Full_URDFV3.usd",
-        # usd_path=f"/home/jaramy/thesis_ws/AgiDrone/Drone_Full_URDFV3/Drone_Full_URDFV4_3.usd", # for notebook
-        usd_path=f"/home/jaramy/jaramy_ws/AgiDrone/Drone_Full_URDFV3/Drone_Full_URDFV4_3.usd", #for Shigaki's lab PC
+        # #usd_path=f"/home/jaramy/thesis_ws/AgiDrone/agile_cam/Drone_Full_URDFV3/Drone_Full_URDFV3.usd",
+        # usd_path=f"/home/jaramy/thesis_ws/AgiDrone/Drone_Full_URDFV3/Drone_Full_URDFV4_3.usd", # for notebook 
+        usd_path=f"/home/jaramy/thesis_ws/AgiDrone/Drone_Full_URDFV3/agi_drone_rev3.usda", # NEW DRONE 1.5Kg
+        # #usd_path=f"/home/jaramy/jaramy_ws/AgiDrone/Drone_Full_URDFV3/Drone_Full_URDFV4_3.usd", #for Shigaki's lab PC
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
             max_depenetration_velocity=10.0,
@@ -37,7 +38,7 @@ AGILE_CFG = ArticulationCfg(
         copy_from_source=False,
     ),
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 1.0),
+        pos=(0.0, 0.0, 1.5),
         # rot=(0.707, 0.0, 0.0, 0.707),
         # rot=(0.707, 0.0, 0.0, 0.707),
         joint_pos={

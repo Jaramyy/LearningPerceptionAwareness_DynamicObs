@@ -275,8 +275,8 @@ class GeometricVelocityController:
         # self.k_d = 180.0
 
         # Attitude gains
-        self.kR = 2.5 #4.5
-        self.kW = 0.1 #0.3
+        self.kR = 0.625 #1.25 #4.5
+        self.kv = 35.0  # velocity error gain for velocity-only control
 
         # Gravity
         self.g = torch.tensor([0., 0., -9.81], device=device).unsqueeze(0)

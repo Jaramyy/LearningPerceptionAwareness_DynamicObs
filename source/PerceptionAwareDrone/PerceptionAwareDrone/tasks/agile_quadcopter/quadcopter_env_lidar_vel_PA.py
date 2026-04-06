@@ -28,7 +28,7 @@ from .robot.agileDrone import AGILE_CFG    # isort: skip
 from isaaclab.markers import CUBOID_MARKER_CFG  # isort: skip
 
 #terrain
-from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG, OBSTACLE_RAND_POS
+from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG#, OBSTACLE_RAND_POS
 
 import isaaclab.envs.mdp as mdp    
 from isaaclab.managers import EventTermCfg as EventTerm
@@ -53,25 +53,76 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 #goal
 import numpy as np
 
+from .utility.noisemodel import NoiseModel
+from isaaclab.utils.math import (
+    compute_pose_error,
+    matrix_from_euler,
+    matrix_from_quat,
+    normalize,
+    quat_apply,
+    quat_apply_inverse,
+    quat_error_magnitude,
+    quat_from_angle_axis,
+    quat_from_euler_xyz,
+    quat_from_matrix,
+    quat_mul,
+    sample_uniform,
+    subtract_frame_transforms,
+)
+
+
+PUSH_LIN_VEL = 0.3  # m/s
+PUSH_ANG_VEL = 0.3  # rad/s
 @configclass
 class EventCfg:
+
     add_base_mass = EventTerm(
         func=mdp.randomize_rigid_body_mass,
         mode="startup",
+        # params={
+        #     "asset_cfg": SceneEntityCfg("robot", body_names="base_link"),
+        #     "mass_distribution_params": (-0.2, 0.2),
+        #     "operation": "add",
+        # },
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="base_link"),
-            "mass_distribution_params": (-0.2, 0.2),
-            "operation": "add",
+            "mass_distribution_params": (0.90, 1.10),
+            "operation": "scale",
         },
     )
-
-    push_robot = EventTerm(
-        func=mdp.apply_external_force_torque,
-        mode="interval",
-        interval_range_s=(0.0, 0.2),
+    
+    noise_com_pos = EventTerm(
+        func=mdp.randomize_rigid_body_com,
+        mode="startup",
         params={
-            "force_range": (-0.5, 0.5),
-            "torque_range": (-0.05, 0.05),
+            "asset_cfg": SceneEntityCfg("robot", body_names="base_link"),
+            "com_range": {"x": (-0.01, 0.01), "y": (-0.01, 0.01), "z": (-0.01, 0.01)},
+        },
+    )
+    
+    # push_robot = EventTerm(
+    #     func=mdp.apply_external_force_torque,
+    #     mode="interval",
+    #     interval_range_s=(0.0, 0.2),
+    #     params={
+    #         "force_range": (-0.5, 0.5),
+    #         "torque_range": (-0.05, 0.05),
+    #     },
+    # )
+    
+    push_robot = EventTerm(
+        func=mdp.push_by_setting_velocity,
+        mode="interval",
+        interval_range_s=(5.0, 15.0),
+        params={
+            "velocity_range": {
+                "x": (-PUSH_LIN_VEL, PUSH_LIN_VEL),
+                "y": (-PUSH_LIN_VEL, PUSH_LIN_VEL),
+                "z": (-PUSH_LIN_VEL, PUSH_LIN_VEL),
+                "roll": (-PUSH_ANG_VEL, PUSH_ANG_VEL),
+                "pitch": (-PUSH_ANG_VEL, PUSH_ANG_VEL),
+                "yaw": (-PUSH_ANG_VEL, PUSH_ANG_VEL),
+            }
         },
     )
 
@@ -127,9 +178,57 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     # observation_space = 12 #without lidar
     # observation_space = 17 #with 5 beams lidar
     # observation_space = 12
-    observation_space = 12 + 60 + 1 + 2  # with 60 beams lidar + potential field
+    observation_space = 12 + 60 + 1 + 2 + 4  # with 60 beams lidar + potential field + last action 
     state_space = 0
     debug_vis = True
+
+    # # # # Noise Configuration
+    add_noise = True
+    noiseCfg = {
+        "root_pos": {
+            "type": "uniform",
+            "dim": 3,
+            "mean": 0.005,
+            "std": 0.005,
+            "clip": 0.3,
+        },
+        "root_quat": {
+            "type": "uniform",
+            "dim": 3,
+            "mean": torch.pi * (0.5 / 180.0),
+            "std": torch.pi * (1.0 / 180.0),
+            "clip": 0.3,
+        },
+        "lin_vel": {
+            "type": "uniform",
+            "dim": 3,
+            "mean": 0.005,
+            "std": 0.005,
+            "clip": 3.0,
+        },
+        "ang_vel": {
+            "type": "uniform",
+            "dim": 3,
+            "mean": 0.005,
+            "std": 0.005,
+            "clip": 3.0,
+        },
+        # "gravity": {
+        #     "type": "uniform",
+        #     "dim": 3,
+        #     "mean": 0.0,
+        #     "std": 0.05,
+        #     "clip": 0.1,
+        # },
+        # "dof_pos": {
+        #     "type": "uniform",
+        #     "dim": gimbal_num,
+        #     "mean": math.pi * (1.0 / 180.0),
+        #     "std": math.pi * (1.0 / 180.0),
+        #     "clip": 0.1,
+        # },
+    }
+
 
     ui_window_class_type = QuadcopterEnvWindow
     
@@ -138,7 +237,8 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
 
     # simulation
     sim: SimulationCfg = SimulationCfg(
-        dt=1/150,
+        # dt=1/150,
+        dt=1/200,
         render_interval=decimation,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
@@ -149,8 +249,8 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
         ),
     )
 
-    flat_terrain = False  # for generator terrain
-    # flat_terrain = True
+    # flat_terrain = False  # for generator terrain
+    flat_terrain = True
     if flat_terrain:
         # for flat and emtry terrain
         terrain = TerrainImporterCfg(
@@ -199,7 +299,8 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     lidar_sensor = RayCasterCfg(
         prim_path="/World/envs/env_.*/Robot/base_link",
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.15)),
-        attach_yaw_only=False,
+        # attach_yaw_only=False,
+        ray_alignment='base',
         # pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-50.0, 50.0),horizontal_res=1.67),     #For limited fov
         pattern_cfg=patterns.LidarPatternCfg(channels=1, vertical_fov_range=(10.0, 20.0), horizontal_fov_range=(-179.0, 179.0),horizontal_res=6.0),      #For full fov 
         debug_vis=False,
@@ -213,15 +314,15 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     # lin_vel_reward_scale = -0.5
     # ang_vel_reward_scale = -0.01
     distance_to_goal_reward_scale = 50.0
-    action_rate_reward_scale = -0.001 #-0.05
+    action_rate_reward_scale = -0.01 #-0.05
     velocity_direction = 25.0
     head_tracking = 30.0
-    reward_safety_static = 30.0
+    reward_safety_static = 32.0
     potential_field_PA = 25.0 #32.0
     head_tracking_PA = 32.0
 
     #max velocity
-    max_velocity = 2.0 #2.0  # m/s
+    max_velocity = 4.0 #2.0  # m/s
     max_yaw_rate = 6.28 #3.14  # rad/s
 
 
@@ -234,6 +335,7 @@ class QuadcopterEnv(DirectRLEnv):
 
         # Total thrust and moment applied to the base of the quadcopter
         self._actions = torch.zeros(self.num_envs, gym.spaces.flatdim(self.single_action_space), device=self.device)
+        self._last_actions = torch.zeros(self.num_envs, gym.spaces.flatdim(self.single_action_space), device=self.device)
         # self.previous_action = torch.zeros(self.num_envs, gym.spaces.flatdim(self.single_action_space), device=self.device)
         self.previous_action = torch.zeros(self.num_envs, 3, device=self.device)
         self._thrust = torch.zeros(self.num_envs, 1, 3, device=self.device)
@@ -246,7 +348,7 @@ class QuadcopterEnv(DirectRLEnv):
         self.height_range = torch.zeros(self.num_envs, 2 , device=self.device)
 
 
-                #lidar
+        #lidar
         self.lidar_resolution = (60)
         self.lidar_range = 5.0
 
@@ -255,6 +357,9 @@ class QuadcopterEnv(DirectRLEnv):
         self.my_visualizer = self.define_markers()
         self.robot_visualizer = self.define_robot_markers()
         self.nearest_obs_visualizer = self.define_nearest_obs_markers()
+
+        # noise model
+        self.noiseModel = NoiseModel(cfg.noiseCfg, device=self.device, num_envs=self.num_envs)
 
         # Logging
         self._episode_sums = {
@@ -326,7 +431,7 @@ class QuadcopterEnv(DirectRLEnv):
         # self._actions = actions.clone().clamp(-1.0, 1.0)
         # self._thrust[:, 0, 2] = self.cfg.thrust_to_weight * self._robot_weight * (self._actions[:, 0] + 1.0) / 2.0
         # self._moment[:, 0, :] = self.cfg.moment_scale * self._actions[:, 1:]
-
+        self._last_actions = self._actions.clone().clamp(-1.0, 1.0)  
         self._actions = actions.clone().clamp(-1.0, 1.0)  
         # self._actions = torch.ones_like(actions)   # just for testing 
         # self._actions[:, 1:] = self._actions[:, 1:]*0.0
@@ -364,6 +469,35 @@ class QuadcopterEnv(DirectRLEnv):
         
 
     def _get_observations(self) -> dict:
+
+        root_pos_w = self._robot.data.root_pos_w
+        root_quat_w = self._robot.data.root_quat_w
+        root_lin_vel_w = self._robot.data.root_lin_vel_w
+        root_ang_vel_b = self._robot.data.root_ang_vel_b
+        projected_gravity_w = self._robot.data.GRAVITY_VEC_W
+        
+        if self.cfg.add_noise:
+            if "lin_vel" in self.noiseModel.params:
+                root_lin_vel_w = self.noiseModel.apply(root_lin_vel_w, "lin_vel")
+            if "ang_vel" in self.noiseModel.params:
+                root_ang_vel_b = self.noiseModel.apply(root_ang_vel_b, "ang_vel")
+            if "gravity" in self.noiseModel.params:
+                noise = torch.empty(self.num_envs, 3, device=self.device).uniform_(
+                    -self.cfg.noiseCfg["gravity"]["std"], self.cfg.noiseCfg["gravity"]["std"]
+                )
+                projected_gravity_w += noise
+                projected_gravity_w = normalize(projected_gravity_w)
+            if "root_pos" in self.noiseModel.params:
+                root_pos_w = self.noiseModel.apply(root_pos_w, "root_pos")
+            if "root_quat" in self.noiseModel.params:
+                axis = torch.rand(self.num_envs, 3, device=self.device)
+                axis = axis / axis.norm(dim=-1, keepdim=True)
+                angle = torch.empty(self.num_envs, 1, device=self.device).uniform_(
+                    -self.cfg.noiseCfg["root_quat"]["std"], self.cfg.noiseCfg["root_quat"]["std"]
+                )
+                box_quat = quat_from_angle_axis(angle.squeeze(1), axis)
+                root_quat_w = quat_mul(box_quat, root_quat_w)
+
         desired_pos_b, _ = subtract_frame_transforms(
             self._robot.data.root_pos_w, self._robot.data.root_quat_w, self._desired_pos_w
         )
@@ -398,15 +532,19 @@ class QuadcopterEnv(DirectRLEnv):
 
         obs = torch.cat(
             [
-                self._robot.data.root_lin_vel_b,
-                self._robot.data.root_ang_vel_b,
-                self._robot.data.projected_gravity_b,
+                # self._robot.data.root_lin_vel_b,
+                root_lin_vel_w,
+                # self._robot.data.root_ang_vel_b,
+                root_ang_vel_b,
+                # self._robot.data.projected_gravity_b,
+                projected_gravity_w,
                 # desired_pos_b,
                 unit_desird_pos_b,  # 3
                 desired_dist_2d,  # 1
                 desired_dist_z,  # 1
                 self.lidar_scan.squeeze(1),
                 potential.unsqueeze(-1),
+                self._last_actions,
             ],
             dim=-1,
         )
@@ -416,9 +554,9 @@ class QuadcopterEnv(DirectRLEnv):
     def _get_rewards(self) -> torch.Tensor:
         lin_vel = torch.sum(torch.square(self._robot.data.root_lin_vel_b), dim=1)
         ang_vel = torch.sum(torch.square(self._robot.data.root_ang_vel_b), dim=1)
-        # action_rate = torch.sum(torch.square(self._actions - self.previous_action), dim=1)
+        action_rate = torch.sum(torch.square(self._actions - self._last_actions), dim=1)
 
-        action_rate = torch.sum(torch.square(self._robot.data.root_lin_vel_w - self.previous_action), dim=1)
+        # action_rate = torch.sum(torch.square(self._robot.data.root_lin_vel_w - self.previous_action), dim=1)
 
         distance_to_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1)
         distance_to_goal_mapped = 1 - torch.tanh(distance_to_goal / 0.8)
@@ -513,7 +651,7 @@ class QuadcopterEnv(DirectRLEnv):
         # print("potential field reward ", rew_potential_pa[2])
         rew_heading_reward_blended = (1 - potential) * head_tracking_path_rew +  potential * torch.abs(cosine_similarity)
 
-        penalty_shaking_roll_pitch = 
+        # penalty_shaking_roll_pitch = 
 
         rewards = {
             # "rew_lin_vel": lin_vel * self.cfg.lin_vel_reward_scale * self.step_dt,
@@ -532,7 +670,7 @@ class QuadcopterEnv(DirectRLEnv):
         reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
 
         # self.previous_action = self._actions.clone()
-        self.previous_action = self._robot.data.root_lin_vel_w.clone()
+        # self.previous_action = self._robot.data.root_lin_vel_w.clone()
 
 
         # Logging
@@ -544,16 +682,19 @@ class QuadcopterEnv(DirectRLEnv):
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.35, self._robot.data.root_pos_w[:, 2] > 10.0)
         
-        uprightness = self._robot.data.projected_gravity_b[:, 2] >= 0.0
+        # uprightness = self._robot.data.projected_gravity_b[:, 2] >= 0.0
 
         static_collision = einops.reduce(self.lidar_scan, "n 1 w -> n 1", "min") < 0.2  # 0.3 collision radius
-        reach_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1) < 0.15
+        # reach_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1) < 0.15
 
         relative_err_pos_w = self._desired_pos_w - self._robot.data.root_pos_w
         ref_heading = torch.atan2(relative_err_pos_w[:, 1], relative_err_pos_w[:, 0])  # radian
         angle_diff = ref_heading - self._robot.data.heading_w
         opposite_direction_heading = torch.abs(angle_diff) >  0.8  #45 degress # 90 degrees
-        died = died | uprightness | static_collision.squeeze(1) | reach_goal | opposite_direction_heading
+        # died = died | uprightness | static_collision.squeeze(1) | reach_goal | opposite_direction_heading
+        # died = died | uprightness | static_collision.squeeze(1) | opposite_direction_heading
+        died = died | static_collision.squeeze(1) | opposite_direction_heading
+        
         return died, time_out
 
     def _reset_idx(self, env_ids: torch.Tensor | None):
@@ -585,6 +726,7 @@ class QuadcopterEnv(DirectRLEnv):
 
         self._actions[env_ids] = 0.0
         self.previous_action[env_ids] = 0.0
+        self._last_actions[env_ids] = 0.0
         # Sample new commands
         self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-15.0, 15.0)
         self._desired_pos_w[env_ids, :2] += self._terrain.env_origins[env_ids, :2]
@@ -709,7 +851,7 @@ class GeometricVelocityController:
         # self.kR = 2.5 #4.5
         self.kW = 0.1 #0.3
 
-        self.kR = 0.625 #4.5
+        self.kR = 1.25 #4.5
         self.kv = 35.0  # velocity error gain for velocity-only control
 
         # Gravity
@@ -886,7 +1028,7 @@ class GeometricVelocityController:
         e3 = e3.expand(ev.shape[0], -1)                                  # (B,3)
 
         # A: desired total acceleration/force direction term, (B,3)
-        A = (-self.kv * ev) - (self.mass * self.g * e3 * 1.85) 
+        A = (-self.kv * ev) - (self.mass * self.g * e3 * 1.89) # 1.89 is a tuning factor to get better height tracking, can be removed if you want exact gravity compensation 
         # A = (self.kv * ev) + (self.mass * self.g * e3)
 
         # Re3: world-frame body z-axis (B,3)

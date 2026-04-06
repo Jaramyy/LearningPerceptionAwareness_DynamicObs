@@ -25,6 +25,9 @@ AGILE_CFG = ArticulationCfg(
         # #usd_path=f"/home/jaramy/jaramy_ws/AgiDrone/Drone_Full_URDFV3/Drone_Full_URDFV4_3.usd", #for Shigaki's lab PC
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
+            retain_accelerations=False,
+            max_linear_velocity=1000.0,
+            max_angular_velocity=1000.0,
             max_depenetration_velocity=10.0,
             enable_gyroscopic_forces=True,
         ),

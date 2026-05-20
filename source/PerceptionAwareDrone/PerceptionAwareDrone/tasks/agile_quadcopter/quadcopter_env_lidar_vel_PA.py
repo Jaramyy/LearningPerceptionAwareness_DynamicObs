@@ -54,6 +54,9 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 import numpy as np
 
 from .utility.noisemodel import NoiseModel
+from .utility.lee_velocity_controller.vel_controller import GeometricVelocityController
+from .utility.utilitymath import sampleUniformQuatwithTilt, sampleCenterQuatwithTilt
+
 from isaaclab.utils.math import (
     compute_pose_error,
     matrix_from_euler,
@@ -171,6 +174,7 @@ class QuadcopterEnvWindow(BaseEnvWindow):
 
 @configclass
 class QuadcopterEnvCfg(DirectRLEnvCfg):
+    evaluate_mode = False
     # env
     episode_length_s = 10.0
     decimation = 2
@@ -213,13 +217,21 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
             "std": 0.005,
             "clip": 3.0,
         },
-        # "gravity": {
-        #     "type": "uniform",
-        #     "dim": 3,
-        #     "mean": 0.0,
-        #     "std": 0.05,
-        #     "clip": 0.1,
-        # },
+        "gravity": {
+            "type": "uniform",
+            "dim": 3,
+            "mean": 0.0,
+            "std": 0.05,
+            "clip": 0.1,
+        },
+
+        "lidar_pose": {
+            "type": "uniform",
+            "dim": 3,
+            "mean": 0.005,
+            "std": 0.005,
+            "clip": 0.05,
+        },
         # "dof_pos": {
         #     "type": "uniform",
         #     "dim": gimbal_num,
@@ -311,8 +323,9 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     moment_scale = 0.7
 
     # reward scales
-    # lin_vel_reward_scale = -0.5
-    # ang_vel_reward_scale = -0.01
+    lin_vel_reward_scale = -0.0002
+    ang_vel_reward_scale = -0.001
+
     distance_to_goal_reward_scale = 50.0
     action_rate_reward_scale = -0.01 #-0.05
     velocity_direction = 25.0
@@ -322,10 +335,23 @@ class QuadcopterEnvCfg(DirectRLEnvCfg):
     head_tracking_PA = 32.0
 
     #max velocity
-    max_velocity = 4.0 #2.0  # m/s
+    max_velocity = 2.0 #2.0  # m/s
     max_yaw_rate = 6.28 #3.14  # rad/s
 
 
+
+    #NEW Reward parameters
+    thrust_power_scale = -0.001
+    # rew_angular_to_goal_scale = 0.5
+    died_reward_scale = -0.03
+    reach_goal_reward_timeout_scale = 0.01
+    reach_goal_reward_scale = 0.5
+
+    velocity_direction_reward_scale = 2.00
+    distance_to_goal_reward_scale = 5.0
+    angular_to_goal_reward_scale = 5.0
+    head_tracking_reward_scale = 5.5
+    height_penalty_scale = -0.5
 
 class QuadcopterEnv(DirectRLEnv):
     cfg: QuadcopterEnvCfg
@@ -345,6 +371,7 @@ class QuadcopterEnv(DirectRLEnv):
         self._yaw_vel_cmd = torch.zeros(self.num_envs, 1, device=self.device)
         # Goal position
         self._desired_pos_w = torch.zeros(self.num_envs, 3, device=self.device)
+        self._desired_quat_w = torch.zeros(self.num_envs, 4, device=self.device)
         self.height_range = torch.zeros(self.num_envs, 2 , device=self.device)
 
 
@@ -365,16 +392,25 @@ class QuadcopterEnv(DirectRLEnv):
         self._episode_sums = {
             key: torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
             for key in [
-                # "rew_lin_vel",
-                # "rew_ang_vel",
+                "rew_lin_vel",
+                "rew_ang_vel",
+                "rew_thrust_power",
                 "rew_distance_to_goal",
                 "rew_action_rate",
                 "rew_velocity_dir",
-                # "rew_head_tracking",
+                "rew_head_tracking",
                 "rew_height_penalty",
                 "rew_reward_safety_static",
                 "rew_potential_field_PA",
                 "rew_heading_tracking_PA",
+                "died",
+                "rew_reach_goal",
+                "rew_reach_goal_timeout",
+                "rew_angular_to_goal",
+                "rew_head_tracking_path",
+                "flip_penalty", 
+                "rew_heading_stability",
+                "rew_stop",
             ]
         }
        # Get specific body indices
@@ -427,54 +463,237 @@ class QuadcopterEnv(DirectRLEnv):
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
 
+    # def _pre_physics_step(self, actions: torch.Tensor):
+    #     # self._actions = actions.clone().clamp(-1.0, 1.0)
+    #     # self._thrust[:, 0, 2] = self.cfg.thrust_to_weight * self._robot_weight * (self._actions[:, 0] + 1.0) / 2.0
+    #     # self._moment[:, 0, :] = self.cfg.moment_scale * self._actions[:, 1:]
+    #     self._last_actions = self._actions.clone().clamp(-1.0, 1.0)  
+    #     self._actions = actions.clone().clamp(-1.0, 1.0)  
+    #     # self._actions = torch.ones_like(actions)   # just for testing 
+    #     # self._actions[:, 1:] = self._actions[:, 1:]*0.0
+    #     # print(f"Actions received: {self._actions}")   
+
+    #     # fake_action = torch.zeros_like(self._actions)
+    #     # fake_action[:, 0] = 0.5
+    #     # fake_action[:, 1:] = 1.0
+        
+    #     self._yaw_vel_cmd[:, 0] = self._actions[:, 0] * self.cfg.max_yaw_rate # rad/s
+    #     self._lin_vel_cmd[:, :] = self._actions[:, 1:] * self.cfg.max_velocity  # m/s
+    #     # self._lin_vel_cmd[:, :] = fake_action[:, 1:] * self.cfg.max_velocity  # m/s
+    #     # self._yaw_vel_cmd[:, 0] = fake_action[:, 0] * self.cfg.max_yaw_rate # rad/s
+
+        
+    #     thrust, moment = self.velocity_controller.update_velocity_only_edit(
+    #         quat_w=self._robot.data.root_link_quat_w,
+    #         vel_w=self._robot.data.root_lin_vel_w,
+    #         omega_b=self._robot.data.root_ang_vel_b,
+    #         desired_vel_w=self._lin_vel_cmd[:, :],
+    #         desired_yaw_rate=self._yaw_vel_cmd[:, 0],
+    #     )
+    #     # print(f" thrust: {thrust}, moment: {moment}")
+    #     self._thrust[:, :] = 0.0
+    #     self._moment[:, :] = 0.0
+    #     self._thrust[:, 0, 2] = thrust
+    #     self._moment[:, 0, :] = moment
+    ####### BEST 
+    # def _pre_physics_step(self, actions: torch.Tensor):
+
+    #     self._last_actions = self._actions.clone().clamp(-1.0, 1.0)
+    #     self._actions = actions.clone().clamp(-1.0, 1.0)
+
+    #     # =========================
+    #     # 1. Convert actions → commands
+    #     # =========================
+    #     self._yaw_vel_cmd[:, 0] = self._actions[:, 0] * self.cfg.max_yaw_rate
+    #     self._lin_vel_cmd[:, :] = self._actions[:, 1:] * self.cfg.max_velocity
+
+    #     # =========================
+    #     # 2. Distance to goal
+    #     # =========================
+    #     distance_to_goal = torch.linalg.norm(
+    #         self._desired_pos_w - self._robot.data.root_pos_w, dim=1
+    #     )
+
+    #     DIST_TH = 0.05  #0.15
+    #     near_goal = (distance_to_goal < DIST_TH).float().unsqueeze(-1)  # (N,1)
+
+    #     # =========================
+    #     # 🔥 3. HARD STOP near goal
+    #     # =========================
+    #     # Kill ALL motion commands
+    #     self._lin_vel_cmd = self._lin_vel_cmd * (1.0 - near_goal)
+    #     self._yaw_vel_cmd[:, 0] = self._yaw_vel_cmd[:, 0] * (1.0 - near_goal.squeeze(-1))
+
+
+    #     # =========================
+    #     # 4. Controller
+    #     # =========================
+    #     thrust, moment = self.velocity_controller.update_velocity_only_edit(
+    #         quat_w=self._robot.data.root_link_quat_w,
+    #         vel_w=self._robot.data.root_lin_vel_w,
+    #         omega_b=self._robot.data.root_ang_vel_b,
+    #         desired_vel_w=self._lin_vel_cmd,
+    #         desired_yaw_rate=self._yaw_vel_cmd[:, 0],
+    #     )
+
+    #     # =========================
+    #     # 🔥 5. CRITICAL: Kill tilt authority near goal
+    #     # =========================
+    #     # moment = [roll, pitch, yaw]
+    #     # We suppress roll/pitch → prevents oscillation
+    #     # moment[:, 0:2] = moment[:, 0:2] * (1.0 - near_goal)
+
+    #     # # Optional: also damp yaw
+    #     # moment[:, 2] = moment[:, 2] * (1.0 - near_goal.squeeze(-1))
+
+    #     # # =========================
+    #     # # 🔥 6. Angular damping injection (VERY IMPORTANT)
+    #     # # =========================
+    #     # omega = self._robot.data.root_ang_vel_b
+
+    #     # # strong damping on roll/pitch
+    #     # damping_gain = 2.0
+    #     # moment[:, 0:2] += -damping_gain * omega[:, 0:2] * near_goal
+
+    #     # # mild yaw damping
+    #     # moment[:, 2] += -0.5 * omega[:, 2] * near_goal.squeeze(-1)
+
+    #     # =========================
+    #     # 7. Apply forces
+    #     # =========================
+    #     self._thrust[:, :] = 0.0
+    #     self._moment[:, :] = 0.0
+
+    #     self._thrust[:, 0, 2] = thrust
+    #     self._moment[:, 0, :] = moment
+
     def _pre_physics_step(self, actions: torch.Tensor):
-        # self._actions = actions.clone().clamp(-1.0, 1.0)
-        # self._thrust[:, 0, 2] = self.cfg.thrust_to_weight * self._robot_weight * (self._actions[:, 0] + 1.0) / 2.0
-        # self._moment[:, 0, :] = self.cfg.moment_scale * self._actions[:, 1:]
-        self._last_actions = self._actions.clone().clamp(-1.0, 1.0)  
-        self._actions = actions.clone().clamp(-1.0, 1.0)  
-        # self._actions = torch.ones_like(actions)   # just for testing 
-        # self._actions[:, 1:] = self._actions[:, 1:]*0.0
-        # print(f"Actions received: {self._actions}")   
 
-        # fake_action = torch.zeros_like(self._actions)
-        # fake_action[:, 0] = 0.5
-        # fake_action[:, 1:] = 1.0
-        
-        self._yaw_vel_cmd[:, 0] = self._actions[:, 0] * self.cfg.max_yaw_rate # rad/s
-        self._lin_vel_cmd[:, :] = self._actions[:, 1:] * self.cfg.max_velocity  # m/s
-        # self._lin_vel_cmd[:, :] = fake_action[:, 1:] * self.cfg.max_velocity  # m/s
-        # self._yaw_vel_cmd[:, 0] = fake_action[:, 0] * self.cfg.max_yaw_rate # rad/s
+        self._last_actions = self._actions.clone().clamp(-1.0, 1.0)
+        self._actions = actions.clone().clamp(-1.0, 1.0)
 
-        
-        
-        #TODO: Feed input to controller and CHECK!!
+        # =====================================================
+        # 1. Distance to goal
+        # =====================================================
+        relative_goal = self._desired_pos_w - self._robot.data.root_pos_w
+
+        distance_to_goal = torch.linalg.norm(
+            relative_goal,
+            dim=1,
+            keepdim=True,
+        )
+
+        # =====================================================
+        # 2. Smooth slowdown near goal
+        # =====================================================
+        SLOWDOWN_DIST = 2.0
+        MIN_SPEED_SCALE = 0.05
+
+        # linear slowdown
+        speed_scale = torch.clamp(
+            distance_to_goal / SLOWDOWN_DIST,
+            min=MIN_SPEED_SCALE,
+            max=1.0,
+        )
+
+        # smoother profile
+        speed_scale = torch.sqrt(speed_scale)
+
+        # =====================================================
+        # 3. Convert actions -> commands
+        # =====================================================
+
+        # yaw command also slows down near goal
+        self._yaw_vel_cmd[:, 0] = (
+            self._actions[:, 0]
+            * self.cfg.max_yaw_rate
+            * speed_scale.squeeze(-1)
+        )
+
+        # translational velocity slows near goal
+        self._lin_vel_cmd[:, :] = (
+            self._actions[:, 1:]
+            * self.cfg.max_velocity
+            * speed_scale
+        )
+
+        # =====================================================
+        # 4. Extra stabilization zone
+        # =====================================================
+        HOLD_DIST = 0.05 #15
+
+        near_goal = (distance_to_goal < HOLD_DIST).float()
+
+        # very close -> almost hover
+        self._lin_vel_cmd *= (1.0 - 0.9 * near_goal)
+        self._yaw_vel_cmd[:, 0] *= (1.0 - 0.9 * near_goal.squeeze(-1))
+
+        # =====================================================
+        # 5. Controller
+        # =====================================================
         thrust, moment = self.velocity_controller.update_velocity_only_edit(
             quat_w=self._robot.data.root_link_quat_w,
             vel_w=self._robot.data.root_lin_vel_w,
             omega_b=self._robot.data.root_ang_vel_b,
-            desired_vel_w=self._lin_vel_cmd[:, :],
+            desired_vel_w=self._lin_vel_cmd,
             desired_yaw_rate=self._yaw_vel_cmd[:, 0],
         )
-        # print(f" thrust: {thrust}, moment: {moment}")
+
+        # =====================================================
+        # 6. Angular damping near goal
+        # =====================================================
+        # omega = self._robot.data.root_ang_vel_b
+
+        # # roll/pitch damping
+        # damping_gain_rp = 2.5
+
+        # # yaw damping
+        # damping_gain_yaw = 0.5
+
+        # # apply damping only near goal
+        # moment[:, 0:2] += (
+        #     -damping_gain_rp
+        #     * omega[:, 0:2]
+        #     * near_goal
+        # )
+
+        # moment[:, 2] += (
+        #     -damping_gain_yaw
+        #     * omega[:, 2]
+        #     * near_goal.squeeze(-1)
+        # )
+
+        # # =====================================================
+        # # 7. Optional safety clamp
+        # # prevents violent oscillation
+        # # =====================================================
+        # moment[:, 0:2] = torch.clamp(
+        #     moment[:, 0:2],
+        #     min=-0.3,
+        #     max=0.3,
+        # )
+
+        # =====================================================
+        # 8. Apply forces
+        # =====================================================
         self._thrust[:, :] = 0.0
         self._moment[:, :] = 0.0
+
         self._thrust[:, 0, 2] = thrust
         self._moment[:, 0, :] = moment
-
-        
 
     def _apply_action(self):
         self._robot.set_external_force_and_torque(self._thrust, self._moment, body_ids=self._body_id)
         
 
     def _get_observations(self) -> dict:
-
         root_pos_w = self._robot.data.root_pos_w
         root_quat_w = self._robot.data.root_quat_w
         root_lin_vel_w = self._robot.data.root_lin_vel_w
         root_ang_vel_b = self._robot.data.root_ang_vel_b
         projected_gravity_w = self._robot.data.GRAVITY_VEC_W
+        lidar_sensor_pos_w = self._lidar_sensor.data.pos_w
+
         
         if self.cfg.add_noise:
             if "lin_vel" in self.noiseModel.params:
@@ -497,7 +716,73 @@ class QuadcopterEnv(DirectRLEnv):
                 )
                 box_quat = quat_from_angle_axis(angle.squeeze(1), axis)
                 root_quat_w = quat_mul(box_quat, root_quat_w)
+            
+            if "lidar_pose" in self.noiseModel.params:
+                lidar_sensor_pos_w = self.noiseModel.apply(lidar_sensor_pos_w, "lidar_pose")
+                
+        
+        root_lin_vel_b = quat_apply_inverse(root_quat_w, root_lin_vel_w)
+        projected_gravity_b = quat_apply_inverse(root_quat_w, projected_gravity_w)
+        
+        desired_pos_b, _ = subtract_frame_transforms(
+            root_pos_w, root_quat_w, self._desired_pos_w, self._desired_quat_w
+        )
 
+        desired_dist = desired_pos_b.norm(dim=-1, keepdim=True)
+        unit_desird_pos_b = desired_pos_b / (desired_dist + 1e-6)
+
+        desired_dist_2d = desired_pos_b[:, :2].norm(dim=-1, keepdim=True)
+        desired_dist_z = desired_pos_b[:, 2].unsqueeze(1)
+
+        self.lidar_scan = (
+            (
+                self._lidar_sensor.data.ray_hits_w
+                - lidar_sensor_pos_w.unsqueeze(1)
+            )
+            .norm(dim=-1)
+            .clamp_max(self.lidar_range)
+            .reshape(self.num_envs, 1, self.lidar_resolution)
+        )
+
+        # lidar potential field
+        vec_to_obstacles = (self._lidar_sensor.data.ray_hits_w - lidar_sensor_pos_w.unsqueeze(1)) .clamp_max(self.lidar_range)
+        dists_to_obstacle = vec_to_obstacles.norm(dim=-1)
+        closest_idx = torch.argmin(dists_to_obstacle, dim=1)
+        env_idx = torch.arange(vec_to_obstacles.shape[0])
+        nearest_dist = dists_to_obstacle[env_idx, closest_idx]
+        
+        sigma = 3.0 #0.9  # Standard deviation of Gaussian function
+        gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
+        potential = 0.25 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
+
+
+        obs = torch.cat(
+            [
+                # self._robot.data.root_lin_vel_b,
+                root_lin_vel_b,
+                # self._robot.data.root_ang_vel_b,
+                root_ang_vel_b,
+                # self._robot.data.projected_gravity_b,
+                projected_gravity_b,
+                # desired_pos_b,
+                unit_desird_pos_b,  # 3
+                desired_dist_2d,  # 1
+                desired_dist_z,  # 1
+                self.lidar_scan.squeeze(1),
+                potential.unsqueeze(-1),
+                self._last_actions,
+            ],
+            dim=-1,
+        )
+        # observations = {"policy": obs}
+
+        states = self._get_states()
+        # states = torch.clamp(states, -clip_obs, clip_obs)
+        observations = {"policy": obs, "critic": states}
+
+        return observations
+    
+    def _get_states(self):
         desired_pos_b, _ = subtract_frame_transforms(
             self._robot.data.root_pos_w, self._robot.data.root_quat_w, self._desired_pos_w
         )
@@ -508,7 +793,7 @@ class QuadcopterEnv(DirectRLEnv):
         desired_dist_2d = desired_pos_b[:, :2].norm(dim=-1, keepdim=True)
         desired_dist_z = desired_pos_b[:, 2].unsqueeze(1)
 
-        self.lidar_scan = (
+        lidar_scan = (
             (
                 self._lidar_sensor.data.ray_hits_w
                 - self._lidar_sensor.data.pos_w.unsqueeze(1)
@@ -529,160 +814,478 @@ class QuadcopterEnv(DirectRLEnv):
         gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
         potential = 0.25 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
 
-
-        obs = torch.cat(
-            [
-                # self._robot.data.root_lin_vel_b,
-                root_lin_vel_w,
-                # self._robot.data.root_ang_vel_b,
-                root_ang_vel_b,
-                # self._robot.data.projected_gravity_b,
-                projected_gravity_w,
-                # desired_pos_b,
-                unit_desird_pos_b,  # 3
-                desired_dist_2d,  # 1
-                desired_dist_z,  # 1
-                self.lidar_scan.squeeze(1),
+        states = torch.cat(
+            (
+                self._robot.data.root_lin_vel_b,
+                self._robot.data.root_ang_vel_b,
+                self._robot.data.projected_gravity_b,
+                desired_pos_b,
+                unit_desird_pos_b,
+                desired_dist_2d,
+                desired_dist_z,
+                lidar_scan.squeeze(1),
                 potential.unsqueeze(-1),
                 self._last_actions,
-            ],
+            ),
             dim=-1,
         )
-        observations = {"policy": obs}
-        return observations
-
+        return states
+    
     def _get_rewards(self) -> torch.Tensor:
-        lin_vel = torch.sum(torch.square(self._robot.data.root_lin_vel_b), dim=1)
-        ang_vel = torch.sum(torch.square(self._robot.data.root_ang_vel_b), dim=1)
-        action_rate = torch.sum(torch.square(self._actions - self._last_actions), dim=1)
 
-        # action_rate = torch.sum(torch.square(self._robot.data.root_lin_vel_w - self.previous_action), dim=1)
+        pose_err, rot_err = compute_pose_error(
+            self._robot.data.root_pos_w,
+            self._robot.data.root_quat_w,
+            self._desired_pos_w,
+            self._desired_quat_w,
+        )
 
-        distance_to_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1)
-        distance_to_goal_mapped = 1 - torch.tanh(distance_to_goal / 0.8)
-        
+        self._position_error = pose_err
+        self._angle_error = rot_err
+
+        # --- Distance ---
+        distance_to_goal = torch.linalg.norm(self._position_error, dim=1)
+        rew_distance_to_goal = 1 - torch.tanh(distance_to_goal / 0.8)
+
+        # --- Angular error ---
+        angular_to_goal = torch.linalg.norm(self._angle_error, dim=1)
+        distance_weight = 1 - torch.tanh(distance_to_goal / 0.8)
+        rew_angular_to_goal = (1 - torch.tanh(angular_to_goal)) * distance_weight
+
+        # --- Velocity norms ---
+        lin_vel_norm = torch.linalg.norm(self._robot.data.root_lin_vel_b, dim=1)
+        ang_vel_norm = torch.linalg.norm(self._robot.data.root_ang_vel_b, dim=1)
+
+        lin_vel_clamp = torch.clamp(lin_vel_norm, max=10.0)
+        ang_vel_clamp = torch.clamp(ang_vel_norm, max=10.0)
+
+        # --- Base velocity penalties ---
+        rew_lin_vel = torch.square(torch.exp(0.6 * lin_vel_clamp) - 1.0)
+        rew_ang_vel_far = torch.square(torch.exp(0.4 * ang_vel_clamp) - 1.0)
+
+        # =========================
+        # 🔥 KEY FIX: GOAL REGION LOGIC
+        # =========================
+        DIST_TH = 0.5
+        near_goal = (distance_to_goal < DIST_TH).float()
+        far_goal = 1.0 - near_goal
+
+        # --- Strong angular damping near goal ---
+        rew_ang_vel_near = ang_vel_norm**2 * 5.0
+        rew_ang_vel = far_goal * rew_ang_vel_far + near_goal * rew_ang_vel_near
+
+        # =========================
+        # Heading tracking (ONLY FAR)
+        # =========================
         relative_err_pos_w = self._desired_pos_w - self._robot.data.root_pos_w
-        unit_relative_err_pos = relative_err_pos_w / (relative_err_pos_w.norm(dim=-1, keepdim=True) + 1e-6)
+        unit_relative_err_pos = relative_err_pos_w / (
+            relative_err_pos_w.norm(dim=-1, keepdim=True) + 1e-6
+        )
+
+        # Velocity direction reward
         rew_vel_dir_w = self._robot.data.root_lin_vel_w * unit_relative_err_pos
         rew_vel_dir_w = torch.sum(rew_vel_dir_w, dim=-1)
+        rew_vel_dir_w = torch.clamp(rew_vel_dir_w, min=0.0)
 
-        # heading tracking reward
-        self.ref_heading = torch.atan2(relative_err_pos_w[:, 1], relative_err_pos_w[:, 0])  # radian
+        # Heading tracking (DISABLED near goal)
+        self.ref_heading = torch.atan2(
+            relative_err_pos_w[:, 1], relative_err_pos_w[:, 0]
+        )
         self.robot_heading = self._robot.data.heading_w
         self.angle_diff = self.ref_heading - self.robot_heading
-        head_tracking_path_rew = 0.7 - torch.tanh(torch.abs(self.angle_diff) / 0.9)
-        
+
+        head_tracking = 0.7 - torch.tanh(torch.abs(self.angle_diff) / 0.9)
+        head_tracking = head_tracking * far_goal  # 🔥 critical fix
+
+        # =========================
+        # Heading stabilization (ONLY NEAR)
+        # =========================
+        heading_stability = torch.exp(-2.0 * ang_vel_norm)
+        heading_stability = heading_stability * near_goal
+
+        # =========================
+        # Stop-and-hold reward
+        # =========================
+        stop_reward = (
+            torch.exp(-3 * lin_vel_norm)
+            * torch.exp(-3 * ang_vel_norm)
+            * torch.exp(-2 * distance_to_goal)
+        )
+
+        # =========================
+        # Reach goal condition
+        # =========================
+        ANG_VEL_TH = 0.2
+        LIN_VEL_TH = 0.1
+        POS_TH = 0.1
+        ANG_TH = 0.1
+
+        reach_goal = torch.logical_and(
+            torch.logical_and(ang_vel_norm < ANG_VEL_TH, lin_vel_norm < LIN_VEL_TH),
+            torch.logical_and(angular_to_goal < ANG_TH, distance_to_goal < POS_TH),
+        )
+
+        reach_goal = torch.logical_and(
+            reach_goal,
+            self.episode_length_buf > (
+                self.max_episode_length - (2.0 / (self.cfg.sim.dt * self.cfg.decimation))
+            ),
+        )
+
+        self._reach_goal = reach_goal.to(torch.float32) * self.reset_time_outs.to(torch.float32)
+
+        reach_goal_reward_timeout = (
+            self.reset_time_outs.to(torch.float32)
+            * reach_goal.to(torch.float32)
+            * self.max_episode_length_s
+        )
+
+        reach_goal_reward = torch.zeros_like(reach_goal_reward_timeout)
+        reach_goal_reward += torch.exp(-2 * distance_to_goal / POS_TH) * reach_goal.float()
+        reach_goal_reward += torch.exp(-2 * angular_to_goal / ANG_TH) * reach_goal.float()
+
+        # =========================
+        # Height penalty
+        # =========================
+        clipped_z = torch.clamp(
+            self._robot.data.root_pos_w[:, 2],
+            self.height_range[:, 0],
+            self.height_range[:, 1],
+        )
+        penalty_height = (torch.abs(self._robot.data.root_pos_w[:, 2] - clipped_z)) ** 2
+
+        # =========================
+        # Flip penalty
+        # =========================
+        uprightness = self._robot.data.projected_gravity_b[:, 2] >= 0.0
+        flip_penalty = torch.where(
+            uprightness,
+            torch.tensor(0.0, device=self.device),
+            torch.tensor(1.0, device=self.device),
+        )
 
         # debug visualization
-        ref_heading_marker_orientations = quat_from_angle_axis(self.ref_heading, torch.tensor([0.0, 0.0, 1.0], device=self.device))
-        self.robot_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=ref_heading_marker_orientations)
+        ref_heading_marker_orientations = self._desired_quat_w
+        self.robot_visualizer.visualize(translations=self._desired_pos_w, orientations=ref_heading_marker_orientations)
 
-        robot_heading_marker_orientations = quat_from_angle_axis(self.robot_heading, torch.tensor([0.0, 0.0, 1.0], device=self.device))
+        robot_heading_marker_orientations = self._robot.data.root_quat_w
         self.my_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=robot_heading_marker_orientations)
         # self.robot_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=self._robot.data.root_quat_w)
         
-        # height penalty
-        clipped_z = torch.clamp(
-                    self._robot.data.root_pos_w[:, 2],
-                    self.height_range[:, 0] ,  # allow small tolerance
-                    self.height_range[:, 1]
-                )
-        penalty_height = ((self._robot.data.root_pos_w[:, 2] - clipped_z) ** 2)  # shape (num_envs, 1)
-
-        # lidar safety reward
-        reward_safety_static = 1 - torch.tanh((self.lidar_range - self.lidar_scan).clamp(min=1e-6, max=self.lidar_range)).mean(dim=2).squeeze(1)
-
-
-        # lidar potential field adapt heading reward
-        vec_to_obstacles = (self._lidar_sensor.data.ray_hits_w - self._lidar_sensor.data.pos_w.unsqueeze(1)).clamp_max(2.5)
-        dists = vec_to_obstacles.norm(dim=-1)
-        closest_idx = torch.argmin(dists, dim=1)
-        env_idx = torch.arange(vec_to_obstacles.shape[0])
-
-        nearest_vec = vec_to_obstacles[env_idx, closest_idx]
-        nearest_dist = dists[env_idx, closest_idx]
-        
-        robot_heading_vector = quat_apply_yaw(
-            self._robot.data.root_state_w[:, 3:7].to(torch.float32),
-            torch.tensor([1, 0, 0], device=self.device, dtype=torch.float32).repeat(self.num_envs, 1),
-        )
-        #check if robot still in potential field range, if not set nearest vec to goal direction
-        # in_field_range = nearest_dist < (self.lidar_range * 2.0)
-        # nearest_vec = torch.where(
-        #     in_field_range.unsqueeze(-1),
-        #     nearest_vec,
-        #     -unit_relative_err_pos * 5.0,  # scale to match typical obstacle distance
-        # )
-        nearest_angle = torch.atan2(nearest_vec[:, 1], nearest_vec[:, 0])
-        nearest_quat = quat_from_angle_axis(nearest_angle, torch.tensor([0, 0, 1], device=self.device, dtype=torch.float32).repeat(self.num_envs, 1))
-
-        self.nearest_obs_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=nearest_quat)
-
-        nearest_vec_norm = nearest_vec / (nearest_vec.norm(dim=-1, keepdim=True) + 1e-6)
-        robot_vec_heading_norm = robot_heading_vector / (robot_heading_vector.norm(dim=-1, keepdim=True) + 1e-6)
-        # cosine_similarity = torch.dot(nearest_vec_norm, robot_vec_heading_norm)/torch.norm(nearest_vec_norm)*torch.norm(robot_vec_heading_norm)
-        cosine_similarity = torch.nn.functional.cosine_similarity(
-            nearest_vec_norm,
-            robot_vec_heading_norm,
-            dim=1,
-            eps=1e-8,
-        )
-
-        cos_facing_obstacle = torch.sum(robot_heading_vector * nearest_vec_norm, dim=1)  # in [-1, 1]
-        # dot_vec = torch.abs(torch.sum(robot_heading_vector * nearest_vec, dim=1))
-        
-        # sigma = 0.7  # Standard deviation of Gaussian function
-        # gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
-        # potential = 0.5 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
-        sigma = 3.0 #0.9  # Standard deviation of Gaussian function
-        gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
-        potential = 0.25 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
-        
-        rew_potential_pa = (2*potential) * (1*cosine_similarity)
-        # rew_potential_pa = potential * torch.abs(cosine_similarity)
-        #potential_rew = potential * dot_vec
-
-        # goal_heading_error = torch.abs(self.angle_diff)
-        # goal_heading_reward = 1 - torch.tanh(goal_heading_error / 0.5)
-        # blend_factor = (1 - potential)
-        # print("blend factor ", blend_factor[2])
-        # print("potential value ", potential[2])
-        # print("head tracking reward ",  head_tracking_path_rew[2])
-        # print("potential field reward ", rew_potential_pa[2])
-        rew_heading_reward_blended = (1 - potential) * head_tracking_path_rew +  potential * torch.abs(cosine_similarity)
-
-        # penalty_shaking_roll_pitch = 
-
+        # =========================
+        # FINAL REWARD DICT
+        # =========================
         rewards = {
-            # "rew_lin_vel": lin_vel * self.cfg.lin_vel_reward_scale * self.step_dt,
-            # "rew_ang_vel": ang_vel * self.cfg.ang_vel_reward_scale * self.step_dt,
-            "rew_distance_to_goal": distance_to_goal_mapped * self.cfg.distance_to_goal_reward_scale * self.step_dt,
-            "rew_action_rate": action_rate * self.cfg.action_rate_reward_scale * self.step_dt,
-            "rew_velocity_dir": rew_vel_dir_w * self.cfg.velocity_direction * self.step_dt,
-            # "rew_head_tracking": head_tracking_path_rew * self.cfg.head_tracking * self.step_dt,
-            "rew_height_penalty": -penalty_height * 0.5 * self.step_dt,
-            "rew_reward_safety_static": reward_safety_static * self.cfg.reward_safety_static * self.step_dt,
-            "rew_potential_field_PA": rew_potential_pa * self.cfg.potential_field_PA * self.step_dt,
-            "rew_heading_tracking_PA": rew_heading_reward_blended * self.cfg.head_tracking_PA * self.step_dt,
-
-
+            "rew_distance_to_goal": rew_distance_to_goal * self.cfg.distance_to_goal_reward_scale * self.step_dt,
+            "rew_angular_to_goal": rew_angular_to_goal * self.cfg.angular_to_goal_reward_scale * self.step_dt,
+            "rew_lin_vel": rew_lin_vel * self.cfg.lin_vel_reward_scale * self.step_dt,
+            "rew_ang_vel": rew_ang_vel * self.cfg.ang_vel_reward_scale * self.step_dt,
+            "rew_velocity_dir": rew_vel_dir_w * self.cfg.velocity_direction_reward_scale * self.step_dt,
+            "rew_head_tracking": head_tracking * self.cfg.head_tracking_reward_scale * self.step_dt,
+            "rew_heading_stability": heading_stability * 3.0 * self.step_dt,
+            "rew_stop": stop_reward * 5.0 * self.step_dt,
+            "rew_reach_goal": reach_goal_reward * self.cfg.reach_goal_reward_scale * self.step_dt,
+            "rew_reach_goal_timeout": reach_goal_reward_timeout * self.cfg.reach_goal_reward_timeout_scale * self.step_dt,
+            "rew_height_penalty": penalty_height * self.cfg.height_penalty_scale * self.step_dt,
+            "flip_penalty": flip_penalty * self.cfg.died_reward_scale * self.step_dt,
         }
-        reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
 
-        # self.previous_action = self._actions.clone()
-        # self.previous_action = self._robot.data.root_lin_vel_w.clone()
-
+        total_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
 
         # Logging
         for key, value in rewards.items():
             self._episode_sums[key] += value
-        return reward
+
+        return total_reward
+        
+    # def _get_rewards(self) -> torch.Tensor:
+        
+    #     pose_err, rot_err = compute_pose_error(
+    #         self._robot.data.root_pos_w,
+    #         self._robot.data.root_quat_w,
+    #         self._desired_pos_w,
+    #         self._desired_quat_w,
+    #         # quat_from_euler_xyz(torch.zeros(self.num_envs, device=self.device), torch.zeros(self.num_envs, device=self.device), torch.zeros(self.num_envs, device=self.device)),
+    #     )
+
+    #     self._position_error = pose_err
+    #     self._angle_error = rot_err
+    # #     distance_to_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1)
+    # #     distance_to_goal_mapped = 1 - torch.tanh(distance_to_goal / 0.8)
+        
+    #     distance_to_goal = torch.linalg.norm(self._position_error , dim=1)
+    #     # print(f"distance_to_goal: {distance_to_goal}")
+    #     rew_distance_to_goal = 1 - torch.tanh(distance_to_goal / 0.8)
+    #     # print(f"distance_to_goal: {distance_to_goal.shape}, rew_distance_to_goal: {rew_distance_to_goal.shape}")
+
+    #     distance_to_goal_weight = 1 - torch.tanh(distance_to_goal / 0.8)
+    #     angular_to_goal = torch.linalg.norm(self._angle_error, dim=1)
+    #     rew_angular_to_goal = (1 - torch.tanh(angular_to_goal)) * distance_to_goal_weight
+    #     # print(f"rew_angular_to_goal: {rew_angular_to_goal.shape}")
+
+    #     lin_vel_norm = torch.linalg.norm(self._robot.data.root_lin_vel_b, dim=1)
+    #     lin_vel_norm_clamp = torch.clamp(lin_vel_norm, max=10.0)
+    #     rew_lin_vel = torch.square(torch.exp(0.6 * lin_vel_norm_clamp) - 1.0)
+    #     # print(f"lin_vel_norm: {lin_vel_norm.shape}, rew_lin_vel: {rew_lin_vel.shape}")
+
+    #     ang_vel_norm = torch.linalg.norm(self._robot.data.root_ang_vel_b, dim=1)
+    #     ang_vel_norm_clamp = torch.clamp(ang_vel_norm, max=10.0)
+    #     rew_ang_vel = torch.square(torch.exp(0.4 * ang_vel_norm_clamp) - 1.0)
+
+    #     # rew_thrust_power = self._thrust[:, 0, 2] #TODO: change to actual thrust
+    #     # print(f"rew_thrust_power: {rew_thrust_power.shape}")
+
+    #     ANG_VEL_TH = 0.2
+    #     LIN_VEL_TH = 0.1
+    #     POS_TH = 0.1
+    #     ANG_TH = 0.1
+
+    #     reach_goal = torch.logical_and(
+    #         torch.logical_and(ang_vel_norm < ANG_VEL_TH, lin_vel_norm < LIN_VEL_TH),
+    #         torch.logical_and(angular_to_goal < ANG_TH, distance_to_goal < POS_TH),
+    #     )
+    #     # print("reach_goal:", reach_goal.sum())
+    #     reach_goal = torch.logical_and(
+    #         reach_goal,
+    #         self.episode_length_buf > (self.max_episode_length - (2.0 / (self.cfg.sim.dt * self.cfg.decimation))),
+    #     )
+    #     # self._reach_goal_state = reach_goal
+    #     self._reach_goal = reach_goal.to(torch.float32) * self.reset_time_outs.to(torch.float32)
+    #     # self._reach_goal_count += self._reach_goal
+    #     reach_goal_reward_timeout = (
+    #         self.reset_time_outs.to(torch.float32) * reach_goal.to(torch.float32) * self.max_episode_length_s
+    #     ) 
+        
+    #     reach_goal_reward = torch.zeros_like(reach_goal_reward_timeout)
+    #     # reach_goal_reward += reach_goal.to(torch.float32) * self.step_dt * 1.0
+    #     reach_goal_reward += torch.exp(-2 * distance_to_goal / POS_TH) * reach_goal.to(torch.float32)
+    #     reach_goal_reward += torch.exp(-2 * angular_to_goal / ANG_TH) * reach_goal.to(torch.float32) 
+    #     reach_goal_reward += torch.exp(-2 * lin_vel_norm / LIN_VEL_TH) * reach_goal.to(torch.float32) 
+    #     reach_goal_reward += torch.exp(-2 * ang_vel_norm / ANG_VEL_TH) * reach_goal.to(torch.float32) 
+    #     reach_goal_reward = reach_goal_reward
+
+    #     # reward for velocity in the direction of the goal
+    #     relative_err_pos_w = self._desired_pos_w - self._robot.data.root_pos_w
+    #     unit_relative_err_pos = relative_err_pos_w / (relative_err_pos_w.norm(dim=-1, keepdim=True) + 1e-6)
+
+    #     # unit_relative_err_pos = self._position_error / (self._position_error.norm(dim=-1, keepdim=True) + 1e-6)
+    #     rew_vel_dir_w = self._robot.data.root_lin_vel_w * unit_relative_err_pos
+    #     rew_vel_dir_w = torch.sum(rew_vel_dir_w, dim=-1)
+    #     rew_vel_dir_w = torch.clamp(rew_vel_dir_w, min=0.0)
+    #     # print(f"rew_vel_dir_w: {rew_vel_dir_w.shape}")
+
+    #     # heading tracking reward
+    #     self.ref_heading = torch.atan2(relative_err_pos_w[:, 1], relative_err_pos_w[:, 0])  # radian
+    #     self.robot_heading = self._robot.data.heading_w
+    #     self.angle_diff = self.ref_heading - self.robot_heading
+    #     head_tracking_path_rew = 0.7 - torch.tanh(torch.abs(self.angle_diff) / 0.9)
+
+    #     # height penalty
+    #     clipped_z = torch.clamp(
+    #                 self._robot.data.root_pos_w[:, 2],
+    #                 self.height_range[:, 0] ,  # allow small tolerance
+    #                 self.height_range[:, 1]
+    #             )
+    #     penalty_height = ((self._robot.data.root_pos_w[:, 2] - clipped_z) ** 2)  # shape (num_envs, 1)
+
+    #     # debug visualization
+    #     ref_heading_marker_orientations = self._desired_quat_w
+    #     self.robot_visualizer.visualize(translations=self._desired_pos_w, orientations=ref_heading_marker_orientations)
+
+    #     robot_heading_marker_orientations = self._robot.data.root_quat_w
+    #     self.my_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=robot_heading_marker_orientations)
+    #     # self.robot_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=self._robot.data.root_quat_w)
+
+    #     #flip penalty
+    #     uprightness = self._robot.data.projected_gravity_b[:, 2] >= 0.0
+    #     # if it upside down, apply penalty
+    #     flip_penalty = torch.where(uprightness, torch.tensor(0.0, device=self.device), torch.tensor(1.0, device=self.device))
+    #     # flip_penalty = torch.where(uprightness[:, 2] < 0, torch.tensor(1.0, device=self.device), torch.tensor(0.0, device=self.device))
+
+
+
+    #     rewards = {
+    #         "rew_lin_vel": rew_lin_vel * self.cfg.lin_vel_reward_scale * self.step_dt,
+    #         "rew_ang_vel": rew_ang_vel * self.cfg.ang_vel_reward_scale * self.step_dt,
+    #         "rew_reach_goal": reach_goal_reward * self.cfg.reach_goal_reward_scale * self.step_dt,
+    #         "rew_reach_goal_timeout": reach_goal_reward_timeout * self.cfg.reach_goal_reward_timeout_scale * self.step_dt ,
+    #         "rew_distance_to_goal": rew_distance_to_goal * self.cfg.distance_to_goal_reward_scale * self.step_dt,
+    #         # "rew_thrust_power": rew_thrust_power * self.cfg.thrust_power_scale * self.step_dt,
+    #         "rew_angular_to_goal": rew_angular_to_goal * self.cfg.angular_to_goal_reward_scale * self.step_dt,
+    #         "rew_velocity_dir": rew_vel_dir_w * self.cfg.velocity_direction_reward_scale * self.step_dt,
+    #         "rew_head_tracking_path": head_tracking_path_rew * self.cfg.head_tracking_reward_scale * self.step_dt,
+    #         "rew_height_penalty": penalty_height.squeeze(-1) * self.cfg.height_penalty_scale * self.step_dt,
+    #         "flip_penalty": flip_penalty * self.cfg.died_reward_scale * self.step_dt,
+    #     }
+    #     total_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
+    #     # total_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
+        
+    #     # Logging 
+    #     for key, value in rewards.items():
+    #                 self._episode_sums[key] += value
+                    
+    #     return total_reward
+
+
+
+
+
+
+    # def _get_rewards(self) -> torch.Tensor:
+    #     lin_vel = torch.sum(torch.square(self._robot.data.root_lin_vel_b), dim=1)
+    #     ang_vel = torch.sum(torch.square(self._robot.data.root_ang_vel_b), dim=1)
+    #     action_rate = torch.sum(torch.square(self._actions - self._last_actions), dim=1)
+
+    #     # action_rate = torch.sum(torch.square(self._robot.data.root_lin_vel_w - self.previous_action), dim=1)
+
+    #     distance_to_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1)
+    #     distance_to_goal_mapped = 1 - torch.tanh(distance_to_goal / 0.8)
+        
+    #     relative_err_pos_w = self._desired_pos_w - self._robot.data.root_pos_w
+    #     unit_relative_err_pos = relative_err_pos_w / (relative_err_pos_w.norm(dim=-1, keepdim=True) + 1e-6)
+    #     rew_vel_dir_w = self._robot.data.root_lin_vel_w * unit_relative_err_pos
+    #     rew_vel_dir_w = torch.sum(rew_vel_dir_w, dim=-1)
+
+    #     # heading tracking reward
+    #     self.ref_heading = torch.atan2(relative_err_pos_w[:, 1], relative_err_pos_w[:, 0])  # radian
+    #     self.robot_heading = self._robot.data.heading_w
+    #     self.angle_diff = self.ref_heading - self.robot_heading
+    #     head_tracking_path_rew = 0.7 - torch.tanh(torch.abs(self.angle_diff) / 0.9)
+        
+
+    #     # debug visualization
+    #     ref_heading_marker_orientations = quat_from_angle_axis(self.ref_heading, torch.tensor([0.0, 0.0, 1.0], device=self.device))
+    #     self.robot_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=ref_heading_marker_orientations)
+
+    #     robot_heading_marker_orientations = quat_from_angle_axis(self.robot_heading, torch.tensor([0.0, 0.0, 1.0], device=self.device))
+    #     self.my_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=robot_heading_marker_orientations)
+    #     # self.robot_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=self._robot.data.root_quat_w)
+        
+    #     # height penalty
+    #     clipped_z = torch.clamp(
+    #                 self._robot.data.root_pos_w[:, 2],
+    #                 self.height_range[:, 0] ,  # allow small tolerance
+    #                 self.height_range[:, 1]
+    #             )
+    #     penalty_height = ((self._robot.data.root_pos_w[:, 2] - clipped_z) ** 2)  # shape (num_envs, 1)
+
+    #     # lidar safety reward
+    #     reward_safety_static = 1 - torch.tanh((self.lidar_range - self.lidar_scan).clamp(min=1e-6, max=self.lidar_range)).mean(dim=2).squeeze(1)
+
+
+    #     # lidar potential field adapt heading reward
+    #     vec_to_obstacles = (self._lidar_sensor.data.ray_hits_w - self._lidar_sensor.data.pos_w.unsqueeze(1)).clamp_max(2.5)
+    #     dists = vec_to_obstacles.norm(dim=-1)
+    #     closest_idx = torch.argmin(dists, dim=1)
+    #     env_idx = torch.arange(vec_to_obstacles.shape[0])
+
+    #     nearest_vec = vec_to_obstacles[env_idx, closest_idx]
+    #     nearest_dist = dists[env_idx, closest_idx]
+        
+    #     robot_heading_vector = quat_apply_yaw(
+    #         self._robot.data.root_state_w[:, 3:7].to(torch.float32),
+    #         torch.tensor([1, 0, 0], device=self.device, dtype=torch.float32).repeat(self.num_envs, 1),
+    #     )
+    #     #check if robot still in potential field range, if not set nearest vec to goal direction
+    #     # in_field_range = nearest_dist < (self.lidar_range * 2.0)
+    #     # nearest_vec = torch.where(
+    #     #     in_field_range.unsqueeze(-1),
+    #     #     nearest_vec,
+    #     #     -unit_relative_err_pos * 5.0,  # scale to match typical obstacle distance
+    #     # )
+    #     nearest_angle = torch.atan2(nearest_vec[:, 1], nearest_vec[:, 0])
+    #     nearest_quat = quat_from_angle_axis(nearest_angle, torch.tensor([0, 0, 1], device=self.device, dtype=torch.float32).repeat(self.num_envs, 1))
+
+    #     self.nearest_obs_visualizer.visualize(translations=self._robot.data.root_pos_w, orientations=nearest_quat)
+
+    #     nearest_vec_norm = nearest_vec / (nearest_vec.norm(dim=-1, keepdim=True) + 1e-6)
+    #     robot_vec_heading_norm = robot_heading_vector / (robot_heading_vector.norm(dim=-1, keepdim=True) + 1e-6)
+    #     # cosine_similarity = torch.dot(nearest_vec_norm, robot_vec_heading_norm)/torch.norm(nearest_vec_norm)*torch.norm(robot_vec_heading_norm)
+    #     cosine_similarity = torch.nn.functional.cosine_similarity(
+    #         nearest_vec_norm,
+    #         robot_vec_heading_norm,
+    #         dim=1,
+    #         eps=1e-8,
+    #     )
+    #     sigma = 3.0 #0.9  # Standard deviation of Gaussian function
+    #     gaussian_factor = 1 / (0.1 * torch.sqrt(2 * torch.tensor(torch.pi)))  # Precomputed constant
+    #     potential = 0.25 * gaussian_factor * torch.exp(-nearest_dist**2 / (2 * sigma**2))
+    #     rew_potential_pa = (2*potential) * (1*cosine_similarity)
+    #     rew_heading_reward_blended = (1 - potential) * head_tracking_path_rew +  potential * torch.abs(cosine_similarity)
+
+    #     # penalty_shaking_roll_pitch = 
+
+    #     rewards = {
+    #         # "rew_lin_vel": lin_vel * self.cfg.lin_vel_reward_scale * self.step_dt,
+    #         # "rew_ang_vel": ang_vel * self.cfg.ang_vel_reward_scale * self.step_dt,
+    #         "rew_distance_to_goal": distance_to_goal_mapped * self.cfg.distance_to_goal_reward_scale * self.step_dt,
+    #         "rew_action_rate": action_rate * self.cfg.action_rate_reward_scale * self.step_dt,
+    #         "rew_velocity_dir": rew_vel_dir_w * self.cfg.velocity_direction * self.step_dt,
+    #         # "rew_head_tracking": head_tracking_path_rew * self.cfg.head_tracking * self.step_dt,
+    #         "rew_height_penalty": -penalty_height * 0.5 * self.step_dt,
+    #         "rew_reward_safety_static": reward_safety_static * self.cfg.reward_safety_static * self.step_dt,
+    #         "rew_potential_field_PA": rew_potential_pa * self.cfg.potential_field_PA * self.step_dt,
+    #         "rew_heading_tracking_PA": rew_heading_reward_blended * self.cfg.head_tracking_PA * self.step_dt,
+
+
+    #     }
+    #     total_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
+
+    #     # Early termination penalty
+    #     # die_reward = self.reset_terminated.to(torch.float32) * self.cfg.died_reward_scale * self.max_episode_length_s
+    #     # total_reward += die_reward
+    #     # rewards["died"] = die_reward
+
+    #     # # timeout reward with reaching goal
+    #     # ang_vel_norm = torch.linalg.norm(self._robot.data.root_ang_vel_b, dim=-1)
+    #     # lin_vel_norm = torch.linalg.norm(self._robot.data.root_lin_vel_b, dim=-1)
+
+    #     # ANG_VEL_TH = 0.02
+    #     # LIN_VEL_TH = 0.01
+    #     # POS_TH = 0.02
+    #     # ANG_TH = 0.05
+    #     # reach_goal = torch.logical_and(
+    #     #     torch.logical_and(ang_vel_norm < ANG_VEL_TH, lin_vel_norm < LIN_VEL_TH),
+    #     #     torch.logical_and(angular_to_goal < ANG_TH, distance_to_goal < POS_TH),
+    #     # )
+    #     # reach_goal = torch.logical_and(
+    #     #     reach_goal,
+    #     #     self.episode_length_buf > (self.max_episode_length - (2.0 / (self.cfg.sim.dt * self.cfg.decimation))),
+    #     # )
+    #     # self._reach_goal_state = reach_goal
+    #     # self._reach_goal = reach_goal.to(torch.float32) * self.reset_time_outs.to(torch.float32)
+    #     # self._reach_goal_count += self._reach_goal
+    #     # reach_goal_reward_timeout = (
+    #     #     self.reset_time_outs.to(torch.float32) * reach_goal.to(torch.float32) * self.max_episode_length_s
+    #     # ) * self.cfg.reach_goal_reward_timeout_scale
+    #     # reach_goal_reward = torch.zeros_like(reach_goal_reward_timeout)
+    #     # # reach_goal_reward += reach_goal.to(torch.float32) * self.step_dt * 1.0
+    #     # reach_goal_reward += torch.exp(-2 * distance_to_goal / POS_TH) * reach_goal.to(torch.float32) * self.step_dt
+    #     # reach_goal_reward += torch.exp(-2 * angular_to_goal / ANG_TH) * reach_goal.to(torch.float32) * self.step_dt
+    #     # reach_goal_reward += torch.exp(-2 * lin_vel_norm / LIN_VEL_TH) * reach_goal.to(torch.float32) * self.step_dt
+    #     # reach_goal_reward += torch.exp(-2 * ang_vel_norm / ANG_VEL_TH) * reach_goal.to(torch.float32) * self.step_dt
+    #     # reach_goal_reward = reach_goal_reward * self.cfg.reach_goal_reward_scale
+
+
+    #     # self.previous_action = self._actions.clone()
+    #     # self.previous_action = self._robot.data.root_lin_vel_w.clone()
+
+
+    #     # Logging
+    #     for key, value in rewards.items():
+    #         self._episode_sums[key] += value
+            
+    #     return total_reward
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         died = torch.logical_or(self._robot.data.root_pos_w[:, 2] < 0.35, self._robot.data.root_pos_w[:, 2] > 10.0)
         
-        # uprightness = self._robot.data.projected_gravity_b[:, 2] >= 0.0
+        # uprightness = self._robot.data.projected_gravity_b[:, 2] < 0.1
+        # print(f"uprightness: {self._robot.data.projected_gravity_b[:, :] }")
+        # check if the drone upside down by looking at the z component of the projected gravity in the body frame. If it's negative, it means the drone is upside down.
+        # uprightness = quat_apply_inverse(self._robot.data.root_quat_w,  self._robot.data.GRAVITY_VEC_W)
+        # uprightness = uprightness[:, 2] >= 0.0
 
         static_collision = einops.reduce(self.lidar_scan, "n 1 w -> n 1", "min") < 0.2  # 0.3 collision radius
         # reach_goal = torch.linalg.norm(self._desired_pos_w - self._robot.data.root_pos_w, dim=1) < 0.15
@@ -693,10 +1296,18 @@ class QuadcopterEnv(DirectRLEnv):
         opposite_direction_heading = torch.abs(angle_diff) >  0.8  #45 degress # 90 degrees
         # died = died | uprightness | static_collision.squeeze(1) | reach_goal | opposite_direction_heading
         # died = died | uprightness | static_collision.squeeze(1) | opposite_direction_heading
-        died = died | static_collision.squeeze(1) | opposite_direction_heading
+        # died = died | static_collision.squeeze(1) | opposite_direction_heading
+        died = died | static_collision.squeeze(1) #| uprightness
+        
+        if self.cfg.evaluate_mode:
+            died = torch.zeros_like(time_out, dtype=torch.bool)
         
         return died, time_out
-
+    
+    def random_yaw_quaternion(self, num_envs, device):
+        yaw_angles = (torch.rand(num_envs, device=device) - 0.5) * 2 * torch.pi
+        return torch.zeros(num_envs, device=device)
+    
     def _reset_idx(self, env_ids: torch.Tensor | None):
         if env_ids is None or len(env_ids) == self.num_envs:
             env_ids = self._robot._ALL_INDICES
@@ -727,13 +1338,33 @@ class QuadcopterEnv(DirectRLEnv):
         self._actions[env_ids] = 0.0
         self.previous_action[env_ids] = 0.0
         self._last_actions[env_ids] = 0.0
+        
         # Sample new commands
-        self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-15.0, 15.0)
-        self._desired_pos_w[env_ids, :2] += self._terrain.env_origins[env_ids, :2]
-        self._desired_pos_w[env_ids, 2] = torch.zeros_like(self._desired_pos_w[env_ids, 2]).uniform_(1.5, 3.5)
+        if self.cfg.evaluate_mode:
+            self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-0.1, 0.1)
+            self._desired_pos_w[env_ids, :2] += self._terrain.env_origins[env_ids, :2]
+            self._desired_pos_w[env_ids, 2] = torch.zeros_like(self._desired_pos_w[env_ids, 2]).uniform_(2.0, 2.1)
+        else:
+            self._desired_pos_w[env_ids, :2] = torch.zeros_like(self._desired_pos_w[env_ids, :2]).uniform_(-10.0, 10.0)
+            self._desired_pos_w[env_ids, :2] += self._terrain.env_origins[env_ids, :2]
+            self._desired_pos_w[env_ids, 2] = torch.zeros_like(self._desired_pos_w[env_ids, 2]).uniform_(1.2, 1.8)
+            
+            body_ang = torch.pi / 180.0 * 0.0
+            ang_range = body_ang 
+            self._desired_quat_w[env_ids] = sampleUniformQuatwithTilt(torch.tensor(ang_range), len(env_ids)).to(self.device)
+
+        # self._desired_quat_w[env_ids] = self.random_yaw_quaternion(len(env_ids), self.device)
+        # dir_to_goal = self._desired_pos_w[env_ids] - self._robot.data.root_pos_w[env_ids]
+        # yaw = torch.atan2(dir_to_goal[:, 1], dir_to_goal[:, 0])
+        # self._desired_quat_w[env_ids] = quat_from_euler_xyz(
+        #     torch.zeros_like(yaw),
+        #     torch.zeros_like(yaw),
+        #     yaw
+        # )
+        
 
         desired_heights = self._desired_pos_w[:, 2]
-        margin = 0.15
+        margin = 0.05
         self.height_range = torch.stack([
             desired_heights - margin,
             desired_heights + margin
@@ -772,15 +1403,15 @@ class QuadcopterEnv(DirectRLEnv):
         marker_cfg = VisualizationMarkersCfg(
             prim_path="/Visuals/myMarkers",
             markers={
-                # "frame": sim_utils.UsdFileCfg(
-                #     usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
-                #     scale=(0.5, 0.5, 0.5),
-                # ),
-                "arrow_x": sim_utils.UsdFileCfg(
-                    usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
-                    scale=(0.1, 0.1, 1.0),
-                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
+                "frame": sim_utils.UsdFileCfg(
+                    usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
+                    scale=(0.2, 0.2, 0.2),
                 ),
+                # "arrow_x": sim_utils.UsdFileCfg(
+                #     usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+                #     scale=(0.1, 0.1, 1.0),
+                #     visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
+                # ),
             },
         )
         return VisualizationMarkers(marker_cfg)
@@ -790,15 +1421,15 @@ class QuadcopterEnv(DirectRLEnv):
         marker_cfg = VisualizationMarkersCfg(
             prim_path="/Visuals/myMarkers",
             markers={
-                # "frame": sim_utils.UsdFileCfg(
-                #     usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
-                #     scale=(0.5, 0.5, 0.5),
-                # ),
-                "arrow_x": sim_utils.UsdFileCfg(
-                    usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
-                    scale=(0.1, 0.1, 1.0),
-                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),
+                "frame": sim_utils.UsdFileCfg(
+                    usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
+                    scale=(0.1, 0.1, 0.1),
                 ),
+                # "arrow_x": sim_utils.UsdFileCfg(
+                #     usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+                #     scale=(0.1, 0.1, 1.0),
+                #     visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0)),
+                # ),
             },
         )
         return VisualizationMarkers(marker_cfg)
@@ -822,378 +1453,4 @@ class QuadcopterEnv(DirectRLEnv):
         return VisualizationMarkers(marker_cfg)
 
 
-
-class GeometricVelocityController:
-
-    def __init__(self, num_env, mass, inertia, device):
-        self.num_env = num_env
-        self.mass = mass
-
-        # self.J = inertia.unsqueeze(0).to(device)    # (1,3,3)
-        # self.J = inertia.unsqueeze(0).to(device)  
-        self.J = inertia.unsqueeze(0).expand(self.num_env, 3, 3).to(device)
-        self.J_expand = inertia.unsqueeze(0).expand(self.num_env, 3, 3).to(device)
-        self.device = device
-        
-
-        # Position gains
-        self.k_p = 8.0 
-        self.k_d = 25.0
-
-        self.k_d_xy = 22.0
-        self.k_d_z = 80.0
-        
-        # FOR 1/200
-        # self.k_p = 16.0 # WORKED at 16.0
-        # self.k_d = 180.0
-
-        # Attitude gains
-        # self.kR = 2.5 #4.5
-        self.kW = 0.1 #0.3
-
-        self.kR = 1.25 #4.5
-        self.kv = 35.0  # velocity error gain for velocity-only control
-
-        # Gravity
-        self.g = torch.tensor([0., 0., -9.81], device=device).unsqueeze(0)
-
-
-    # --------------------
-    # Utility functions
-    # --------------------
-    def vee_map(self, M):
-        # Extract [M32 - M23, M13 - M31, M21 - M12]
-        return torch.stack((
-            M[:, 2, 1] - M[:, 1, 2],
-            M[:, 0, 2] - M[:, 2, 0],
-            M[:, 1, 0] - M[:, 0, 1],
-        ), dim=1)
-
-    def matrix_from_quat(self, q):
-        """ IsaacLab format: q = (w,x,y,z) """
-        w, x, y, z = q[:, 0], q[:, 1], q[:, 2], q[:, 3]
-
-        R = torch.zeros((q.shape[0], 3, 3), device=q.device)
-
-        R[:, 0, 0] = 1 - 2 * (y * y + z * z)
-        R[:, 0, 1] = 2 * (x * y - z * w)
-        R[:, 0, 2] = 2 * (x * z + y * w)
-
-        R[:, 1, 0] = 2 * (x * y + z * w)
-        R[:, 1, 1] = 1 - 2 * (x * x + z * z)
-        R[:, 1, 2] = 2 * (y * z - x * w)
-
-        R[:, 2, 0] = 2 * (x * z - y * w)
-        R[:, 2, 1] = 2 * (y * z + x * w)
-        R[:, 2, 2] = 1 - 2 * (x * x + y * y)
-
-        return R
-
-    def quat_rotate(self, q, v):
-        """Rotate vector v by quaternion q."""
-        R = self.matrix_from_quat(q)
-        return torch.bmm(R, v.unsqueeze(2)).squeeze(2)
-
-    # ----------------------------------------
-    # MAIN CONTROL STEP
-    # ----------------------------------------
-    def update(
-        self,
-        pos_w, vel_w, quat_w, omega_b,
-        desired_pos_w, desired_vel_w,
-        desired_yaw, desired_yaw_rate
-    ):
-        # ---------------------------
-        # 1) POSITION + VELOCITY ERRORS
-        # ---------------------------
-        pos_err = desired_pos_w - desired_pos_w
-        vel_err = desired_vel_w - vel_w
-
-        # ---------------------------
-        # 2) DESIRED ACCELERATION
-        # ---------------------------
-        # acc_des = self.k_d * vel_err + self.g
-        acc_des = torch.zeros_like(vel_w)
-        acc_des[:, 0] = self.k_d_xy * vel_err[:, 0]
-        acc_des[:, 1] = self.k_d_xy * vel_err[:, 1]
-        acc_des[:, 2] = self.k_d_z * vel_err[:, 2] + self.g[:, 2]
-
-        # ---------------------------
-        # 3) DESIRED BODY Z (b3c)
-        # ---------------------------
-        b3_c = acc_des / torch.norm(acc_des, dim=1, keepdim=True)
-
-        # ---------------------------
-        # 4) DESIRED BODY X,Y FROM YAW
-        # ---------------------------
-        cy = torch.cos(desired_yaw)
-        sy = torch.sin(desired_yaw)
-
-        b1_des = torch.tensor([[cy, sy, 0.0]], device=self.device)
-
-        b2_c = torch.cross(b3_c, b1_des, dim=1)
-        b2_c = b2_c / torch.norm(b2_c, dim=1, keepdim=True)
-
-        b1_c = torch.cross(b2_c, b3_c, dim=1)
-
-        # ---------------------------
-        # 5) DESIRED ROTATION MATRIX Rd
-        # ---------------------------
-        Rd = torch.zeros((1, 3, 3), device=self.device)
-        Rd[:, :, 0] = b1_c
-        Rd[:, :, 1] = b2_c
-        Rd[:, :, 2] = b3_c
-
-        # ---------------------------
-        # 6) CURRENT ROTATION MATRIX R
-        # ---------------------------
-        R = self.matrix_from_quat(quat_w)
-
-        # ---------------------------
-        # 7) THRUST COMMAND
-        # ---------------------------
-        # Project desired force onto current body z axis
-        b3 = R[:, :, 2]
-        thrust = self.mass * torch.sum(acc_des * b3, dim=1)
-
-        # ---------------------------
-        # 8) ROTATION ERROR
-        # ---------------------------
-        rotation_error = 0.5 * self.vee_map(
-            torch.bmm(Rd.transpose(1, 2), R) -
-            torch.bmm(R.transpose(1, 2), Rd)
-        )
-
-        # ---------------------------
-        # 9) DESIRED BODY RATES
-        # ---------------------------
-        omega_c = torch.zeros((1, 3), device=self.device)
-        omega_c[:, 2] = desired_yaw_rate
-
-        RRT = torch.bmm(R.transpose(1, 2), Rd)
-        omega_c_body = torch.bmm(RRT, omega_c.unsqueeze(2)).squeeze(2)
-
-        omega_err = omega_b - omega_c_body
-        print(f"Omega error: {omega_err}")
-
-        # ---------------------------
-        # 10) FEEDFORWARD TERM (Ω × JΩc)
-        # ---------------------------
-        J_omega_c = torch.bmm(self.J, omega_c.unsqueeze(2)).squeeze(2)
-        feedforward = torch.cross(omega_b, J_omega_c, dim=1)
-
-        # ---------------------------
-        # 11) TORQUE COMMAND
-        # ---------------------------
-        torque = -self.kR * rotation_error - self.kW * omega_err + feedforward
-
-        return thrust, torque
-    
-    def update_velocity_only_edit(
-        self,
-        vel_w, quat_w, omega_b,
-        desired_vel_w,
-        desired_yaw_rate
-    ):
-        """
-        Velocity-only control with yaw-rate tracking.
-        Inputs:
-            pos_w          : current position (1,3) [unused, velocity-only]
-            vel_w          : current linear velocity (1,3)
-            quat_w         : current orientation quaternion (1,4)
-            omega_b        : current body angular velocity (1,3)
-            desired_vel_w  : commanded linear velocity (1,3)
-            desired_yaw_rate : commanded body-frame yaw-rate (rad/s)
-        Outputs:
-            thrust  : scalar thrust along body z-axis
-            torque  : body-frame torque (1,3)
-        """
-        # vel_w = vel_w.view(1,3)
-        # quat_w = quat_w.view(1,4)
-        # omega_b = omega_b.view(1,3)
-        # desired_vel_w = desired_vel_w.view(1,3)
-        R = self.matrix_from_quat(quat_w)
-        
-        # ---------------------------
-        # 1) VELOCITY ERROR
-        # ---------------------------
-        ev = vel_w - desired_vel_w
-
-        # ---------------------------
-        # 2) Thrust magnitude (PD on velocity error + gravity compensation)
-        # ---------------------------
-        eps = 1e-8
-        # ev: (B,3)
-        e3 = torch.tensor([0., 0., 1.], device=self.device).view(1,3)      # (1,3)
-        e3 = e3.expand(ev.shape[0], -1)                                  # (B,3)
-
-        # A: desired total acceleration/force direction term, (B,3)
-        A = (-self.kv * ev) - (self.mass * self.g * e3 * 1.89) # 1.89 is a tuning factor to get better height tracking, can be removed if you want exact gravity compensation 
-        # A = (self.kv * ev) + (self.mass * self.g * e3)
-
-        # Re3: world-frame body z-axis (B,3)
-        Re3 = torch.matmul(R, e3.unsqueeze(-1)).squeeze(-1)              # (B,3)
-
-        # thrust per batch (scalar per item)
-        # f = dot(A, Re3)  (see sign conventions in your controller)
-        f = torch.sum(A * Re3, dim=1)                                    # (B,)
-
-        # desired body axes
-        A_norm = torch.norm(A, dim=1, keepdim=True).clamp_min(eps)       # (B,1)
-        b3c = A / A_norm                                                # (B,3)
-
-        b1d = R[:, :, 0]                                                 # (B,3)  (current body x-axis)
-
-        C = torch.cross(b3c, b1d, dim=1)                                 # (B,3)
-        C_norm = torch.norm(C, dim=1, keepdim=True).clamp_min(eps)       # (B,1)
-
-        b2c = C / C_norm                                                 # (B,3)
-        b1c = -torch.cross(b3c, C, dim=1) / C_norm                       # (B,3)
-
-        # Compose desired rotation matrix Rc with columns [b1c, b2c, b3c]
-        Rc = torch.stack((b1c, b2c, b3c), dim=2)                         # (B,3,3)
-        omega_c = torch.zeros_like(omega_b)
-        omega_c[:,2] = desired_yaw_rate  # yaw-rate tracking
-
-
-        er = 0.5*self.vee_map(Rc.transpose(1,2) @ R - R.transpose(1,2) @ Rc)
-        eOmega = omega_b - omega_c
-
-
-        J_omega_c = torch.bmm(self.J, omega_c.unsqueeze(2)).squeeze(2)
-
-        M = (-self.kR * er) - (self.kW * eOmega) + torch.cross(omega_b, J_omega_c, dim=1) 
-
-        # print(f"Velocity error: {ev}, Thrust command: {f}")
-
-        return f, M
-    
-    def update_velocity_only(
-        self,
-        vel_w, quat_w, omega_b,
-        desired_vel_w,
-        desired_yaw_rate
-    ):
-        """
-        Velocity-only control with yaw-rate tracking.
-        Inputs:
-            vel_w          : current linear velocity (1,3)
-            quat_w         : current orientation quaternion (1,4)
-            omega_b        : current body angular velocity (1,3)
-            desired_vel_w  : commanded linear velocity (1,3)
-            desired_yaw_rate : commanded body-frame yaw-rate (rad/s)
-        Outputs:
-            thrust  : scalar thrust along body z-axis
-            torque  : body-frame torque (1,3)
-        """
-        # Ensure batch dims
-        # vel_w = vel_w.view(1,3)
-        # quat_w = quat_w.view(1,4)
-        # omega_b = omega_b.view(1,3)
-        # desired_vel_w = desired_vel_w.view(1,3)
-
-        # ---------------------------
-        # 1) VELOCITY ERROR
-        # ---------------------------
-        vel_err = desired_vel_w - vel_w
-
-        # ---------------------------
-        # 2) DESIRED ACCELERATION (velocity-only)
-        # ---------------------------
-        acc_des = torch.zeros_like(vel_w)  # force command
-        acc_des[:, 0] = self.k_d_xy * vel_err[:, 0]
-        acc_des[:, 1] = self.k_d_xy * vel_err[:, 1]
-        acc_des[:, 2] = self.k_d_z * vel_err[:, 2] + self.g[:, 2]  # include gravity
-
-        # ---------------------------
-        # 3) BODY Z (thrust direction)
-        # ---------------------------
-        b3_c = acc_des / (torch.norm(acc_des, dim=1, keepdim=True))
-
-        # ---------------------------
-        # 4) DESIRED BODY X/Y (arbitrary, yaw free)
-        # ---------------------------
-        # current yaw from quaternion
-        # w, x, y, z = quat_w[:,0], quat_w[:,1], quat_w[:,2], quat_w[:,3]
-        
-        euler = euler_xyz_from_quat(quat_w)
-        # print("Quat shape: ", len(euler))
-        # print("Euler angles (rpy) shape: ", euler[0])
-
-        if isinstance(euler, tuple):
-            # Each tensor shape: (1,) → stack to (3,) → then batch to (env,3)
-            self.current_euler = torch.stack([e.squeeze(-1) for e in euler], dim=1)
-
-        # print("Current euler angles (rpy): ", self.current_euler.shape)
-        
-        cy = torch.cos(self.current_euler[:, 2])
-        sy = torch.sin(self.current_euler[:, 2])
-
-        # cp = torch.cos(self.current_euler[:, 1])
-        # sp = torch.sin(self.current_euler[:, 1])
-
-        # cr = torch.cos(self.current_euler[:, 0])
-        # sr = torch.sin(self.current_euler[:, 0])
-
-        # b1_des = torch.tensor([[cy, sy, torch.zeros_like(cy)]], device=self.device)
-        b1_des = torch.stack((cy, sy, torch.zeros_like(cy)), dim=1)  # shape (B,3)
-
-        # b1_des = torch.tensor([[1.0, 0.0, 0.0]], device=self.device)  # yaw-free reference
-        b2_c = torch.cross(b3_c, b1_des, dim=1)
-        b2_c /= (torch.norm(b2_c, dim=1, keepdim=True))
-        b1_c = torch.cross(b2_c, b3_c, dim=1)
-
-        
-
-        # ---------------------------
-        # 5) DESIRED ROTATION MATRIX Rd
-        # ---------------------------
-        # Rd = torch.zeros((1,3,3), device=self.device)
-        # Rd[:,:,0] = b1_c
-        # Rd[:,:,1] = b2_c
-        # Rd[:,:,2] = b3_c
-        Rd = torch.stack((b1_c, b2_c, b3_c), dim=2)
-
-        # ---------------------------
-        # 6) CURRENT ROTATION MATRIX R
-        # ---------------------------
-        R = self.matrix_from_quat(quat_w)
-
-        # ---------------------------
-        # 7) THRUST
-        # ---------------------------
-        b3 = R[:, :, 2]  # current body z-axis
-        thrust = self.mass * torch.sum(acc_des * b3, dim=1)
-
-        # ---------------------------
-        # 8) ROTATION ERROR (roll/pitch only, yaw ignored)
-        # ---------------------------
-        rotation_error = 0.5 * self.vee_map(
-            torch.bmm(Rd.transpose(1,2), R) - torch.bmm(R.transpose(1,2), Rd)
-        )
-        rotation_error[:,2] = 0.0  # zero yaw error
-
-        # ---------------------------
-        # 9) DESIRED BODY RATES
-        # ---------------------------
-        omega_c = torch.zeros_like(omega_b)
-        # print("Omega command shape: ", omega_c.shape)
-        # print("Desired yaw rate shape: ", desired_yaw_rate.shape)
-        omega_c[:, 2] = desired_yaw_rate[:]  # yaw-rate tracking
-
-        omega_err = omega_b - omega_c
-
-        # ---------------------------
-        # 10) FEEDFORWARD
-        # ---------------------------
-        
-        J_omega_c = torch.bmm(self.J_expand, omega_c.unsqueeze(2)).squeeze(2)
-        feedforward = torch.cross(omega_b, J_omega_c, dim=1)
-
-        # ---------------------------
-        # 11) TORQUE
-        # ---------------------------
-        torque = -self.kR * rotation_error - self.kW * omega_err + feedforward
-
-        return thrust, torque
 

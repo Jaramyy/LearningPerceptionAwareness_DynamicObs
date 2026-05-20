@@ -215,8 +215,6 @@ class publishTF(Node):
         path.poses.append(pose)
         self.pub_path.publish(path)
 
-
-
 class insect_MLP(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(insect_MLP, self).__init__()
@@ -255,9 +253,7 @@ class setpose_from_goal_pose_topic(Node):
     def get_goal_position(self):
         return self.goal_position
 
-
 class GeometricVelocityController:
-
     def __init__(self, mass, inertia, device):
         self.mass = mass
         self.J = inertia.unsqueeze(0).to(device)    # (1,3,3)
@@ -510,8 +506,6 @@ class GeometricVelocityController:
 
         return f, M
 
-
-
     def update_velocity_only(
         self,
         pos_w, vel_w, quat_w, omega_b,
@@ -656,6 +650,16 @@ def main():
     cfg.func("/World/defaultGroundPlane", cfg)
     cfg = sim_utils.DistantLightCfg(intensity=3000.0, color=(0.75, 0.75, 0.75))
     cfg.func("/World/Light", cfg)
+    # from isaaclab.assets import Articulation, AssetBaseCfg
+    
+    # ground = AssetBaseCfg(
+    #     prim_path="/World/defaultGroundPlane",
+    #     spawn=sim_utils.GroundPlaneCfg(),
+    # )
+
+    # dome_light = AssetBaseCfg(
+    #     prim_path="/World/Light", spawn=sim_utils.DomeLightCfg(intensity=3000.0, color=(0.75, 0.75, 0.75))
+    # )
 
     robot_cfg = AGILE_CFG.replace(prim_path="/World/AgileDrone")
     robot_cfg.spawn.func("/World/AgileDrone", robot_cfg.spawn, translation=robot_cfg.init_state.pos)

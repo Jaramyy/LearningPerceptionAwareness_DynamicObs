@@ -73,6 +73,8 @@ from isaaclab_tasks.utils.hydra import hydra_task_config
 # Import extensions to set up environment tasks
 import PerceptionAwareDrone.tasks  # noqa: F401
 
+import wandb
+
 @hydra_task_config(args_cli.task, "rl_games_cfg_entry_point")
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: dict):
     """Train with RL-Games agent."""
@@ -88,6 +90,19 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     agent_cfg["params"]["config"]["max_epochs"] = (
         args_cli.max_iterations if args_cli.max_iterations is not None else agent_cfg["params"]["config"]["max_epochs"]
     )
+
+    wandb.init(
+        project='NAV_PA',
+        # entity=args_cli.wandb_entity,
+        # name=experiment_name,
+        sync_tensorboard=True,
+        monitor_gym=True,
+        save_code=True,
+    )
+    if not wandb.run.resumed:
+        wandb.config.update({"env_cfg": env_cfg.to_dict()})
+        wandb.config.update({"agent_cfg": agent_cfg})
+    
     if args_cli.checkpoint is not None:
         resume_path = retrieve_file_path(args_cli.checkpoint)
         agent_cfg["params"]["load_checkpoint"] = True

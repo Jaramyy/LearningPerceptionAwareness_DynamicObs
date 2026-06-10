@@ -23,6 +23,7 @@ AGILE_CFG = ArticulationCfg(
         # usd_path=f"/home/jaramy/thesis_ws/AgiDrone/Drone_Full_URDFV3/Drone_Full_URDFV4_3.usd", # for notebook 
         usd_path=f"/home/jaramy/thesis_ws/AgiDrone/Drone_Full_URDFV3/agi_drone_rev3.usda", # NEW DRONE 1.5Kg
         # #usd_path=f"/home/jaramy/jaramy_ws/AgiDrone/Drone_Full_URDFV3/Drone_Full_URDFV4_3.usd", #for Shigaki's lab PC
+        activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
             retain_accelerations=False,
@@ -65,5 +66,6 @@ AGILE_CFG = ArticulationCfg(
             damping=0.0,
         ),
     },
+    
 )
 """Configuration for the Agile quadcopter."""

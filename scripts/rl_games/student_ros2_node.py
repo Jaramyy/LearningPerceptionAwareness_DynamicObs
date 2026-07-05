@@ -396,31 +396,40 @@ class StudentOffboardNode(Node):
             norm_obs = self._normalizer.normalize(obs)
             actions = self._student(norm_obs)   # (1, 4) in [-1, 1]
 
+        # Student policy outputs BODY-FRAME FLU velocities (not world frame).
+        # The student was distilled from body-frame-only obs (lin_vel_b, goal_dir_b,
+        # grav_b) so it cannot know absolute world heading — it outputs ego-centric
+        # commands that must be rotated to world frame using the current PX4 yaw.
+        #
+        # action[0] = yaw_rate  (CCW positive in Isaac FLU)
+        # action[1] = vx_b      (FLU forward velocity)
+        # action[2] = vy_b      (FLU left velocity)
+        # action[3] = vz_b      (FLU up velocity)
         yaw_rate_flu = float(actions[0, 0]) * self._eff_max_yaw
         vx_b = float(actions[0, 1]) * self._eff_max_vel
         vy_b = float(actions[0, 2]) * self._eff_max_vel
         vz_b = float(actions[0, 3]) * self._eff_max_vel
 
-        # Body FLU → world NEUp using NED CW yaw:
-        #   forward unit = (cos yaw_cw, sin yaw_cw) in (N, E)
-        #   left    unit = (sin yaw_cw, -cos yaw_cw) in (N, E)
-        # Verified: N-facing(0°): fwd→N✓, left→W✓
-        #           E-facing(90°): fwd→E✓, left→N✓
+        # FLU body → NEUp world using NED CW yaw (px4_yaw):
+        #   forward unit in (N,E) = ( cos yaw_cw,  sin yaw_cw)
+        #   left    unit in (N,E) = ( sin yaw_cw, -cos yaw_cw)
+        # Verified: yaw=0° (N): fwd→N, left→W ✓   yaw=90° (E): fwd→E, left→N ✓
         cos_y = math.cos(px4_yaw)
         sin_y = math.sin(px4_yaw)
-        vx_world = vx_b * cos_y + vy_b * sin_y   # North (NEUp)
-        vy_world = vx_b * sin_y - vy_b * cos_y   # East  (NEUp)
+        vx_world = vx_b * cos_y + vy_b * sin_y   # North component
+        vy_world = vx_b * sin_y - vy_b * cos_y   # East component
 
         # NEUp → NED with clamping
         v_ned_n = max(-self._eff_max_vel, min(self._eff_max_vel, vx_world))
         v_ned_e = max(-self._eff_max_vel, min(self._eff_max_vel, vy_world))
-        # Vertical: cap downward at max_vz (conservative) but allow full upward speed
+        # Vertical: Down = -Up; cap downward conservatively, allow full upward speed
         v_ned_d_raw = -vz_b
         v_ned_d = max(-self._eff_max_vel, min(self._max_vz_down, v_ned_d_raw))
         # Altitude floor: if below goal_alt-0.5m, refuse further descent
         pD = pos[2]
         if pD > self._alt_floor_D and v_ned_d > 0.0:
             v_ned_d = 0.0
+        # Yaw: Isaac CCW (Z-up) → PX4 NED CW (Z-down), so negate
         yawspeed_ned = max(-self._eff_max_yaw, min(self._eff_max_yaw, -yaw_rate_flu))
 
         self._v_ned = (v_ned_n, v_ned_e, v_ned_d)

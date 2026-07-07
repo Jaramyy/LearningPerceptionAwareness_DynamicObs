@@ -51,7 +51,7 @@ import PerceptionAwareDrone.tasks  # noqa: F401
 LIDAR_START = 14
 LIDAR_END = 74
 FRONT_BEAM_INDICES = [28, 29, 30, 31, 32]
-STUDENT_OBS_DIM = 14 + len(FRONT_BEAM_INDICES)  # 19
+STUDENT_OBS_DIM = 11 + len(FRONT_BEAM_INDICES)  # 16  (no gravity)
 LIDAR_RANGE = 5.0
 
 OBS_NAMES = [
@@ -61,9 +61,6 @@ OBS_NAMES = [
     "ang_vel_x  (rad/s)   ",
     "ang_vel_y  (rad/s)   ",
     "ang_vel_z  (rad/s)   ",
-    "gravity_x            ",
-    "gravity_y            ",
-    "gravity_z            ",
     "goal_dir_x (fwd)     ",
     "goal_dir_y (left)    ",
     "goal_dir_z (up)      ",
@@ -130,7 +127,7 @@ def _quat_to_rot(q_wxyz: torch.Tensor) -> torch.Tensor:
 
 def _ned_to_flu_mat(R_P: torch.Tensor, v_ned: torch.Tensor) -> torch.Tensor:
     v_frd = R_P.T @ v_ned
-    return torch.stack([v_frd[0], -v_frd[1], -v_frd[2]])
+    return torch.stack([v_frd[0], v_frd[1], -v_frd[2]])  # only negate Z
 
 
 def _isaac_to_R_px4(q_isaac: torch.Tensor) -> torch.Tensor:
@@ -144,9 +141,10 @@ def _isaac_to_R_px4(q_isaac: torch.Tensor) -> torch.Tensor:
 # ── Isaac native obs extractor ────────────────────────────────────────────────
 
 def _extract_isaac_obs(teacher_obs_77: torch.Tensor) -> torch.Tensor:
-    base  = teacher_obs_77[0, :LIDAR_START]
-    front = teacher_obs_77[0, LIDAR_START:LIDAR_END][FRONT_BEAM_INDICES]
-    return torch.cat([base, front])  # (19,)  beams already normalized [0,1] in env
+    lin_ang = teacher_obs_77[0, 0:6]               # lin_vel + ang_vel
+    goal    = teacher_obs_77[0, 9:LIDAR_START]      # goal_dir + dist_2d + dist_z (skip gravity [6:9])
+    front   = teacher_obs_77[0, LIDAR_START:LIDAR_END][FRONT_BEAM_INDICES]
+    return torch.cat([lin_ang, goal, front])        # (16,)
 
 
 # ── PX4-style obs builder (mirrors student_ros2_node._build_obs) ──────────────
@@ -162,17 +160,14 @@ def _build_px4_obs(raw_env, goal_ned: tuple) -> torch.Tensor:
     # NEUp -> NED (flip z)
     pos_ned = torch.tensor([pos_neup[0], pos_neup[1], -pos_neup[2]], device=device)
     vel_ned = torch.tensor([vel_neup[0], vel_neup[1], -vel_neup[2]], device=device)
-    # FLU -> FRD (negate y,z)
-    ang_frd = torch.tensor([ang_flu[0].item(), -ang_flu[1].item(), -ang_flu[2].item()], device=device)
+    # Isaac body -> FRD: only negate Z (pitch Y also negated for FRD sign convention)
+    ang_frd = torch.tensor([ang_flu[0].item(), -ang_flu[1].item(), ang_flu[2].item()], device=device)
 
     R_P = _isaac_to_R_px4(q_isaac)
 
-    vel_flu_recon  = _ned_to_flu_mat(R_P, vel_ned)
-    ang_flu_recon  = torch.tensor([ang_frd[0].item(), -ang_frd[1].item(), -ang_frd[2].item()], device=device)
-
-    grav_ned = torch.tensor([0., 0., 1.], device=device)
-    grav_flu = _ned_to_flu_mat(R_P, grav_ned)
-    grav_flu = grav_flu / (grav_flu.norm() + 1e-6)
+    vel_flu_recon = _ned_to_flu_mat(R_P, vel_ned)
+    # FRD -> Isaac body: only negate pitch Y, keep yaw Z same sign
+    ang_flu_recon = torch.tensor([ang_frd[0].item(), -ang_frd[1].item(), ang_frd[2].item()], device=device)
 
     gN, gE, gD = goal_ned
     pN, pE, pD = pos_ned.tolist()
@@ -191,7 +186,7 @@ def _build_px4_obs(raw_env, goal_ned: tuple) -> torch.Tensor:
     beams = beams.clamp(max=LIDAR_RANGE) / LIDAR_RANGE  # normalize to [0,1]
 
     return torch.cat([
-        vel_flu_recon, ang_flu_recon, grav_flu, goal_flu,
+        vel_flu_recon, ang_flu_recon, goal_flu,
         torch.tensor([dist_2d, dist_z], device=device),
         beams,
     ])

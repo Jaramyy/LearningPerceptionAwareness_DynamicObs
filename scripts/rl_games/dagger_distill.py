@@ -1,10 +1,10 @@
 """
-DAgger policy distillation: privileged teacher (77D) -> onboard student (19D).
+DAgger policy distillation: privileged teacher (77D) -> onboard student (16D).
 
 Teacher obs layout (77D, from QuadcopterEnvCfg):
     [0:3]   root_lin_vel_b      -- IMU
     [3:6]   root_ang_vel_b      -- IMU gyro
-    [6:9]   projected_gravity_b -- IMU
+    [6:9]   projected_gravity_b -- IMU  (dropped for student: redundant with ang_vel for a level drone)
     [9:12]  unit_desired_pos_b  -- GPS/waypoint direction (3D unit vec)
     [12]    desired_dist_2d     -- 2D distance to goal
     [13]    desired_dist_z      -- Z distance to goal
@@ -12,9 +12,13 @@ Teacher obs layout (77D, from QuadcopterEnvCfg):
     [74:76] nearest_obs_dir_b   -- PRIVILEGED (requires 360° scan; teacher only)
     [76]    potential            -- PRIVILEGED (Gaussian of nearest obstacle; teacher only)
 
-Student obs (19D) — deployable with partial front-facing LiDAR only:
-    [0:14]  base state (same as teacher)
-    [14:19] 5 front-facing beams (teacher indices 28–32, covering ±12° around forward)
+Student obs (16D) — deployable with partial front-facing LiDAR only:
+    [0:3]   root_lin_vel_b      -- lin velocity in FLU body frame
+    [3:6]   root_ang_vel_b      -- ang velocity in FLU body frame
+    [6:9]   unit_desired_pos_b  -- unit vector to goal in FLU body frame
+    [9]     desired_dist_2d     -- 2D distance to goal
+    [10]    desired_dist_z      -- Z distance to goal
+    [11:16] 5 front-facing beams (teacher indices 28–32, covering ±12° around forward)
             beam_angle = -179 + beam_idx × 6°
             beam 28: -11°, 29: -5°, 30: +1°, 31: +7°, 32: +13°
 
@@ -123,19 +127,21 @@ POTENTIAL_IDX = 76  # potential scalar — privileged, dropped for student
 #   selected range: beams 28–32 cover ±12° around forward
 FRONT_BEAM_INDICES = [28, 29, 30, 31, 32]  # ±12° FOV
 
-STUDENT_OBS_DIM = 14 + len(FRONT_BEAM_INDICES)  # = 19
+STUDENT_OBS_DIM = 11 + len(FRONT_BEAM_INDICES)  # = 16  (no gravity)
 
 
 def extract_student_obs(teacher_obs: torch.Tensor) -> torch.Tensor:
-    """Slice 19-dim student obs from the 77-dim teacher obs tensor.
+    """Slice 16-dim student obs from the 77-dim teacher obs tensor.
 
-    Drops: full 360° lidar (60→5 beams), nearest_obs_dir_b, potential.
-    Keeps: base state [0:14] + 5 front-facing lidar beams.
+    Drops: projected_gravity_b [6:9], full 360° lidar (60→5 beams),
+           nearest_obs_dir_b, potential.
+    Keeps: lin_vel [0:6] + goal+dist [9:14] + 5 front-facing beams.
     """
-    base = teacher_obs[:, :LIDAR_START]            # (N, 14)
-    lidar = teacher_obs[:, LIDAR_START:LIDAR_END]  # (N, 60)
-    front = lidar[:, FRONT_BEAM_INDICES]           # (N, 5)
-    return torch.cat([base, front], dim=-1)        # (N, 19)
+    lin_ang = teacher_obs[:, 0:6]                  # (N, 6)  lin_vel + ang_vel
+    goal    = teacher_obs[:, 9:LIDAR_START]         # (N, 5)  goal_dir + dist_2d + dist_z
+    lidar   = teacher_obs[:, LIDAR_START:LIDAR_END] # (N, 60)
+    front   = lidar[:, FRONT_BEAM_INDICES]          # (N, 5)
+    return torch.cat([lin_ang, goal, front], dim=-1)  # (N, 16)
 
 
 # ── Networks ────────────────────────────────────────────────────────────────
@@ -453,7 +459,7 @@ def main():
 
     print("\n[INFO] Starting DAgger distillation")
     print(f"       Teacher obs dim : {TEACHER_OBS_DIM}")
-    print(f"       Student obs dim : {STUDENT_OBS_DIM}  (14 base state + 5 front beams, no potential/nearest_obs)")
+    print(f"       Student obs dim : {STUDENT_OBS_DIM}  (11 base state no gravity + 5 front beams, no potential/nearest_obs)")
     print(f"       Front beams     : indices {FRONT_BEAM_INDICES}  (±12° FOV, beam_angle = -179 + i×6°)")
     print(f"       Hidden dims     : {args_cli.hidden_dims}")
     print(f"       Num envs        : {args_cli.num_envs}")

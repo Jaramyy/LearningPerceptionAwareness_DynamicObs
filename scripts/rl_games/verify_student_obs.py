@@ -35,7 +35,7 @@ from px4_msgs.msg import VehicleAttitude, VehicleLocalPosition, SensorCombined
 from sensor_msgs.msg import LaserScan
 
 # ── Obs layout ───────────────────────────────────────────────────────────────
-STUDENT_OBS_DIM = 19
+STUDENT_OBS_DIM = 16
 LIDAR_RANGE = 5.0
 BEAM_ANGLES_DEG = [-11.0, -5.0, 1.0, 7.0, 13.0]
 
@@ -46,9 +46,6 @@ OBS_NAMES = [
     "ang_vel_x  roll (r/s)",
     "ang_vel_y  pitch(r/s)",
     "ang_vel_z  yaw  (r/s)",
-    "gravity_x  (FLU, unit)",
-    "gravity_y  (FLU, unit)",
-    "gravity_z  (FLU, unit)",
     "goal_dir_x fwd  (unit)",
     "goal_dir_y left (unit)",
     "goal_dir_z up   (unit)",
@@ -70,9 +67,6 @@ SANITY = [
     (-8.0,  8.0),   # ang_vel_x
     (-8.0,  8.0),   # ang_vel_y
     (-8.0,  8.0),   # ang_vel_z
-    (-0.3,  0.3),   # gravity_x  (near 0 when level)
-    (-0.3,  0.3),   # gravity_y  (near 0 when level)
-    (-1.1, -0.9),   # gravity_z  (near -1 when level)
     (-1.1,  1.1),   # goal_dir_x
     (-1.1,  1.1),   # goal_dir_y
     (-1.1,  1.1),   # goal_dir_z
@@ -108,7 +102,7 @@ def _ned_to_flu(q_wxyz, v_ned):
     """
     w, x, y, z = q_wxyz
     v_frd = _quat_apply((w, -x, -y, -z), v_ned)   # conjugate = NED -> FRD
-    return (v_frd[0], -v_frd[1], -v_frd[2])        # FRD -> FLU
+    return (v_frd[0], v_frd[1], -v_frd[2])         # FRD -> Isaac body (only negate Z)
 
 
 def _norm3(v):
@@ -224,14 +218,10 @@ class ObsMonitorNode(Node):
         # [0:3] Linear velocity FLU body
         vel_flu = _ned_to_flu(q, vel_ned)
 
-        # [3:6] Angular velocity FLU body
-        ang_flu = (ang_frd[0], -ang_frd[1], -ang_frd[2])
+        # [3:6] Angular velocity in Isaac body frame (FRD -> Isaac: only negate pitch Y)
+        ang_flu = (ang_frd[0], -ang_frd[1], ang_frd[2])
 
-        # [6:9] Projected gravity in FLU body (NED down = (0,0,+1))
-        grav_flu = _ned_to_flu(q, (0.0, 0.0, 1.0))
-        grav_flu = _normalize3(grav_flu)
-
-        # [9:12] Unit goal direction in FLU body
+        # [6:9] Unit goal direction in FLU body
         gN, gE, gD = self._goal_ned
         pN, pE, pD = pos
         dN, dE, dD = gN - pN, gE - pE, gD - pD
@@ -253,7 +243,6 @@ class ObsMonitorNode(Node):
         return (
             list(vel_flu)
             + list(ang_flu)
-            + list(grav_flu)
             + list(unit_goal)
             + [dist_2d, dist_z]
             + beams
@@ -318,7 +307,6 @@ def main():
     print("Expected values (drone level, stationary, goal ahead):")
     print("  lin_vel_x/y/z  ≈ 0.0")
     print("  ang_vel_x/y/z  ≈ 0.0")
-    print("  gravity_z      ≈ -1.0  (gravity down = -Z in FLU)")
     print("  goal_dir_x     ≈ +1.0  (goal is ahead when facing goal)")
     print("  dist_2d        = horizontal distance to goal")
     print("  dist_z         = altitude diff (+ means goal is above)")

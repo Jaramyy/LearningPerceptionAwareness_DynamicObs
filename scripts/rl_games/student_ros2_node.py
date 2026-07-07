@@ -3,14 +3,13 @@
 No Isaac Lab required — observations are built from PX4 uXRCE-DDS topics and a
 ROS2 LiDAR topic.  Works identically for Gazebo sim2sim and real hardware.
 
-Observation layout (19D, must match dagger_distill.py):
+Observation layout (16D, must match dagger_distill.py):
   [0:3]   root_lin_vel_b      linear velocity in FLU body frame (m/s)
   [3:6]   root_ang_vel_b      angular velocity in FLU body frame (rad/s)
-  [6:9]   projected_gravity_b unit gravity vector in FLU body frame
-  [9:12]  unit_desired_pos_b  unit vector to goal in FLU body frame
-  [12]    desired_dist_2d     horizontal distance to goal (m)
-  [13]    desired_dist_z      vertical distance to goal, + = goal above (m)
-  [14:19] 5 front LiDAR beams angles -11,-5,+1,+7,+13 deg relative to forward (m)
+  [6:9]   unit_desired_pos_b  unit vector to goal in FLU body frame
+  [9]     desired_dist_2d     horizontal distance to goal (m)
+  [10]    desired_dist_z      vertical distance to goal, + = goal above (m)
+  [11:16] 5 front LiDAR beams angles -11,-5,+1,+7,+13 deg relative to forward (m)
 
 PX4 ROS2 topics consumed:
   /fmu/out/vehicle_local_position   (position + velocity in NED)
@@ -65,7 +64,7 @@ from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Bool
 
 # ── Obs constants (must match dagger_distill.py) ─────────────────────────────
-STUDENT_OBS_DIM = 19
+STUDENT_OBS_DIM = 16
 ACTION_DIM = 4
 LIDAR_RANGE = 5.0           # training max range (m)
 BEAM_ANGLES_DEG = [-11.0, -5.0, 1.0, 7.0, 13.0]   # beams 28-32 at ±12° FOV
@@ -139,8 +138,9 @@ def _ned_to_flu(q_frd_ned_wxyz: tuple, v_ned: tuple) -> tuple:
     # Inverse (conjugate for unit quaternion): rotates NED -> FRD body
     q_inv = (w, -x, -y, -z)
     v_frd = _quat_apply(q_inv, v_ned)
-    # FRD -> FLU: negate Y (right->left) and Z (down->up)
-    return (v_frd[0], -v_frd[1], -v_frd[2])
+    # FRD -> Isaac body: Isaac +Y = physical Right (same as FRD +Y), only Z differs.
+    # Only negate Z (Down->Up). Do NOT negate Y.
+    return (v_frd[0], v_frd[1], -v_frd[2])
 
 
 def _norm3(v: tuple) -> float:
@@ -303,7 +303,7 @@ class StudentOffboardNode(Node):
 
         # Control timer
         self._step = 0
-        self.create_timer(1.0 / 75.0, self._control_cb)
+        self.create_timer(1.0 / 100.0, self._control_cb)
 
         self.get_logger().info(
             f"StudentOffboard ready | goal_NED={goal_ned} | "
@@ -340,35 +340,31 @@ class StudentOffboardNode(Node):
         # [0:3] Linear velocity in FLU body frame
         vel_flu = _ned_to_flu(q, vel_ned)
 
-        # [3:6] Angular velocity in FLU body frame (FRD: negate Y and Z)
-        ang_flu = (ang_vel_frd[0], -ang_vel_frd[1], -ang_vel_frd[2])
+        # [3:6] Angular velocity in Isaac body frame.
+        # Pitch (Y): FRD +Y=Right nose-up positive, Isaac +Y=Right nose-down positive → negate.
+        # Yaw  (Z): both FRD and Isaac have +Z-axis positive = right turn → keep sign.
+        ang_flu = (ang_vel_frd[0], -ang_vel_frd[1], ang_vel_frd[2])
 
-        # [6:9] Projected gravity in FLU body frame
-        # Gravity in NED = unit down vector = (0, 0, +1) in NED
-        grav_flu = _ned_to_flu(q, (0.0, 0.0, 1.0))
-        grav_flu = _normalize3(grav_flu)
-
-        # [9:12] Unit vector from drone to goal in FLU body frame
+        # [6:9] Unit vector from drone to goal in FLU body frame
         gN, gE, gD = self._goal_ned
         pN, pE, pD = pos
         dN, dE, dD = gN - pN, gE - pE, gD - pD
         goal_flu = _ned_to_flu(q, (dN, dE, dD))
         unit_goal_flu = _normalize3(goal_flu)
 
-        # [12] 2D horizontal distance (m)
+        # [9] 2D horizontal distance (m)
         dist_2d = math.sqrt(dN**2 + dE**2)
 
-        # [13] Vertical distance: positive = goal is above drone
+        # [10] Vertical distance: positive = goal is above drone
         # In NED: D decreases as altitude increases, so goal above means gD < pD
         dist_z = pD - gD   # positive when goal is above (NED D is negative altitude)
 
-        # [14:19] Front 5 LiDAR beams normalized to [0,1] — matches Isaac training obs
+        # [11:16] Front 5 LiDAR beams normalized to [0,1] — matches Isaac training obs
         beams = [b / LIDAR_RANGE for b in _extract_front_beams(lidar_msg, BEAM_ANGLES_DEG, LIDAR_RANGE)]
 
         obs_list = (
             list(vel_flu)
             + list(ang_flu)
-            + list(grav_flu)
             + list(unit_goal_flu)
             + [dist_2d, dist_z]
             + beams
@@ -410,14 +406,15 @@ class StudentOffboardNode(Node):
         vy_b = float(actions[0, 2]) * self._eff_max_vel
         vz_b = float(actions[0, 3]) * self._eff_max_vel
 
-        # FLU body → NEUp world using NED CW yaw (px4_yaw):
-        #   forward unit in (N,E) = ( cos yaw_cw,  sin yaw_cw)
-        #   left    unit in (N,E) = ( sin yaw_cw, -cos yaw_cw)
-        # Verified: yaw=0° (N): fwd→N, left→W ✓   yaw=90° (E): fwd→E, left→N ✓
+        # Isaac body (+X=fwd, +Y=right) → NEUp world using NED CW yaw (px4_yaw):
+        #   fwd   unit in NE = ( cos y,  sin y)
+        #   right unit in NE = (-sin y,  cos y)
+        # Verified: yaw=0: fwd→N[1,0]✓ right→E[0,+1]✓
+        #           yaw=90: fwd→E[0,1]✓ right→S[-1,0]✓
         cos_y = math.cos(px4_yaw)
         sin_y = math.sin(px4_yaw)
-        vx_world = vx_b * cos_y + vy_b * sin_y   # North component
-        vy_world = vx_b * sin_y - vy_b * cos_y   # East component
+        vx_world = vx_b * cos_y - vy_b * sin_y   # North component
+        vy_world = vx_b * sin_y + vy_b * cos_y   # East component
 
         # NEUp → NED with clamping
         v_ned_n = max(-self._eff_max_vel, min(self._eff_max_vel, vx_world))
@@ -429,8 +426,9 @@ class StudentOffboardNode(Node):
         pD = pos[2]
         if pD > self._alt_floor_D and v_ned_d > 0.0:
             v_ned_d = 0.0
-        # Yaw: Isaac CCW (Z-up) → PX4 NED CW (Z-down), so negate
-        yawspeed_ned = max(-self._eff_max_yaw, min(self._eff_max_yaw, -yaw_rate_flu))
+        # Yaw: both Isaac (CCW about Z-up) and PX4 NED (CW about Z-down) define
+        # positive = right turn (CW on compass).  Same sign — no negation.
+        yawspeed_ned = max(-self._eff_max_yaw, min(self._eff_max_yaw, yaw_rate_flu))
 
         self._v_ned = (v_ned_n, v_ned_e, v_ned_d)
         self._yawspeed = yawspeed_ned
@@ -450,7 +448,7 @@ class StudentOffboardNode(Node):
                 f"vel_NED=({v_ned_n:+.2f},{v_ned_e:+.2f},{v_ned_d:+.2f}) | "
                 f"yaw_spd={yawspeed_ned:+.2f} | "
                 f"dist={dist:.2f}m | "
-                f"beams(norm)={[f'{b:.2f}' for b in obs[0, 14:].tolist()]}"
+                f"beams(norm)={[f'{b:.2f}' for b in obs[0, 11:].tolist()]}"
             )
         self._step += 1
 

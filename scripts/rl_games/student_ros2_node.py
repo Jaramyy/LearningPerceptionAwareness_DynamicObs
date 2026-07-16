@@ -482,6 +482,17 @@ class StudentOffboardNode(Node):
         vy_b = float(actions[0, 2]) * self._eff_max_vel
         vz_b = float(actions[0, 3]) * self._eff_max_vel
 
+        # Safety clamp: scale down forward speed based on nearest obstacle in
+        # forward 3 sectors (sec1, sec2, sec3 = obs[12:15], normalized [0,1]).
+        # At 0.4 normalized (2 m), forward speed is already at 50%; at 0.2 (1 m) it's 0%.
+        # Lateral (vy_b) and yaw are NOT clamped so the student can still steer away.
+        CLAMP_START = 0.4   # fraction of LIDAR_RANGE where clamping begins (2.0 m)
+        CLAMP_STOP  = 0.20  # fraction where forward speed → 0                (1.0 m)
+        fwd_sector_min = min(obs[0, 12].item(), obs[0, 13].item(), obs[0, 14].item())
+        if fwd_sector_min < CLAMP_START:
+            fwd_scale = max(0.0, (fwd_sector_min - CLAMP_STOP) / (CLAMP_START - CLAMP_STOP))
+            vx_b *= fwd_scale
+
         # Isaac body FLU (+X=fwd, +Y=left) → NED world using PX4 yaw (CW from North):
         #   fwd  unit in NE = (cos y,  sin y)
         #   left unit in NE = (sin y, -cos y)   [90° CW from fwd in the NE map plane]

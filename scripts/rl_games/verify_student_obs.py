@@ -1,4 +1,4 @@
-"""Live monitor: print 19D student obs built from real PX4 + LiDAR sensors.
+"""Live monitor: print 16D student obs built from real PX4 + LiDAR sensors.
 
 No Isaac Lab needed.  Run this alongside student_ros2_node.py (or before
 arming) to verify the obs look physically correct before sim2real transfer.
@@ -37,7 +37,11 @@ from sensor_msgs.msg import LaserScan
 # ── Obs layout ───────────────────────────────────────────────────────────────
 STUDENT_OBS_DIM = 16
 LIDAR_RANGE = 5.0
-BEAM_ANGLES_DEG = [-11.0, -5.0, 1.0, 7.0, 13.0]
+# 5 sectors matching Isaac FLU body-frame angle order.
+# Isaac FLU: negative angles = RIGHT, positive = LEFT.
+# Gazebo ROS LaserScan (FLU): same — negative angles = RIGHT.
+# Sector 0 = RIGHT (most negative), sector 4 = LEFT (most positive).
+BEAM_SECTOR_DEG = [(-90.0, -54.0), (-54.0, -18.0), (-18.0, 18.0), (18.0, 54.0), (54.0, 90.0)]
 
 OBS_NAMES = [
     "lin_vel_x  fwd  (m/s)",
@@ -51,11 +55,11 @@ OBS_NAMES = [
     "goal_dir_z up   (unit)",
     "dist_2d    horiz(m)   ",
     "dist_z     vert (m)   ",
-    "beam_28  -11 deg [0-1]",
-    "beam_29   -5 deg [0-1]",
-    "beam_30   +1 deg [0-1]",
-    "beam_31   +7 deg [0-1]",
-    "beam_32  +13 deg [0-1]",
+    "sec0 RIGHT -90:-54 [0-1]",
+    "sec1 R-ctr -54:-18 [0-1]",
+    "sec2 fwd   -18:+18 [0-1]",
+    "sec3 L-ctr +18:+54 [0-1]",
+    "sec4 LEFT  +54:+90 [0-1]",
 ]
 
 # Expected range when drone is level and stationary (for quick sanity check)
@@ -102,7 +106,7 @@ def _ned_to_flu(q_wxyz, v_ned):
     """
     w, x, y, z = q_wxyz
     v_frd = _quat_apply((w, -x, -y, -z), v_ned)   # conjugate = NED -> FRD
-    return (v_frd[0], v_frd[1], -v_frd[2])         # FRD -> Isaac body (only negate Z)
+    return (v_frd[0], -v_frd[1], -v_frd[2])         # FRD → FLU: negate Y (right→left) and Z (down→up)
 
 
 def _norm3(v):
@@ -114,17 +118,20 @@ def _normalize3(v, eps=1e-6):
     return (v[0] / n, v[1] / n, v[2] / n)
 
 
-def _extract_beams(msg: LaserScan, angles_deg, max_range):
-    beams = []
+def _extract_beams(msg: LaserScan, sectors_deg, max_range):
+    """Return the nearest obstacle range within each angular sector."""
     n = len(msg.ranges)
-    for deg in angles_deg:
-        idx = round((math.radians(deg) - msg.angle_min) / msg.angle_increment)
-        idx = max(0, min(n - 1, idx))
-        r = msg.ranges[idx]
-        if math.isnan(r) or math.isinf(r) or r <= 0.0:
-            r = max_range
-        beams.append(min(r, max_range))
-    return beams
+    result = []
+    for lo_deg, hi_deg in sectors_deg:
+        lo_idx = max(0, math.ceil((math.radians(lo_deg) - msg.angle_min) / msg.angle_increment))
+        hi_idx = min(n - 1, int((math.radians(hi_deg) - msg.angle_min) / msg.angle_increment))
+        min_r = max_range
+        for i in range(lo_idx, hi_idx + 1):
+            r = msg.ranges[i]
+            if not (math.isnan(r) or math.isinf(r) or r <= 0.0):
+                min_r = min(min_r, r)
+        result.append(min_r)
+    return result
 
 
 # ── Sensor state ─────────────────────────────────────────────────────────────
@@ -214,12 +221,12 @@ class ObsMonitorNode(Node):
         self._tick = 0
 
     def _build_obs(self, pos, vel_ned, q, ang_frd, lidar):
-        """Build 19D obs — mirrors student_ros2_node._build_obs exactly."""
+        """Build 16D obs — mirrors student_ros2_node._build_obs exactly."""
         # [0:3] Linear velocity FLU body
         vel_flu = _ned_to_flu(q, vel_ned)
 
-        # [3:6] Angular velocity in Isaac body frame (FRD -> Isaac: only negate pitch Y)
-        ang_flu = (ang_frd[0], -ang_frd[1], ang_frd[2])
+        # [3:6] Angular velocity FRD → FLU: negate Y (pitch axis) and Z (yaw axis)
+        ang_flu = (ang_frd[0], -ang_frd[1], -ang_frd[2])
 
         # [6:9] Unit goal direction in FLU body
         gN, gE, gD = self._goal_ned
@@ -228,15 +235,15 @@ class ObsMonitorNode(Node):
         goal_flu = _ned_to_flu(q, (dN, dE, dD))
         unit_goal = _normalize3(goal_flu)
 
-        # [12] 2D distance
+        # [9] 2D distance
         dist_2d = math.sqrt(dN**2 + dE**2)
 
-        # [13] Vertical: pD - gD > 0 means goal is above (NED: smaller D = higher)
+        # [10] Vertical: pD - gD > 0 means goal is above (NED: smaller D = higher)
         dist_z = pD - gD
 
-        # [14:19] Front LiDAR beams normalized to [0,1] — matches Isaac training obs
+        # [11:16] Front LiDAR beams normalized to [0,1] — matches Isaac training obs
         if lidar is not None:
-            beams = [b / LIDAR_RANGE for b in _extract_beams(lidar, BEAM_ANGLES_DEG, LIDAR_RANGE)]
+            beams = [b / LIDAR_RANGE for b in _extract_beams(lidar, BEAM_SECTOR_DEG, LIDAR_RANGE)]
         else:
             beams = [1.0] * 5
 
@@ -284,7 +291,7 @@ class ObsMonitorNode(Node):
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="Live monitor of 19D student obs from PX4 sensors")
+    parser = argparse.ArgumentParser(description="Live monitor of 16D student obs from PX4 sensors")
     parser.add_argument("--goal_north", type=float, default=5.0,
                         help="Goal North of takeoff (m)")
     parser.add_argument("--goal_east", type=float, default=0.0,

@@ -9,7 +9,7 @@ Observation layout (16D, must match dagger_distill.py):
   [6:9]   unit_desired_pos_b  unit vector to goal in FLU body frame
   [9]     desired_dist_2d     horizontal distance to goal (m)
   [10]    desired_dist_z      vertical distance to goal, + = goal above (m)
-  [11:16] 5 front LiDAR beams angles -11,-5,+1,+7,+13 deg relative to forward (m)
+  [11:16] 5 front LiDAR beams at -83,-47,+1,+43,+79 deg (±80° FOV, beams 16,22,30,37,43)
 
 PX4 ROS2 topics consumed:
   /fmu/out/vehicle_local_position   (position + velocity in NED)
@@ -19,7 +19,7 @@ PX4 ROS2 topics consumed:
 
 Frame conventions:
   PX4 body : FRD  (Forward-Right-Down)
-  Isaac/Student body : FLU  (Forward-Left-Up)
+  Isaac/Student body : FLU  (Forward-Left-Up)  [right-handed, +Y=left, +Z=up]
   PX4 world : NED  (North-East-Down)
   Goal input: North / East / altitude-above-home (converted to NED internally)
 
@@ -62,12 +62,18 @@ from px4_msgs.msg import (
 )
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Bool
+from geometry_msgs.msg import PoseStamped, TransformStamped
+from tf2_ros import TransformBroadcaster
 
 # ── Obs constants (must match dagger_distill.py) ─────────────────────────────
 STUDENT_OBS_DIM = 16
 ACTION_DIM = 4
 LIDAR_RANGE = 5.0           # training max range (m)
-BEAM_ANGLES_DEG = [-11.0, -5.0, 1.0, 7.0, 13.0]   # beams 28-32 at ±12° FOV
+# 5 sectors matching Isaac body-frame angle order.
+# Isaac FLU: negative angles = RIGHT, positive = LEFT.
+# Gazebo ROS LaserScan (FLU): same convention — negative angles = RIGHT.
+# Sector 0 = RIGHT (most negative), sector 4 = LEFT (most positive).
+BEAM_SECTOR_DEG = [(-90.0, -54.0), (-54.0, -18.0), (-18.0, 18.0), (18.0, 54.0), (54.0, 90.0)]
 
 # Scale factors (match QuadcopterEnvCfg)
 MAX_VELOCITY = 4.0    # m/s
@@ -129,18 +135,16 @@ def _quat_apply(q_wxyz: tuple, v: tuple) -> tuple:
 
 
 def _ned_to_flu(q_frd_ned_wxyz: tuple, v_ned: tuple) -> tuple:
-    """Transform vector from NED world frame to FLU body frame.
+    """Transform vector from NED world frame to FLU body frame (Isaac convention).
 
     q_frd_ned: rotation quaternion from FRD body -> NED world (PX4 convention).
-    Returns vector in FLU body frame.
+    Returns vector in FLU body frame (+X=fwd, +Y=left, +Z=up).
+    FRD → FLU: negate Y (right→left) and Z (down→up).
     """
     w, x, y, z = q_frd_ned_wxyz
-    # Inverse (conjugate for unit quaternion): rotates NED -> FRD body
-    q_inv = (w, -x, -y, -z)
+    q_inv = (w, -x, -y, -z)        # conjugate: NED → FRD
     v_frd = _quat_apply(q_inv, v_ned)
-    # FRD -> Isaac body: Isaac +Y = physical Right (same as FRD +Y), only Z differs.
-    # Only negate Z (Down->Up). Do NOT negate Y.
-    return (v_frd[0], v_frd[1], -v_frd[2])
+    return (v_frd[0], -v_frd[1], -v_frd[2])    # FRD → FLU
 
 
 def _norm3(v: tuple) -> float:
@@ -152,22 +156,51 @@ def _normalize3(v: tuple, eps: float = 1e-6) -> tuple:
     return (v[0] / n, v[1] / n, v[2] / n)
 
 
+def _qmul(a: tuple, b: tuple) -> tuple:
+    """Quaternion product a ⊗ b (w,x,y,z convention)."""
+    w1, x1, y1, z1 = a
+    w2, x2, y2, z2 = b
+    return (
+        w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
+        w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
+        w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
+        w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,
+    )
+
+
+def _px4_to_enu_quat(q_frd_ned: tuple) -> tuple:
+    """Convert PX4 attitude quaternion (FRD→NED) to ROS TF quaternion (FLU→ENU).
+
+    Result is suitable for geometry_msgs/TransformStamped.rotation with
+    parent frame 'map' (ENU: x=East, y=North, z=Up) and
+    child frame 'base_link' (FLU: x=Forward, y=Left, z=Up).
+
+    Formula: q_enu_flu = q_enu_ned ⊗ q_frd_ned ⊗ q_frd_flu
+      q_enu_ned = (0, 1/√2, 1/√2, 0)  — maps NED axes to ENU axes
+      q_frd_flu = (0,  1,   0,   0)   — 180° about x: FRD → FLU body
+    """
+    s = math.sqrt(0.5)
+    q_enu_ned = (0.0, s, s, 0.0)
+    q_frd_flu = (0.0, 1.0, 0.0, 0.0)
+    return _qmul(_qmul(q_enu_ned, q_frd_ned), q_frd_flu)
+
+
 # ── LiDAR beam extraction ────────────────────────────────────────────────────
 
-def _extract_front_beams(msg: LaserScan, angles_deg: list[float], max_range: float) -> list[float]:
-    """Extract range values at specified body-frame angles from a LaserScan."""
-    beams = []
+def _extract_front_beams(msg: LaserScan, sectors_deg: list, max_range: float) -> list[float]:
+    """Return the nearest obstacle range within each angular sector."""
     n = len(msg.ranges)
-    for deg in angles_deg:
-        rad = math.radians(deg)
-        # Nearest index in the scan
-        idx = round((rad - msg.angle_min) / msg.angle_increment)
-        idx = max(0, min(n - 1, idx))
-        r = msg.ranges[idx]
-        if math.isnan(r) or math.isinf(r) or r <= 0.0:
-            r = max_range
-        beams.append(min(r, max_range))
-    return beams
+    result = []
+    for lo_deg, hi_deg in sectors_deg:
+        lo_idx = max(0, math.ceil((math.radians(lo_deg) - msg.angle_min) / msg.angle_increment))
+        hi_idx = min(n - 1, int((math.radians(hi_deg) - msg.angle_min) / msg.angle_increment))
+        min_r = max_range
+        for i in range(lo_idx, hi_idx + 1):
+            r = msg.ranges[i]
+            if not (math.isnan(r) or math.isinf(r) or r <= 0.0):
+                min_r = min(min_r, r)
+        result.append(min_r)
+    return result
 
 
 # ── Sensor state container ────────────────────────────────────────────────────
@@ -261,6 +294,10 @@ class StudentOffboardNode(Node):
         # Velocity setpoints (NED), updated each control cycle
         self._v_ned = (0.0, 0.0, 0.0)
         self._yawspeed = 0.0
+        self._fixed_alt = args.fixed_alt   # m above home, used by /goal_pose updates
+
+        # TF broadcaster — publishes 'map' → 'base_link' so RViz can show the drone
+        self._tf_broadcaster = TransformBroadcaster(self)
 
         px4_qos = QoSProfile(
             reliability=QoSReliabilityPolicy.BEST_EFFORT,
@@ -292,6 +329,9 @@ class StudentOffboardNode(Node):
             lambda m: self._state.update_lidar(m), sensor_qos)
         self.create_subscription(
             Bool, "/arm_message", self._arm_cb, px4_qos)
+        # RViz 2D Nav Goal → update target position in flight
+        self.create_subscription(
+            PoseStamped, "/goal_pose", self._goal_pose_cb, 10)
 
         # Publishers
         self._pub_offboard = self.create_publisher(
@@ -330,20 +370,56 @@ class StudentOffboardNode(Node):
         self._arm_request = msg.data
         self.get_logger().info(f"Arm request: {msg.data}")
 
+    def _goal_pose_cb(self, msg: PoseStamped):
+        """Receive 2D Nav Goal from RViz and update the flight target.
+
+        RViz publishes in the 'map' frame (ENU: x=East, y=North).
+        Altitude is fixed at --fixed_alt metres above home.
+        """
+        goal_N = msg.pose.position.y   # ENU y = North
+        goal_E = msg.pose.position.x   # ENU x = East
+        goal_D = -self._fixed_alt      # NED Down = -altitude
+        self._goal_ned = (goal_N, goal_E, goal_D)
+        self._alt_floor_D = goal_D + 0.5   # keep floor 0.5 m below new goal
+        self.get_logger().info(
+            f"[goal_pose] new goal → N={goal_N:.1f} E={goal_E:.1f} alt={self._fixed_alt:.1f}m"
+        )
+
+    def _publish_tf(self, pos_ned: tuple, q_frd_ned: tuple):
+        """Broadcast TF: map (ENU) → base_link (FLU drone body)."""
+        pN, pE, pD = pos_ned
+        # NED → ENU position
+        t = TransformStamped()
+        t.header.stamp = self.get_clock().now().to_msg()
+        t.header.frame_id = 'map'
+        t.child_frame_id = 'base_link'
+        t.transform.translation.x = pE    # East
+        t.transform.translation.y = pN    # North
+        t.transform.translation.z = -pD   # Up
+        # PX4 FRD/NED → ROS FLU/ENU quaternion
+        w, x, y, z = _px4_to_enu_quat(q_frd_ned)
+        t.transform.rotation.w = w
+        t.transform.rotation.x = x
+        t.transform.rotation.y = y
+        t.transform.rotation.z = z
+        self._tf_broadcaster.sendTransform(t)
+
     # ── Observation builder ───────────────────────────────────────────────────
 
     def _build_obs(self, pos, vel_ned, q, ang_vel_frd, lidar_msg) -> torch.Tensor | None:
-        """Build 19D student obs from sensor readings. Returns (1,19) tensor."""
+        """Build 16D student obs from sensor readings. Returns (1,16) tensor."""
         if lidar_msg is None:
             return None
 
         # [0:3] Linear velocity in FLU body frame
         vel_flu = _ned_to_flu(q, vel_ned)
 
-        # [3:6] Angular velocity in Isaac body frame.
-        # Pitch (Y): FRD +Y=Right nose-up positive, Isaac +Y=Right nose-down positive → negate.
-        # Yaw  (Z): both FRD and Isaac have +Z-axis positive = right turn → keep sign.
-        ang_flu = (ang_vel_frd[0], -ang_vel_frd[1], ang_vel_frd[2])
+        # [3:6] Angular velocity in FLU body frame.
+        # FRD→FLU: negate Y (right→left, pitch axis flips) and Z (down→up, yaw axis flips).
+        # Roll  (X): axis unchanged, sign unchanged.
+        # Pitch (Y): FRD +Y=right, FLU +Y=left → pitch-up has opposite sign → negate Y.
+        # Yaw   (Z): FRD +Z=down (CW=+), FLU +Z=up (CCW=+) → yaw-right has opposite sign → negate Z.
+        ang_flu = (ang_vel_frd[0], -ang_vel_frd[1], -ang_vel_frd[2])
 
         # [6:9] Unit vector from drone to goal in FLU body frame
         gN, gE, gD = self._goal_ned
@@ -360,7 +436,7 @@ class StudentOffboardNode(Node):
         dist_z = pD - gD   # positive when goal is above (NED D is negative altitude)
 
         # [11:16] Front 5 LiDAR beams normalized to [0,1] — matches Isaac training obs
-        beams = [b / LIDAR_RANGE for b in _extract_front_beams(lidar_msg, BEAM_ANGLES_DEG, LIDAR_RANGE)]
+        beams = [b / LIDAR_RANGE for b in _extract_front_beams(lidar_msg, BEAM_SECTOR_DEG, LIDAR_RANGE)]
 
         obs_list = (
             list(vel_flu)
@@ -369,7 +445,7 @@ class StudentOffboardNode(Node):
             + [dist_2d, dist_z]
             + beams
         )
-        return torch.tensor(obs_list, dtype=torch.float32).unsqueeze(0)  # (1, 19)
+        return torch.tensor(obs_list, dtype=torch.float32).unsqueeze(0)  # (1, 16)
 
     # ── Control loop ──────────────────────────────────────────────────────────
 
@@ -406,15 +482,15 @@ class StudentOffboardNode(Node):
         vy_b = float(actions[0, 2]) * self._eff_max_vel
         vz_b = float(actions[0, 3]) * self._eff_max_vel
 
-        # Isaac body (+X=fwd, +Y=right) → NEUp world using NED CW yaw (px4_yaw):
-        #   fwd   unit in NE = ( cos y,  sin y)
-        #   right unit in NE = (-sin y,  cos y)
-        # Verified: yaw=0: fwd→N[1,0]✓ right→E[0,+1]✓
-        #           yaw=90: fwd→E[0,1]✓ right→S[-1,0]✓
+        # Isaac body FLU (+X=fwd, +Y=left) → NED world using PX4 yaw (CW from North):
+        #   fwd  unit in NE = (cos y,  sin y)
+        #   left unit in NE = (sin y, -cos y)   [90° CW from fwd in the NE map plane]
+        # Verified: yaw=0°: fwd→N✓ left→W(0,-1)✓
+        #           yaw=90°: fwd→E✓ left→N(1,0)✓
         cos_y = math.cos(px4_yaw)
         sin_y = math.sin(px4_yaw)
-        vx_world = vx_b * cos_y - vy_b * sin_y   # North component
-        vy_world = vx_b * sin_y + vy_b * cos_y   # East component
+        vx_world = vx_b * cos_y + vy_b * sin_y   # North component
+        vy_world = vx_b * sin_y - vy_b * cos_y   # East component
 
         # NEUp → NED with clamping
         v_ned_n = max(-self._eff_max_vel, min(self._eff_max_vel, vx_world))
@@ -426,12 +502,15 @@ class StudentOffboardNode(Node):
         pD = pos[2]
         if pD > self._alt_floor_D and v_ned_d > 0.0:
             v_ned_d = 0.0
-        # Yaw: both Isaac (CCW about Z-up) and PX4 NED (CW about Z-down) define
-        # positive = right turn (CW on compass).  Same sign — no negation.
-        yawspeed_ned = max(-self._eff_max_yaw, min(self._eff_max_yaw, yaw_rate_flu))
+        # Yaw: Isaac FRU +Z=up → positive omega_z = CCW from above = yaw LEFT.
+        # PX4 NED +Z=down → positive yawspeed = CW from above = yaw RIGHT.
+        # Sign is OPPOSITE: negate to convert.
+        yawspeed_ned = max(-self._eff_max_yaw, min(self._eff_max_yaw, -yaw_rate_flu))
 
         self._v_ned = (v_ned_n, v_ned_e, v_ned_d)
         self._yawspeed = yawspeed_ned
+
+        self._publish_tf(pos, q)
 
         if self._fsm_state == "OFFBOARD":
             self._publish_velocity(v_ned_n, v_ned_e, v_ned_d, yawspeed_ned)
@@ -443,12 +522,15 @@ class StudentOffboardNode(Node):
             gN, gE, gD = self._goal_ned
             dist = math.sqrt((gN - pN)**2 + (gE - pE)**2 + (gD - pD)**2)
             v_ned_n, v_ned_e, v_ned_d = self._v_ned
+            goal_b = obs[0, 6:9].tolist()
+            raw_act = [float(actions[0, i]) for i in range(4)]
             self.get_logger().info(
                 f"[{self._step:6d}] {self._fsm_state:8s} | "
+                f"dist={dist:.2f}m | yaw={math.degrees(px4_yaw):+.0f}deg | "
+                f"goal_b=({goal_b[0]:+.2f},{goal_b[1]:+.2f},{goal_b[2]:+.2f}) | "
+                f"act=[yaw={raw_act[0]:+.2f} vx={raw_act[1]:+.2f} vy={raw_act[2]:+.2f} vz={raw_act[3]:+.2f}] | "
                 f"vel_NED=({v_ned_n:+.2f},{v_ned_e:+.2f},{v_ned_d:+.2f}) | "
-                f"yaw_spd={yawspeed_ned:+.2f} | "
-                f"dist={dist:.2f}m | "
-                f"beams(norm)={[f'{b:.2f}' for b in obs[0, 11:].tolist()]}"
+                f"beams={[f'{b:.2f}' for b in obs[0, 11:].tolist()]}"
             )
         self._step += 1
 
@@ -589,6 +671,9 @@ def main():
                              "Lower = safer near goal altitude. Default 0.3 m/s.")
     parser.add_argument("--lidar_topic", type=str, default="/scan",
                         help="ROS2 LaserScan topic from LiDAR.")
+    parser.add_argument("--fixed_alt", type=float, default=1.8,
+                        help="Fixed altitude (m above home) used by /goal_pose 2D Nav Goal. "
+                             "Ignored when goal is set via --goal_north/east/alt.")
     args = parser.parse_args()
 
     # Load student checkpoint

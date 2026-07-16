@@ -41,6 +41,7 @@ import time
 
 import gymnasium as gym
 import torch
+import wandb
 
 from rl_games.common import env_configurations, vecenv
 from rl_games.common.player import BasePlayer
@@ -115,6 +116,21 @@ def main():
     global GOAL_RADIUS, PA_THRESHOLD
     GOAL_RADIUS  = args_cli.goal_radius
     PA_THRESHOLD = args_cli.pa_threshold
+
+    from datetime import datetime
+    wandb.init(
+        project="NAV_PA",
+        name=f"eval_{args_cli.task}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+        tags=[args_cli.task, "eval"] if args_cli.task else ["eval"],
+        config={
+            "task":         args_cli.task,
+            "num_envs":     args_cli.num_envs,
+            "num_episodes": args_cli.num_episodes,
+            "goal_radius":  args_cli.goal_radius,
+            "pa_threshold": args_cli.pa_threshold,
+            "checkpoint":   args_cli.checkpoint,
+        },
+    )
 
     # ── env setup ────────────────────────────────────────────────────────────
     env_cfg   = parse_env_cfg(args_cli.task, device=args_cli.device,
@@ -303,6 +319,37 @@ def main():
             for i in range(len(results["final_dist"])):
                 writer.writerow({k: results[k][i] for k in keys})
         print(f"[PA-EVAL] Per-episode CSV saved → {args_cli.save_csv}")
+
+    # ── W&B logging ──────────────────────────────────────────────────────────
+    wandb.log({
+        "eval/success_rate_pct":       summary["success_rate_pct"],
+        "eval/collision_rate_pct":     summary["collision_rate_pct"],
+        "eval/final_dist_mean_m":      summary["final_dist_mean_m"],
+        "eval/final_dist_std_m":       summary["final_dist_std_m"],
+        "eval/ep_length_mean":         summary["ep_length_mean"],
+        "eval/pa_alignment_mean":      summary["pa_alignment_mean"],
+        "eval/pa_alignment_std":       summary["pa_alignment_std"],
+        "eval/pa_active_ratio_mean":   summary["pa_active_ratio_mean"],
+        "eval/episodes_no_pa":         summary["episodes_with_no_pa_activation"],
+        "eval/episodes_evaluated":     summary["episodes_evaluated"],
+    })
+
+    # per-episode table so you can inspect distributions in W&B
+    ep_table = wandb.Table(columns=["episode", "success", "collision", "final_dist_m",
+                                     "pa_alignment", "pa_active_ratio", "ep_length"])
+    for i in range(len(results["final_dist"])):
+        ep_table.add_data(
+            i,
+            results["success"][i],
+            results["collision"][i],
+            results["final_dist"][i],
+            results["pa_alignment"][i],
+            results["pa_active_ratio"][i],
+            results["ep_length"][i],
+        )
+    wandb.log({"eval/episodes": ep_table})
+    wandb.finish()
+    print("[PA-EVAL] W&B run finished.")
 
 
 if __name__ == "__main__":

@@ -13,14 +13,14 @@ Teacher obs layout (77D, from QuadcopterEnvCfg):
     [76]    potential            -- PRIVILEGED (Gaussian of nearest obstacle; teacher only)
 
 Student obs (16D) — deployable with partial front-facing LiDAR only:
-    [0:3]   root_lin_vel_b      -- lin velocity in FLU body frame
-    [3:6]   root_ang_vel_b      -- ang velocity in FLU body frame
-    [6:9]   unit_desired_pos_b  -- unit vector to goal in FLU body frame
+    [0:3]   root_lin_vel_b      -- lin velocity in FRU body frame
+    [3:6]   root_ang_vel_b      -- ang velocity in FRU body frame
+    [6:9]   unit_desired_pos_b  -- unit vector to goal in FRU body frame
     [9]     desired_dist_2d     -- 2D distance to goal
     [10]    desired_dist_z      -- Z distance to goal
-    [11:16] 5 front-facing beams (teacher indices 28–32, covering ±12° around forward)
-            beam_angle = -179 + beam_idx × 6°
-            beam 28: -11°, 29: -5°, 30: +1°, 31: +7°, 32: +13°
+    [11:16] 5 sector min ranges (each sector 36°, -90° to +90°), normalized to [0,1]
+            sector 0: -90°→-54°, sector 2: -18°→+18° (fwd), sector 4: +54°→+90°
+            value = min_beam_in_sector / lidar_range  (0=contact, 1=clear)
 
 DAgger algorithm:
     1. Rollout with mixed policy: teacher with prob beta, student with prob 1-beta
@@ -113,34 +113,43 @@ except ImportError:
     _WANDB_AVAILABLE = False
 
 # ── Obs layout constants ────────────────────────────────────────────────────
-TEACHER_OBS_DIM = 77  # full privileged teacher obs
+TEACHER_OBS_DIM = 75  # full privileged teacher obs (75D, not 77: no nearest_obs_dir_b)
 ACTION_DIM = 4
 
 # Teacher obs slices
 LIDAR_START = 14  # first lidar beam index in teacher obs
 LIDAR_END = 74  # one past last lidar beam (60 beams total)
-NEAREST_OBS_START = 74  # nearest_obs_dir_b [74:76] — privileged, dropped for student
-POTENTIAL_IDX = 76  # potential scalar — privileged, dropped for student
+POTENTIAL_IDX = 74  # potential scalar at index 74 (appended after 60-beam lidar)
 
-# 5 front-facing beams from the 60-beam 360° scan:
+# 5 sectors across -90° to +90° FOV (36° per sector, min range within each).
 #   beam_i angle = -179 + i × 6°  →  beam 30 ≈ 0° (forward)
-#   selected range: beams 28–32 cover ±12° around forward
-FRONT_BEAM_INDICES = [28, 29, 30, 31, 32]  # ±12° FOV
+#   Each tuple is a half-open [start, end) slice into the 60-beam lidar array.
+FRONT_BEAM_SECTORS = [
+    (15, 21),  # sector 0: -90° → -54°  (actual beams -89° to -59°)
+    (21, 27),  # sector 1: -54° → -18°  (actual beams -53° to -23°)
+    (27, 33),  # sector 2: -18° → +18°  (actual beams -17° to +13°, forward)
+    (33, 39),  # sector 3: +18° → +54°  (actual beams +19° to +49°)
+    (39, 45),  # sector 4: +54° → +90°  (actual beams +55° to +85°)
+]
 
-STUDENT_OBS_DIM = 11 + len(FRONT_BEAM_INDICES)  # = 16  (no gravity)
+STUDENT_OBS_DIM = 11 + len(FRONT_BEAM_SECTORS)  # = 16  (no gravity)
+LIDAR_RANGE = 5.0  # max sensor range (m) — used to normalize sector values to [0,1]
 
 
 def extract_student_obs(teacher_obs: torch.Tensor) -> torch.Tensor:
     """Slice 16-dim student obs from the 77-dim teacher obs tensor.
 
-    Drops: projected_gravity_b [6:9], full 360° lidar (60→5 beams),
+    Drops: projected_gravity_b [6:9], full 360° lidar (60→5 sector mins),
            nearest_obs_dir_b, potential.
-    Keeps: lin_vel [0:6] + goal+dist [9:14] + 5 front-facing beams.
+    Keeps: lin_vel [0:6] + goal+dist [9:14] + 5 sector min ranges.
     """
-    lin_ang = teacher_obs[:, 0:6]                  # (N, 6)  lin_vel + ang_vel
-    goal    = teacher_obs[:, 9:LIDAR_START]         # (N, 5)  goal_dir + dist_2d + dist_z
-    lidar   = teacher_obs[:, LIDAR_START:LIDAR_END] # (N, 60)
-    front   = lidar[:, FRONT_BEAM_INDICES]          # (N, 5)
+    lin_ang = teacher_obs[:, 0:6]                  # (N, 6)
+    goal = teacher_obs[:, 9:LIDAR_START]           # (N, 5)
+    lidar = teacher_obs[:, LIDAR_START:LIDAR_END]  # (N, 60)
+    front = torch.cat([
+        lidar[:, s:e].min(dim=1, keepdim=True).values / LIDAR_RANGE
+        for s, e in FRONT_BEAM_SECTORS
+    ], dim=1)                                        # (N, 5) — nearest per sector, [0,1]
     return torch.cat([lin_ang, goal, front], dim=-1)  # (N, 16)
 
 
@@ -185,7 +194,7 @@ class RunningNormalizer(nn.Module):
 
 
 class StudentPolicy(nn.Module):
-    """MLP mapping 19D student obs -> 4D normalized action in [-1, 1]."""
+    """MLP mapping 16D student obs -> 4D normalized action in [-1, 1]."""
 
     def __init__(self, obs_dim: int = STUDENT_OBS_DIM, action_dim: int = ACTION_DIM,
                  hidden_dims: list[int] | None = None):
@@ -332,7 +341,7 @@ def eval_student(
     mse_total = 0.0
     for _ in range(num_steps):
         full_obs: torch.Tensor = obs.float()
-        student_obs = extract_student_obs(full_obs)     # (N, 19)
+        student_obs = extract_student_obs(full_obs)     # (N, 16)
 
         # Teacher labels
         teacher_obs = teacher.obs_to_torch(full_obs)
@@ -370,7 +379,7 @@ def save_checkpoint(
         "beta": beta,
         "student_obs_dim": STUDENT_OBS_DIM,
         "action_dim": ACTION_DIM,
-        "front_beam_indices": FRONT_BEAM_INDICES,
+        "front_beam_sectors": FRONT_BEAM_SECTORS,
     }, path)
     print(f"[INFO] Saved student checkpoint: {path}")
 
@@ -460,7 +469,7 @@ def main():
     print("\n[INFO] Starting DAgger distillation")
     print(f"       Teacher obs dim : {TEACHER_OBS_DIM}")
     print(f"       Student obs dim : {STUDENT_OBS_DIM}  (11 base state no gravity + 5 front beams, no potential/nearest_obs)")
-    print(f"       Front beams     : indices {FRONT_BEAM_INDICES}  (±12° FOV, beam_angle = -179 + i×6°)")
+    print(f"       Front sectors   : {FRONT_BEAM_SECTORS}  (5 × 36°, -90° to +90°, min per sector)")
     print(f"       Hidden dims     : {args_cli.hidden_dims}")
     print(f"       Num envs        : {args_cli.num_envs}")
     print(f"       Buffer capacity : {args_cli.buffer_size:,}")
@@ -511,9 +520,9 @@ def main():
         with torch.no_grad():
             for _ in range(total_rollout_steps):
                 full_obs = obs.float()                          # (N, 77)
-                student_obs = extract_student_obs(full_obs)     # (N, 19)
+                student_obs = extract_student_obs(full_obs)     # (N, 16)
 
-                # Teacher action (labels)
+                # Teacher action (labels) — world-frame, same convention as teacher training
                 teacher_obs_t = teacher.obs_to_torch(full_obs)
                 teacher_actions: torch.Tensor = teacher.get_action(teacher_obs_t, is_deterministic=True)  # type: ignore[assignment]
 
@@ -538,12 +547,12 @@ def main():
                     for s in teacher.states:
                         s[:, dones, :] = 0.0
 
-                # Aggregate: (student_obs, teacher_label)
+                # Aggregate: (student_obs, world-frame teacher_label)
                 rollout_obs_list.append(student_obs.clone())
                 rollout_act_list.append(teacher_actions.float().clone())
 
         # Add all rollout data to buffer at once
-        all_obs = torch.cat(rollout_obs_list, dim=0)     # (N*steps, 19)
+        all_obs = torch.cat(rollout_obs_list, dim=0)     # (N*steps, 16)
         all_acts = torch.cat(rollout_act_list, dim=0)    # (N*steps, 4)
         buffer.add(all_obs, all_acts)
 

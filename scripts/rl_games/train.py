@@ -75,6 +75,7 @@ import PerceptionAwareDrone.tasks  # noqa: F401
 
 import wandb
 
+
 @hydra_task_config(args_cli.task, "rl_games_cfg_entry_point")
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: dict):
     """Train with RL-Games agent."""
@@ -91,18 +92,24 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         args_cli.max_iterations if args_cli.max_iterations is not None else agent_cfg["params"]["config"]["max_epochs"]
     )
 
+    run_name = f"{args_cli.task}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     wandb.init(
         project='NAV_PA',
-        # entity=args_cli.wandb_entity,
-        # name=experiment_name,
+        name=run_name,
+        tags=[args_cli.task] if args_cli.task else [],
         sync_tensorboard=True,
         monitor_gym=True,
         save_code=True,
     )
     if not wandb.run.resumed:
-        wandb.config.update({"env_cfg": env_cfg.to_dict()})
-        wandb.config.update({"agent_cfg": agent_cfg})
-    
+        wandb.config.update({
+            "task": args_cli.task,
+            "num_envs": args_cli.num_envs,
+            "seed": args_cli.seed,
+            "max_iterations": args_cli.max_iterations,
+            "agent_cfg": agent_cfg,
+        })
+
     if args_cli.checkpoint is not None:
         resume_path = retrieve_file_path(args_cli.checkpoint)
         agent_cfg["params"]["load_checkpoint"] = True

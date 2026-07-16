@@ -1,10 +1,12 @@
 """Play and evaluate a student policy trained by DAgger distillation.
 
-Student obs layout (19D, matches dagger_distill.py):
-    [0:14]  base state  (same as teacher: vel, ang_vel, gravity, goal_dir, dist_2d, dist_z)
-    [14:19] 5 front-facing LiDAR beams  (teacher indices 28–32, ±12° FOV)
-            beam_angle = -179 + beam_idx × 6°
-            beam 28: -11°, 29: -5°, 30: +1°, 31: +7°, 32: +13°
+Student obs layout (16D, matches dagger_distill.py):
+    [0:6]   lin_vel + ang_vel in body frame
+    [6:11]  goal_dir (3D unit vec) + dist_2d + dist_z
+    [11:16] 5 sector min ranges  (5 x 36 deg sectors, -90 to +90)
+            each entry = min(all beams in that 36 deg sector)
+            sectors: -90->-54, -54->-18, -18->+18, +18->+54, +54->+90
+    NOTE: gravity (teacher obs[6:9]) is EXCLUDED from student obs.
 
 Run (visual play, press Ctrl-C to stop):
     ./isaaclab.sh -p scripts/rl_games/dagger_play.py \
@@ -62,16 +64,34 @@ import PerceptionAwareDrone.tasks  # noqa: F401
 # ── Obs layout (must match dagger_distill.py) ───────────────────────────────
 LIDAR_START = 14
 LIDAR_END = 74
-FRONT_BEAM_INDICES = [28, 29, 30, 31, 32]   # ±12° FOV around forward
-STUDENT_OBS_DIM = 14 + len(FRONT_BEAM_INDICES)  # 19
+FRONT_BEAM_SECTORS = [
+    (15, 21),  # sector 0: -90 to -54 deg
+    (21, 27),  # sector 1: -54 to -18 deg
+    (27, 33),  # sector 2: -18 to +18 deg (forward)
+    (33, 39),  # sector 3: +18 to +54 deg
+    (39, 45),  # sector 4: +54 to +90 deg
+]
+STUDENT_OBS_DIM = 11 + len(FRONT_BEAM_SECTORS)  # 16  (no gravity, matches dagger_distill.py)
 ACTION_DIM = 4
+LIDAR_RANGE = 5.0  # normalize sector values to [0,1] — must match dagger_distill.py
 
 
 def extract_student_obs(teacher_obs: torch.Tensor) -> torch.Tensor:
-    """Slice 19D student obs from full 77D teacher obs."""
-    base = teacher_obs[:, :LIDAR_START]
-    front = teacher_obs[:, LIDAR_START:LIDAR_END][:, FRONT_BEAM_INDICES]
-    return torch.cat([base, front], dim=-1)
+    """Build 16D student obs — no gravity, 5 sector min ranges.
+
+    Matches dagger_distill.py extract_student_obs exactly:
+      [0:6]   lin_vel + ang_vel
+      [6:11]  goal_dir + dist_2d + dist_z  (teacher obs[9:14], skipping gravity [6:9])
+      [11:16] 5 front sector min ranges
+    """
+    lin_ang = teacher_obs[:, 0:6]
+    goal = teacher_obs[:, 9:LIDAR_START]
+    lidar = teacher_obs[:, LIDAR_START:LIDAR_END]
+    front = torch.cat([
+        lidar[:, s:e].min(dim=1, keepdim=True).values / LIDAR_RANGE
+        for s, e in FRONT_BEAM_SECTORS
+    ], dim=1)
+    return torch.cat([lin_ang, goal, front], dim=-1)
 
 
 # ── Network definitions (identical to dagger_distill.py) ────────────────────
@@ -115,7 +135,6 @@ def _is_collision(raw_env) -> torch.Tensor:
 
 
 def _infer_hidden_dims(student_sd: dict, action_dim: int) -> list[int]:
-    """Read hidden layer sizes from the weight tensors of a saved StudentPolicy."""
     return [
         v.shape[0]
         for k, v in student_sd.items()
@@ -133,30 +152,34 @@ def main():
     print(f"[INFO] Loading student checkpoint: {ckpt_path}")
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
 
-    obs_dim     = ckpt.get("student_obs_dim", STUDENT_OBS_DIM)
-    action_dim  = ckpt.get("action_dim", ACTION_DIM)
-    front_beams = ckpt.get("front_beam_indices", FRONT_BEAM_INDICES)
+    obs_dim = ckpt.get("student_obs_dim", STUDENT_OBS_DIM)
+    action_dim = ckpt.get("action_dim", ACTION_DIM)
+    front_sectors = ckpt.get("front_beam_sectors", FRONT_BEAM_SECTORS)
     hidden_dims = _infer_hidden_dims(ckpt["student"], action_dim)
 
     print(f"[INFO] Obs dim       : {obs_dim}")
     print(f"[INFO] Hidden dims   : {hidden_dims}")
-    print(f"[INFO] Front beams   : {front_beams}")
+    print(f"[INFO] Front sectors : {front_sectors}")
     print(f"[INFO] DAgger iter   : {ckpt.get('dagger_iter', '?')}")
     print(f"[INFO] Final beta    : {ckpt.get('beta', float('nan')):.4f}")
     if obs_dim != STUDENT_OBS_DIM:
         print(f"[WARN] Checkpoint obs_dim={obs_dim} != script STUDENT_OBS_DIM={STUDENT_OBS_DIM}. "
               "Using checkpoint value.")
+    if front_sectors != FRONT_BEAM_SECTORS:
+        print("[WARN] Checkpoint sectors differ from script - obs mismatch!")
+        print(f"       checkpoint : {front_sectors}")
+        print(f"       script     : {FRONT_BEAM_SECTORS}")
 
     # 2. Environment
-    env_cfg   = parse_env_cfg(
+    env_cfg = parse_env_cfg(
         args_cli.task,
         device=args_cli.device,
         num_envs=args_cli.num_envs,
         use_fabric=not args_cli.disable_fabric,
     )
     agent_cfg = cast(dict[str, Any], load_cfg_from_registry(args_cli.task, "rl_games_cfg_entry_point"))
-    rl_device    = agent_cfg["params"]["config"]["device"]
-    clip_obs     = agent_cfg["params"]["env"].get("clip_observations", math.inf)
+    rl_device = agent_cfg["params"]["config"]["device"]
+    clip_obs = agent_cfg["params"]["env"].get("clip_observations", math.inf)
     clip_actions = agent_cfg["params"]["env"].get("clip_actions", math.inf)
 
     env_raw = gym.make(args_cli.task, cfg=env_cfg, render_mode=None)
@@ -164,12 +187,12 @@ def main():
         env_raw = multi_agent_to_single_agent(env_raw)
     env = RlGamesVecEnvWrapper(env_raw, rl_device, clip_obs, clip_actions)
 
-    device  = torch.device(rl_device)
+    device = torch.device(rl_device)
     raw_env = env.unwrapped
-    N       = raw_env.num_envs
+    N = raw_env.num_envs
 
     # 3. Student + normalizer
-    student    = StudentPolicy(obs_dim, action_dim, hidden_dims).to(device)
+    student = StudentPolicy(obs_dim, action_dim, hidden_dims).to(device)
     normalizer = RunningNormalizer(obs_dim).to(device)
     student.load_state_dict(ckpt["student"])
     normalizer.load_state_dict(ckpt["normalizer"])
@@ -184,13 +207,13 @@ def main():
     print()
 
     # 4. Episode accumulators (used in eval mode)
-    ep_steps        = torch.zeros(N, device=device)
+    ep_steps = torch.zeros(N, device=device)
     ep_ever_reached = torch.zeros(N, dtype=torch.bool, device=device)
     results = {
-        "final_dist":  [],
-        "success":     [],
-        "collision":   [],
-        "ep_length":   [],
+        "final_dist": [],
+        "success": [],
+        "collision": [],
+        "ep_length": [],
     }
     completed = 0
 
@@ -202,10 +225,10 @@ def main():
     step = 0
     with torch.inference_mode():
         while simulation_app.is_running():
-            full_obs    = obs.float()
-            student_obs = extract_student_obs(full_obs)   # (N, 19)
-            norm_obs    = normalizer.normalize(student_obs)
-            actions     = student(norm_obs)               # (N, 4)
+            full_obs = obs.float()
+            student_obs = extract_student_obs(full_obs)
+            norm_obs = normalizer.normalize(student_obs)
+            actions = student(norm_obs)
 
             obs, _, dones, _ = env.step(actions)
             if isinstance(obs, dict):
@@ -215,7 +238,7 @@ def main():
                 dist_goal = _dist_to_goal(raw_env)
                 collision = _is_collision(raw_env)
 
-                ep_steps        += 1
+                ep_steps += 1
                 ep_ever_reached |= (dist_goal < args_cli.goal_radius)
 
                 done_ids = dones.nonzero(as_tuple=False).squeeze(-1)
@@ -226,12 +249,12 @@ def main():
                     results["collision"].append(collision[i].item())
                     results["ep_length"].append(ep_steps[i].item())
 
-                    ep_steps[i]        = 0.0
+                    ep_steps[i] = 0.0
                     ep_ever_reached[i] = False
 
                     completed += 1
                     if completed % 20 == 0:
-                        print(f"  … {completed}/{args_cli.num_episodes} episodes done")
+                        print(f"  ... {completed}/{args_cli.num_episodes} episodes done")
                     if completed >= args_cli.num_episodes:
                         break
 
@@ -250,8 +273,11 @@ def main():
     if not eval_mode or not results["final_dist"]:
         return
 
-    def _mean(lst): return sum(lst) / len(lst) if lst else float("nan")
-    def _pct(lst):  return 100.0 * sum(lst) / len(lst) if lst else float("nan")
+    def _mean(lst):
+        return sum(lst) / len(lst) if lst else float("nan")
+
+    def _pct(lst):
+        return 100.0 * sum(lst) / len(lst) if lst else float("nan")
 
     import statistics
     dists = results["final_dist"]
@@ -263,7 +289,7 @@ def main():
     print()
     print(f"  Success rate       : {_pct(results['success']):.1f} %")
     print(f"  Collision rate     : {_pct(results['collision']):.1f} %")
-    print(f"  Final dist (mean)  : {_mean(dists):.3f} ± "
+    print(f"  Final dist (mean)  : {_mean(dists):.3f} +/- "
           f"{statistics.stdev(dists) if len(dists) > 1 else 0.0:.3f} m")
     print(f"  Episode length     : {_mean(results['ep_length']):.1f} steps")
     print("=" * 55)

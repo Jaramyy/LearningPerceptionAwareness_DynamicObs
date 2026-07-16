@@ -62,7 +62,8 @@ from px4_msgs.msg import (
 )
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Bool
-from geometry_msgs.msg import PoseStamped, TransformStamped
+from geometry_msgs.msg import Point, PoseStamped, TransformStamped
+from visualization_msgs.msg import Marker, MarkerArray
 from tf2_ros import TransformBroadcaster
 
 # ── Obs constants (must match dagger_distill.py) ─────────────────────────────
@@ -340,6 +341,8 @@ class StudentOffboardNode(Node):
             TrajectorySetpoint, "/fmu/in/trajectory_setpoint", px4_qos)
         self._pub_cmd = self.create_publisher(
             VehicleCommand, "/fmu/in/vehicle_command", 10)
+        self._pub_markers = self.create_publisher(
+            MarkerArray, "/student/markers", 10)
 
         # Control timer
         self._step = 0
@@ -384,6 +387,81 @@ class StudentOffboardNode(Node):
         self.get_logger().info(
             f"[goal_pose] new goal → N={goal_N:.1f} E={goal_E:.1f} alt={self._fixed_alt:.1f}m"
         )
+
+    def _publish_markers(self, pos_ned: tuple, v_ned: tuple, goal_ned: tuple):
+        """Publish RViz markers in the map (ENU) frame.
+
+        Marker 0 (green arrow): commanded velocity vector from drone position.
+        Marker 1 (blue arrow):  direction to goal, scaled to 1 m for clarity.
+        Marker 2 (yellow sphere): goal position.
+        """
+        pN, pE, pD = pos_ned
+        vN, vE, vD = v_ned
+        gN, gE, gD = goal_ned
+
+        # NED → ENU conversion
+        ox = pE;  oy = pN;  oz = -pD   # drone ENU position
+
+        now = self.get_clock().now().to_msg()
+        def _arrow(mid: int, r: float, g: float, b: float,
+                   sx: float, sy: float, sz: float,
+                   ex: float, ey: float, ez: float) -> Marker:
+            m = Marker()
+            m.header.frame_id = "map"
+            m.header.stamp = now
+            m.ns = "student"
+            m.id = mid
+            m.type = Marker.ARROW
+            m.action = Marker.ADD
+            m.scale.x = 0.08   # shaft diameter
+            m.scale.y = 0.16   # head diameter
+            m.scale.z = 0.0
+            m.color.r = r; m.color.g = g; m.color.b = b; m.color.a = 1.0
+            start = Point(); start.x = sx; start.y = sy; start.z = sz
+            end   = Point(); end.x   = ex; end.y   = ey; end.z   = ez
+            m.points = [start, end]
+            return m
+
+        def _sphere(mid: int, r: float, g: float, b: float,
+                    x: float, y: float, z: float, s: float = 0.3) -> Marker:
+            m = Marker()
+            m.header.frame_id = "map"
+            m.header.stamp = now
+            m.ns = "student"
+            m.id = mid
+            m.type = Marker.SPHERE
+            m.action = Marker.ADD
+            m.pose.position.x = x; m.pose.position.y = y; m.pose.position.z = z
+            m.pose.orientation.w = 1.0
+            m.scale.x = s; m.scale.y = s; m.scale.z = s
+            m.color.r = r; m.color.g = g; m.color.b = b; m.color.a = 0.8
+            return m
+
+        # 0: commanded velocity (green), length = actual speed (1 m = 1 m/s)
+        vel_arrow = _arrow(
+            0, 0.0, 1.0, 0.0,
+            ox, oy, oz,
+            ox + vE, oy + vN, oz - vD,   # NED → ENU for velocity
+        )
+
+        # 1: goal direction (blue), fixed 1.5 m length
+        dN = gN - pN; dE = gE - pE; dD = gD - pD
+        dist = max(math.sqrt(dN**2 + dE**2 + dD**2), 1e-3)
+        arrow_len = 1.5
+        goal_arrow = _arrow(
+            1, 0.0, 0.4, 1.0,
+            ox, oy, oz,
+            ox + (dE / dist) * arrow_len,
+            oy + (dN / dist) * arrow_len,
+            oz + (-dD / dist) * arrow_len,
+        )
+
+        # 2: goal sphere (yellow)
+        goal_sphere = _sphere(2, 1.0, 1.0, 0.0, gE, gN, -gD)
+
+        markers = MarkerArray()
+        markers.markers = [vel_arrow, goal_arrow, goal_sphere]  # type: ignore[assignment]
+        self._pub_markers.publish(markers)
 
     def _publish_tf(self, pos_ned: tuple, q_frd_ned: tuple):
         """Broadcast TF: map (ENU) → base_link (FLU drone body)."""
@@ -522,6 +600,7 @@ class StudentOffboardNode(Node):
         self._yawspeed = yawspeed_ned
 
         self._publish_tf(pos, q)
+        self._publish_markers(pos, (v_ned_n, v_ned_e, v_ned_d), self._goal_ned)
 
         if self._fsm_state == "OFFBOARD":
             self._publish_velocity(v_ned_n, v_ned_e, v_ned_d, yawspeed_ned)

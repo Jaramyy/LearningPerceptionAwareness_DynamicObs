@@ -1,0 +1,250 @@
+[INFO] [launch]: All log files can be found below /home/jaramy/.ros/log/2026-08-07-17-36-43-560707-jaramy-Legion-5-Pro-34880
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [parameter_bridge-1]: process started with pid [34887]
+[INFO] [static_transform_publisher-2]: process started with pid [34889]
+[INFO] [python3-3]: process started with pid [34891]
+[INFO] [python3-4]: process started with pid [34893]
+[INFO] [python3-5]: process started with pid [34895]
+[INFO] [python3-6]: process started with pid [34897]
+[INFO] [rviz2-7]: process started with pid [34899]
+[static_transform_publisher-2] [WARN] [1786099003.607234116] []: Old-style arguments are deprecated; see --help for new-style arguments
+[static_transform_publisher-2] [INFO] [1786099003.620193821] [static_tf_eval]: Spinning until stopped - publishing transform
+[static_transform_publisher-2] translation: ('0.000000', '0.000000', '0.000000')
+[static_transform_publisher-2] rotation: ('0.000000', '0.000000', '0.000000', '1.000000')
+[static_transform_publisher-2] from 'map' to 'agi_drone_depth_0/camera_link/realsense_d435'
+[parameter_bridge-1] [INFO] [1786099003.633703946] [gz_eval_bridge]: Creating GZ->ROS Bridge: [/scan (gz.msgs.LaserScan) -> /scan (sensor_msgs/msg/LaserScan)] (Lazy 0)
+[parameter_bridge-1] [INFO] [1786099003.634870503] [gz_eval_bridge]: Creating GZ->ROS Bridge: [/depth_camera/image (gz.msgs.Image) -> /depth_camera/image (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-1] [INFO] [1786099003.635189651] [gz_eval_bridge]: Creating GZ->ROS Bridge: [/depth_camera/depth_image (gz.msgs.Image) -> /depth_camera/depth_image (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-1] [INFO] [1786099003.635426580] [gz_eval_bridge]: Creating GZ->ROS Bridge: [/depth_camera/camera_info (gz.msgs.CameraInfo) -> /depth_camera/camera_info (sensor_msgs/msg/CameraInfo)] (Lazy 0)
+[python3-5] [INFO] [1786099003.895064784] [orb_visualizer]: ORB visualizer ready
+[python3-5]   → image   : /orb_debug/image
+[python3-5]   → latency : /orb/latency  [proc_ms, inter_ms, kp_count]
+[rviz2-7] [INFO] [1786099003.926084769] [rviz2]: Stereo is NOT SUPPORTED
+[rviz2-7] [INFO] [1786099003.926220196] [rviz2]: OpenGl version: 4.6 (GLSL 4.6)
+[rviz2-7] [INFO] [1786099003.947396731] [rviz2]: Stereo is NOT SUPPORTED
+[python3-4] [INFO] [1786099004.045171620] [gz_eval_monitor]: EvalMonitor: method=pa trial=6  goal_ned=(0.0, 12.0, -2.5)  timeout=90.0s
+[python3-6] [INFO] [1786099004.046805421] [gz_viz_markers]: VizMarkers ready — goal ENU=(12.0, 0.0, 2.5)  /viz/markers → RViz
+[rviz2-7] [INFO] [1786099004.086006017] [rviz2]: Stereo is NOT SUPPORTED
+[rviz2-7] [INFO] [1786099004.125097090] [rviz2]: Stereo is NOT SUPPORTED
+[python3-4] [INFO] [1786099004.217786944] [gz_eval_monitor]: Trial 6: airborne at alt=0.50 m
+[rviz2-7] [INFO] [1786099004.713216873] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 33.992 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099005.195219802] [student_offboard]: StudentOffboard ready | goal_NED=(0.0, 12.0, -2.5) | max_vel=1.1 m/s | lidar=/scan
+[python3-3] [INFO] [1786099005.195721010] [student_offboard]: Arm: ros2 topic pub --once /arm_message std_msgs/msg/Bool "data: true"
+[python3-3] [INFO] [1786099005.196709437] [student_offboard]: [diag] fsm=IDLE flight_check=False arm_req=False nav=31 arm_st=1
+[python3-3] [INFO] [1786099005.200744158] [student_offboard]: [diag] fsm=IDLE flight_check=False arm_req=False nav=31 arm_st=1
+[python3-3] [INFO] [1786099005.210767951] [student_offboard]: [diag] fsm=IDLE flight_check=False arm_req=False nav=31 arm_st=1
+[python3-3] [INFO] [1786099005.220809422] [student_offboard]: [diag] fsm=IDLE flight_check=False arm_req=False nav=31 arm_st=1
+[python3-3] [INFO] [1786099005.230572746] [student_offboard]: [diag] fsm=IDLE flight_check=False arm_req=False nav=31 arm_st=1
+[python3-3] [INFO] [1786099005.240391748] [student_offboard]: [diag] fsm=IDLE flight_check=False arm_req=False nav=31 arm_st=1
+[python3-3] [INFO] [1786099005.250432772] [student_offboard]: [diag] fsm=IDLE flight_check=False arm_req=False nav=31 arm_st=1
+[python3-3] [INFO] [1786099005.252839624] [student_offboard]: [     0] IDLE     | dist=12.01m | alt=0.46m(err=+2.04) | yaw=+91deg | act=[yaw=+0.26 vx=+0.99 vy=-0.01 vz=-0.98] | vel_NED=(-0.02,+1.11,-0.50) | ICP[fwd=2.69m spd=1.00 X0=0.00 W1=0.494] | beams=['1.00', '0.87', '0.54', '1.00', '0.38']
+[python3-3] [INFO] [1786099005.254824628] [student_offboard]: NAV_STATE -> 4
+[python3-3] [INFO] [1786099005.255241442] [student_offboard]: FLIGHT_CHECK -> True
+[python3-5] Traceback (most recent call last):
+[python3-5]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_orb_visualizer.py", line 130, in <module>
+[python3-5]     main()
+[python3-5]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_orb_visualizer.py", line 121, in main
+[python3-5]     rclpy.spin(node)
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[python3-5]     executor.spin_once()
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 808, in spin_once
+[python3-5]     self._spin_once_impl(timeout_sec)
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 805, in _spin_once_impl
+[python3-5]     raise handler.exception()
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/task.py", line 272, in _execute_coroutine_step
+[python3-5]     result = coro.send(None)
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 488, in handler
+[python3-5]     await call_coroutine(entity, arg)
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 407, in _execute_subscription
+[python3-5]     await await_or_execute(sub.callback, msg)
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 110, in await_or_execute
+[python3-5]     return callback(*args)
+[python3-5]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_orb_visualizer.py", line 114, in _cb
+[python3-5]     self._report(len(kps))
+[python3-5] AttributeError: 'OrbVisualizer' object has no attribute '_report'
+[ERROR] [python3-5]: process has died [pid 34895, exit code 1, cmd 'python3 /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_orb_visualizer.py'].
+[python3-3] [INFO] [1786099006.751928924] [student_offboard]: [   150] IDLE     | dist=11.99m | alt=0.45m(err=+2.05) | yaw=+91deg | act=[yaw=+0.26 vx=+0.99 vy=-0.01 vz=-0.98] | vel_NED=(-0.03,+1.11,-0.50) | ICP[fwd=2.67m spd=1.00 X0=0.00 W1=0.416] | beams=['1.00', '0.87', '0.53', '1.00', '0.38']
+[rviz2-7] [INFO] [1786099007.241663677] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 36.500 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099007.955510029] [student_offboard]: FLIGHT_CHECK -> False
+[python3-3] [INFO] [1786099008.062156214] [student_offboard]: FLIGHT_CHECK -> True
+[python3-3] [INFO] [1786099008.251689083] [student_offboard]: [   300] IDLE     | dist=12.05m | alt=0.37m(err=+2.13) | yaw=+91deg | act=[yaw=+0.30 vx=+0.99 vy=+0.00 vz=-0.98] | vel_NED=(-0.01,+1.11,-0.50) | ICP[fwd=2.67m spd=1.00 X0=0.00 W1=0.360] | beams=['1.00', '0.87', '0.53', '1.00', '0.37']
+[python3-3] [INFO] [1786099009.752128290] [student_offboard]: [   450] IDLE     | dist=12.07m | alt=0.31m(err=+2.19) | yaw=+91deg | act=[yaw=+0.33 vx=+0.99 vy=+0.01 vz=-0.97] | vel_NED=(-0.00,+1.11,-0.50) | ICP[fwd=2.69m spd=1.00 X0=0.00 W1=0.317] | beams=['1.00', '0.87', '0.54', '1.00', '0.37']
+[rviz2-7] [INFO] [1786099009.801856796] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 39.076 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099010.250937050] [student_offboard]: [diag] fsm=IDLE flight_check=True arm_req=False nav=4 arm_st=1
+[python3-3] [INFO] [1786099011.252441225] [student_offboard]: [   600] IDLE     | dist=12.12m | alt=0.30m(err=+2.20) | yaw=+91deg | act=[yaw=+0.34 vx=+0.99 vy=-0.01 vz=-0.97] | vel_NED=(-0.02,+1.11,-0.50) | ICP[fwd=2.69m spd=1.00 X0=0.00 W1=0.283] | beams=['1.00', '0.87', '0.54', '1.00', '0.38']
+[rviz2-7] [INFO] [1786099012.329221192] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 41.584 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099012.752577089] [student_offboard]: [   750] IDLE     | dist=12.15m | alt=0.28m(err=+2.22) | yaw=+91deg | act=[yaw=+0.35 vx=+0.99 vy=-0.01 vz=-0.97] | vel_NED=(-0.03,+1.11,-0.50) | ICP[fwd=2.68m spd=1.00 X0=0.00 W1=0.256] | beams=['1.00', '0.87', '0.54', '1.00', '0.37']
+[python3-3] [INFO] [1786099012.893117722] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786099012.900705850] [student_offboard]: -> ARMING
+[python3-3] [INFO] [1786099012.923175842] [student_offboard]: ARM_STATE -> 2
+[python3-3] [INFO] [1786099013.010917863] [student_offboard]: -> TAKEOFF
+[python3-3] [INFO] [1786099013.042837082] [student_offboard]: NAV_STATE -> 17
+[python3-3] [INFO] [1786099013.051008316] [student_offboard]: -> LOITER (waiting for hover)
+[python3-3] [INFO] [1786099013.892642110] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786099014.252502583] [student_offboard]: [   900] LOITER   | dist=12.11m | alt=0.30m(err=+2.20) | yaw=+91deg | act=[yaw=+0.34 vx=+0.99 vy=+0.01 vz=-0.97] | vel_NED=(-0.01,+1.11,-0.50) | ICP[fwd=2.69m spd=1.00 X0=0.00 W1=0.234] | beams=['1.00', '0.87', '0.54', '1.00', '0.38']
+[rviz2-7] [INFO] [1786099014.890241430] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 44.156 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099014.892834726] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786099015.250563486] [student_offboard]: [diag] fsm=LOITER flight_check=True arm_req=True nav=17 arm_st=2
+[python3-3] [INFO] [1786099015.752438216] [student_offboard]: [  1050] LOITER   | dist=12.09m | alt=0.27m(err=+2.23) | yaw=+91deg | act=[yaw=+0.36 vx=+0.99 vy=+0.01 vz=-0.96] | vel_NED=(-0.01,+1.11,-0.50) | ICP[fwd=2.69m spd=1.00 X0=0.00 W1=0.215] | beams=['1.00', '0.87', '0.54', '1.00', '0.38']
+[python3-3] [INFO] [1786099015.892628723] [student_offboard]: Arm request: True
+[python3-4] [INFO] [1786099016.018547996] [gz_eval_monitor]: Trial 6 DONE: result=crash  t=11.8s  orb=353±8  lat=31.7ms  [scan=33.6 policy=0.7 icp=0.0]ms
+[python3-4] [INFO] [1786099016.019300315] [gz_eval_monitor]: Results → /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/results/quick_test/pa_trial_6.json
+[INFO] [python3-4]: process has finished cleanly [pid 34893]
+[python3-3] [INFO] [1786099016.891978511] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786099017.252074744] [student_offboard]: [  1200] LOITER   | dist=12.10m | alt=0.19m(err=+2.31) | yaw=+91deg | act=[yaw=+0.39 vx=+0.99 vy=+0.03 vz=-0.95] | vel_NED=(+0.01,+1.11,-0.50) | ICP[fwd=2.69m spd=1.00 X0=0.00 W1=0.199] | beams=['1.00', '0.87', '0.54', '1.00', '0.38']
+[rviz2-7] [INFO] [1786099017.417185523] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 46.664 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099017.892844719] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786099018.751736213] [student_offboard]: [  1350] LOITER   | dist=12.17m | alt=0.13m(err=+2.37) | yaw=+91deg | act=[yaw=+0.42 vx=+0.99 vy=+0.02 vz=-0.94] | vel_NED=(-0.01,+1.11,-0.50) | ICP[fwd=2.68m spd=1.00 X0=0.00 W1=0.185] | beams=['1.00', '0.86', '0.54', '1.00', '0.37']
+[python3-3] [INFO] [1786099018.892181604] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786099019.893099161] [student_offboard]: Arm request: True
+[rviz2-7] [INFO] [1786099019.977336072] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 49.240 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099020.250612719] [student_offboard]: [diag] fsm=LOITER flight_check=True arm_req=True nav=17 arm_st=2
+[python3-3] [INFO] [1786099020.252694242] [student_offboard]: [  1500] LOITER   | dist=12.16m | alt=0.10m(err=+2.40) | yaw=+92deg | act=[yaw=+0.44 vx=+0.99 vy=+0.02 vz=-0.93] | vel_NED=(-0.01,+1.11,-0.50) | ICP[fwd=2.69m spd=1.00 X0=0.00 W1=0.173] | beams=['1.00', '0.86', '0.54', '1.00', '0.38']
+[python3-3] [INFO] [1786099020.892739991] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786099021.752637982] [student_offboard]: [  1650] LOITER   | dist=12.13m | alt=0.08m(err=+2.42) | yaw=+92deg | act=[yaw=+0.45 vx=+0.99 vy=+0.01 vz=-0.91] | vel_NED=(-0.03,+1.11,-0.50) | ICP[fwd=2.69m spd=1.00 X0=0.00 W1=0.162] | beams=['1.00', '0.87', '0.54', '1.00', '0.38']
+[python3-3] [INFO] [1786099021.891999396] [student_offboard]: Arm request: True
+[rviz2-7] [INFO] [1786099022.568916447] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 51.812 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099022.893012907] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786099022.966979268] [student_offboard]: ARM_STATE -> 1
+[python3-3] [INFO] [1786099022.978465100] [student_offboard]: ARM_STATE -> 2
+[python3-3] [INFO] [1786099023.251887605] [student_offboard]: [  1800] LOITER   | dist=12.11m | alt=0.07m(err=+2.43) | yaw=+92deg | act=[yaw=+0.45 vx=+0.99 vy=+0.01 vz=-0.90] | vel_NED=(-0.03,+1.11,-0.50) | ICP[fwd=2.68m spd=1.00 X0=0.00 W1=0.153] | beams=['1.00', '0.87', '0.54', '1.00', '0.37']
+[python3-3] [INFO] [1786099023.891769571] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786099024.752431616] [student_offboard]: [  1950] LOITER   | dist=12.16m | alt=0.03m(err=+2.47) | yaw=+92deg | act=[yaw=+0.47 vx=+0.99 vy=+0.04 vz=-0.91] | vel_NED=(-0.00,+1.11,-0.50) | ICP[fwd=2.68m spd=1.00 X0=0.00 W1=0.145] | beams=['1.00', '0.87', '0.54', '1.00', '0.37']
+[python3-3] [INFO] [1786099024.892791800] [student_offboard]: Arm request: True
+[rviz2-7] [INFO] [1786099025.129740274] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 54.388 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099025.250664657] [student_offboard]: [diag] fsm=LOITER flight_check=True arm_req=True nav=17 arm_st=2
+[python3-3] [INFO] [1786099025.892977084] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786099026.252404225] [student_offboard]: [  2100] LOITER   | dist=12.19m | alt=0.01m(err=+2.49) | yaw=+93deg | act=[yaw=+0.51 vx=+0.99 vy=-0.09 vz=-0.97] | vel_NED=(-0.16,+1.11,-0.50) | ICP[fwd=2.72m spd=1.00 X0=0.00 W1=0.137] | beams=['1.00', '0.87', '0.54', '1.00', '0.38']
+[python3-3] [INFO] [1786099026.893412229] [student_offboard]: Arm request: True
+[rviz2-7] [INFO] [1786099027.689869232] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 56.960 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099027.753453511] [student_offboard]: [  2250] LOITER   | dist=12.37m | alt=0.61m(err=+1.89) | yaw=+91deg | act=[yaw=+0.54 vx=+0.99 vy=-0.22 vz=-0.99] | vel_NED=(-0.27,+1.11,-0.50) | ICP[fwd=2.94m spd=1.00 X0=0.00 W1=0.131] | beams=['1.00', '0.88', '0.59', '1.00', '0.44']
+[python3-3] [INFO] [1786099027.892692986] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786099028.893231458] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786099029.252770414] [student_offboard]: [  2400] LOITER   | dist=12.31m | alt=1.50m(err=+1.00) | yaw=+91deg | act=[yaw=-0.18 vx=+0.99 vy=-0.19 vz=-1.00] | vel_NED=(-0.24,+1.11,-0.50) | ICP[fwd=3.10m spd=1.00 X0=0.00 W1=0.125] | beams=['1.00', '0.93', '0.62', '1.00', '0.43']
+[python3-3] [INFO] [1786099029.758592691] [student_offboard]: NAV_STATE -> 4
+[python3-3] [INFO] [1786099029.760943970] [student_offboard]: -> OFFBOARD  student policy active
+[python3-3] [INFO] [1786099029.795037693] [student_offboard]: NAV_STATE -> 14
+[python3-3] [INFO] [1786099029.892874792] [student_offboard]: Arm request: True
+[rviz2-7] [INFO] [1786099030.218446708] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 59.468 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099030.250934567] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[python3-3] [INFO] [1786099030.752421400] [student_offboard]: [  2550] OFFBOARD | dist=11.82m | alt=2.31m(err=+0.19) | yaw=+97deg | act=[yaw=+0.03 vx=+0.99 vy=+0.32 vz=-0.97] | vel_NED=(+0.23,+1.12,+0.15) | ICP[fwd=2.78m spd=1.00 X0=0.00 W1=0.119] | beams=['1.00', '0.86', '0.56', '0.83', '1.00']
+[python3-3] [INFO] [1786099030.892654288] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786099031.892943393] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786099032.254620816] [student_offboard]: [  2700] OFFBOARD | dist=11.09m | alt=2.46m(err=+0.04) | yaw=+121deg | act=[yaw=+0.03 vx=+0.89 vy=+0.53 vz=-0.92] | vel_NED=(-0.00,+1.12,+0.15) | ICP[fwd=3.70m spd=1.00 X0=0.00 W1=0.114] | beams=['1.00', '0.71', '0.74', '0.38', '1.00']
+[rviz2-7] [INFO] [1786099032.777202499] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 62.044 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099032.891967815] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786099033.752289000] [student_offboard]: [  2850] OFFBOARD | dist=10.04m | alt=2.39m(err=+0.11) | yaw=+120deg | act=[yaw=-0.05 vx=+0.77 vy=+0.16 vz=-0.49] | vel_NED=(-0.27,+0.84,+0.15) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.109] | beams=['1.00', '0.56', '1.00', '0.19', '0.85']
+[python3-3] [INFO] [1786099033.892635366] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786099034.891965797] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786099035.250711444] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[python3-3] [INFO] [1786099035.252592745] [student_offboard]: [  3000] OFFBOARD | dist=9.48m | alt=2.26m(err=+0.24) | yaw=+123deg | act=[yaw=+0.18 vx=+0.70 vy=+0.79 vz=-0.99] | vel_NED=(+0.31,+1.12,+0.15) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.105] | beams=['1.00', '0.46', '1.00', '1.00', '0.06']
+[rviz2-7] [INFO] [1786099035.369652695] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 64.616 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099035.892565710] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786099036.751935647] [student_offboard]: [  3150] OFFBOARD | dist=8.77m | alt=2.23m(err=+0.27) | yaw=+96deg | act=[yaw=-0.14 vx=+0.85 vy=+0.21 vz=-0.39] | vel_NED=(+0.14,+0.97,+0.15) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.101] | beams=['0.42', '1.00', '1.00', '0.25', '0.24']
+[rviz2-7] [INFO] [1786099037.929768917] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 67.192 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099038.254105815] [student_offboard]: [  3300] OFFBOARD | dist=7.28m | alt=2.25m(err=+0.25) | yaw=+108deg | act=[yaw=+0.17 vx=+0.93 vy=+0.50 vz=+0.25] | vel_NED=(+0.21,+1.12,-0.28) | ICP[fwd=4.19m spd=1.00 X0=0.00 W1=0.097] | beams=['1.00', '0.92', '0.84', '1.00', '0.38']
+[python3-3] [INFO] [1786099039.752203366] [student_offboard]: [  3450] OFFBOARD | dist=5.81m | alt=2.44m(err=+0.06) | yaw=+115deg | act=[yaw=-0.15 vx=+0.91 vy=+0.92 vz=-0.68] | vel_NED=(+0.49,+1.12,+0.15) | ICP[fwd=3.01m spd=1.00 X0=0.00 W1=0.094] | beams=['0.91', '1.00', '0.60', '1.00', '1.00']
+[python3-3] [INFO] [1786099040.250466786] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[rviz2-7] [INFO] [1786099040.489562356] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 69.764 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099041.251963778] [student_offboard]: [  3600] OFFBOARD | dist=4.71m | alt=2.40m(err=+0.10) | yaw=+110deg | act=[yaw=+0.10 vx=+0.76 vy=+0.88 vz=-0.04] | vel_NED=(+0.64,+1.12,+0.04) | ICP[fwd=1.87m spd=0.99 X0=0.00 W1=0.091] | beams=['0.89', '1.00', '0.37', '1.00', '1.00']
+[python3-3] [INFO] [1786099042.752346196] [student_offboard]: [  3750] OFFBOARD | dist=3.72m | alt=2.68m(err=-0.18) | yaw=+133deg | act=[yaw=+0.32 vx=+0.17 vy=+0.88 vz=-0.87] | vel_NED=(+0.60,+0.81,+0.35) | ICP[fwd=1.39m spd=0.95 X0=0.00 W1=0.088] | beams=['1.00', '0.26', '0.28', '1.00', '1.00']
+[rviz2-7] [INFO] [1786099043.018259518] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 72.272 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099044.254017796] [student_offboard]: [  3900] OFFBOARD | dist=2.63m | alt=2.94m(err=-0.44) | yaw=+149deg | act=[yaw=+0.04 vx=+0.47 vy=+0.47 vz=-0.17] | vel_NED=(-0.18,+0.73,+0.19) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.085] | beams=['1.00', '0.30', '1.00', '1.00', '1.00']
+[python3-3] [INFO] [1786099045.250963474] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[rviz2-7] [INFO] [1786099045.577291964] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 74.848 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099045.752355459] [student_offboard]: [  4050] OFFBOARD | dist=2.01m | alt=2.37m(err=+0.13) | yaw=+163deg | act=[yaw=+0.13 vx=-0.07 vy=+0.50 vz=-0.19] | vel_NED=(+0.24,+0.52,+0.15) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.082] | beams=['1.00', '0.37', '1.00', '1.00', '1.00']
+[python3-3] [INFO] [1786099047.251813492] [student_offboard]: [  4200] OFFBOARD | dist=1.40m | alt=2.50m(err=-0.00) | yaw=+167deg | act=[yaw=+0.18 vx=+0.21 vy=+0.52 vz=-0.51] | vel_NED=(-0.09,+0.62,+0.15) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.080] | beams=['0.48', '1.00', '1.00', '1.00', '1.00']
+[rviz2-7] [INFO] [1786099048.106076781] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 77.356 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099048.752151838] [student_offboard]: [  4350] OFFBOARD | dist=0.87m | alt=2.56m(err=-0.06) | yaw=+136deg | act=[yaw=+0.08 vx=+0.06 vy=+0.03 vz=-0.02] | vel_NED=(-0.03,+0.07,+0.02) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.077] | beams=['1.00', '1.00', '1.00', '0.94', '0.94']
+[python3-3] [INFO] [1786099050.250625481] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[python3-3] [INFO] [1786099050.252741317] [student_offboard]: [  4500] OFFBOARD | dist=0.69m | alt=2.52m(err=-0.02) | yaw=+145deg | act=[yaw=-0.03 vx=+0.00 vy=-0.05 vz=-0.32] | vel_NED=(-0.04,-0.05,+0.15) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.075] | beams=['1.00', '1.00', '1.00', '0.91', '0.90']
+[rviz2-7] [INFO] [1786099050.665722174] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 79.928 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099051.752084372] [student_offboard]: [  4650] OFFBOARD | dist=0.55m | alt=2.57m(err=-0.07) | yaw=+153deg | act=[yaw=-0.07 vx=-0.08 vy=-0.22 vz=-0.77] | vel_NED=(-0.03,-0.27,+0.15) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.073] | beams=['0.62', '1.00', '1.00', '0.89', '0.86']
+[rviz2-7] [INFO] [1786099053.194061924] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 82.436 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099053.252763930] [student_offboard]: [  4800] OFFBOARD | dist=0.59m | alt=2.51m(err=-0.01) | yaw=+168deg | act=[yaw=+0.05 vx=+0.05 vy=+0.01 vz=-0.55] | vel_NED=(-0.06,+0.02,+0.15) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.071] | beams=['0.66', '1.00', '1.00', '0.98', '0.84']
+[python3-3] [INFO] [1786099054.752186820] [student_offboard]: [  4950] OFFBOARD | dist=0.78m | alt=2.53m(err=-0.03) | yaw=-169deg | act=[yaw=+0.10 vx=-0.00 vy=-0.01 vz=-0.43] | vel_NED=(+0.00,-0.01,+0.15) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.069] | beams=['1.00', '0.69', '1.00', '1.00', '0.88']
+[python3-3] [INFO] [1786099055.250465926] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[rviz2-7] [INFO] [1786099055.753764735] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 85.012 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099056.252484124] [student_offboard]: [  5100] OFFBOARD | dist=0.97m | alt=2.54m(err=-0.04) | yaw=-173deg | act=[yaw=+0.22 vx=-0.02 vy=-0.06 vz=-0.27] | vel_NED=(+0.03,-0.06,+0.15) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.068] | beams=['1.00', '0.71', '1.00', '1.00', '0.86']
+[python3-3] [INFO] [1786099057.752156541] [student_offboard]: [  5250] OFFBOARD | dist=1.00m | alt=2.55m(err=-0.05) | yaw=-172deg | act=[yaw=+0.03 vx=+0.03 vy=+0.06 vz=-0.06] | vel_NED=(-0.05,+0.06,+0.06) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.066] | beams=['1.00', '0.73', '1.00', '1.00', '0.84']
+[rviz2-7] [INFO] [1786099058.313885836] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 87.584 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786099059.252009521] [student_offboard]: [  5400] OFFBOARD | dist=1.10m | alt=2.58m(err=-0.08) | yaw=-168deg | act=[yaw=-0.08 vx=-0.10 vy=-0.32 vz=-0.43] | vel_NED=(+0.19,-0.33,+0.17) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.064] | beams=['1.00', '0.74', '1.00', '1.00', '0.84']
+[python3-3] [INFO] [1786099060.250542154] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[parameter_bridge-1] [INFO] [1786099060.615156117] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[static_transform_publisher-2] [INFO] [1786099060.615156437] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[rviz2-7] [INFO] [1786099060.615602070] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[python3-6] Traceback (most recent call last):
+[python3-6]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_viz_markers.py", line 312, in main
+[python3-6]     rclpy.spin(node)
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[python3-6]     executor.spin_once()
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 808, in spin_once
+[python3-6]     self._spin_once_impl(timeout_sec)
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 797, in _spin_once_impl
+[python3-6]     handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 780, in wait_for_ready_callbacks
+[python3-6]     return next(self._cb_iter)
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 681, in _wait_for_ready_callbacks
+[python3-6]     raise ExternalShutdownException()
+[python3-6] rclpy.executors.ExternalShutdownException
+[python3-6] 
+[python3-6] During handling of the above exception, another exception occurred:
+[python3-6] 
+[python3-6] Traceback (most recent call last):
+[python3-6]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_viz_markers.py", line 321, in <module>
+[python3-6]     main()
+[python3-6]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_viz_markers.py", line 317, in main
+[python3-6]     rclpy.shutdown()
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+[python3-6]     _shutdown(context=context)
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+[python3-6]     return context.shutdown()
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+[python3-6]     self.__context.shutdown()
+[python3-6] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241
+[python3-3] [INFO] Checkpoint  : /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/logs/dagger/student_latest.pth
+[python3-3] [INFO] Obs dim     : 16
+[python3-3] [INFO] Hidden dims : [256, 128]
+[python3-3] [INFO] DAgger iter : 199
+[python3-3] [INFO] Final beta  : 0.0500
+[python3-3] [INFO] Goal NED    : (0.0, 12.0, -2.5)  (N=0.0, E=12.0, alt=2.5m)
+[python3-3] [INFO] vel_scale   : 0.375  (max 1.1 m/s)
+[python3-3] [INFO] LiDAR topic : /scan
+[python3-3] [INFO] ICP speed   : d_ref=1.0m  d_pred=2.0m  W1_init=0.5  W1_max=5.0  γs=0.5  ks=0.5  (W1 halves in ~0s at rest)
+[python3-3] [crash_log] 500 rows → /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/results/quick_test/pa_trial_6_steps_last5s.csv
+[python3-3] Traceback (most recent call last):
+[python3-3]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/student_ros2_node_icp.py", line 1087, in main
+[python3-3]     rclpy.spin(node)
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[python3-3]     executor.spin_once()
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 808, in spin_once
+[python3-3]     self._spin_once_impl(timeout_sec)
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 797, in _spin_once_impl
+[python3-3]     handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 780, in wait_for_ready_callbacks
+[python3-3]     return next(self._cb_iter)
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 681, in _wait_for_ready_callbacks
+[python3-3]     raise ExternalShutdownException()
+[python3-3] rclpy.executors.ExternalShutdownException
+[python3-3] 
+[python3-3] During handling of the above exception, another exception occurred:
+[python3-3] 
+[python3-3] Traceback (most recent call last):
+[python3-3]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/student_ros2_node_icp.py", line 1097, in <module>
+[python3-3]     main()
+[python3-3]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/student_ros2_node_icp.py", line 1092, in main
+[python3-3]     rclpy.shutdown()
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+[python3-3]     _shutdown(context=context)
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+[python3-3]     return context.shutdown()
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+[python3-3]     self.__context.shutdown()
+[python3-3] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241
+[parameter_bridge-1] [INFO] [1786099060.681120711] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[parameter_bridge-1] [INFO] [1786099060.691423911] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[INFO] [parameter_bridge-1]: process has finished cleanly [pid 34887]
+[INFO] [static_transform_publisher-2]: process has finished cleanly [pid 34889]
+[ERROR] [python3-6]: process has died [pid 34897, exit code 1, cmd 'python3 /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_viz_markers.py --goal_east 12.0 --goal_north 0.0 --goal_alt 2.5'].
+[INFO] [rviz2-7]: process has finished cleanly [pid 34899]
+[ERROR] [python3-3]: process has died [pid 34891, exit code 1, cmd 'python3 /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/student_ros2_node_icp.py --checkpoint /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/logs/dagger/student_latest.pth --goal_north 0.0 --goal_east 12.0 --goal_alt 2.5 --takeoff_alt 2.5 --vel_scale 0.375 --d_reflexive 1.0 --d_predictive 2.0 --lidar_topic /scan --trial_log /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/results/quick_test/pa_trial_6_steps.csv'].

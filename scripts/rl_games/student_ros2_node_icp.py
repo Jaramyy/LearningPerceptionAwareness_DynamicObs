@@ -12,8 +12,8 @@ Speed adaptation network (Section D.1 of paper):
   S2 output = W0·X0 + W1·X1   (W0=1 fixed, W1 learned via ICP online)
   speed_scale = max(0, 1 − S2)
 
-ICP weight update (Eq. 4):
-  ΔW1 = μs·(dX0/dt)·X1 − γs·(ks + P(t))·W1²
+ICP weight update (Eq. 4, rate-independent discrete form):
+  ΔW1 = μs·ΔX0·X1 − γs·(ks + P(t))·W1²·dt
   P(t) = 0.05·X1 if X1>0 else 0
 
 Paper parameters (drone 0.55×0.1 m, max 2 m/s):
@@ -47,6 +47,8 @@ Run:
 """
 
 import argparse
+import collections
+import csv
 import math
 import os
 import threading
@@ -72,7 +74,7 @@ from px4_msgs.msg import (
     SensorCombined,
 )
 from sensor_msgs.msg import LaserScan
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, Float32MultiArray
 from geometry_msgs.msg import Point, PoseStamped, TransformStamped
 from visualization_msgs.msg import Marker, MarkerArray
 from tf2_ros import TransformBroadcaster
@@ -88,8 +90,8 @@ LIDAR_RANGE = 5.0           # training max range (m)
 BEAM_SECTOR_DEG = [(-90.0, -54.0), (-54.0, -18.0), (-18.0, 18.0), (18.0, 54.0), (54.0, 90.0)]
 
 # Scale factors (match QuadcopterEnvCfg)
-MAX_VELOCITY = 4.0    # m/s
-MAX_YAW_RATE = 3.14   # rad/s
+MAX_VELOCITY = 3.0    # m/s
+MAX_YAW_RATE = 4.14   # rad/s
 
 
 # ── Network definitions (identical to dagger_distill.py) ─────────────────────
@@ -227,6 +229,7 @@ class _State:
         self.att_q = (1.0, 0.0, 0.0, 0.0)      # w,x,y,z  FRD->NED
         self.ang_vel_frd = (0.0, 0.0, 0.0)     # rad/s FRD body
         self.lidar_msg: LaserScan | None = None
+        self.lidar_t_recv: float = 0.0          # monotonic time when scan callback fired
         self.px4_yaw = 0.0                      # NED yaw for FSM logging
         # Freshness flags
         self.has_pos = False
@@ -262,6 +265,7 @@ class _State:
     def update_lidar(self, msg: LaserScan):
         with self._lock:
             self.lidar_msg = msg
+            self.lidar_t_recv = time.monotonic()
             self.has_lidar = True
 
     def snapshot(self):
@@ -270,6 +274,7 @@ class _State:
                 self.pos_ned, self.vel_ned, self.att_q,
                 self.ang_vel_frd, self.lidar_msg, self.px4_yaw,
                 self.has_pos and self.has_att and self.has_ang_vel and self.has_lidar,
+                self.lidar_t_recv,
             )
 
 
@@ -283,25 +288,33 @@ class AdaptiveSpeedController:
     Network:  d_min → S1 → {X1 (predictive), X0=Rm(X1) (reflexive)}
               S2 = W0·X0 + W1·X1   →   speed_scale = max(0, 1 − S2)
 
-    ICP update (Eq. 4):
-      ΔW1 = μs·(dX0/dt)·X1 − γs·(ks + P(t))·W1²
+    ICP update (Eq. 4, correctly discretised from continuous-time form):
+      ΔW1 = μs·ΔX0·X1 − γs·(ks + P(t))·W1²·dt
       P(t) = 0.05·X1  if X1 > 0  else  0          (Eq. 5)
+
+    Note: the paper writes the update as a continuous-time ODE
+      dW1/dt = μs·(dX0/dt)·X1 − γs·(ks+P)·W1²
+    Multiplying both sides by dt gives the discrete form above.
+    Using dX0/dt (rate) without re-multiplying by dt over-drives W1 at
+    high control frequencies (100Hz → 100× too large), causing explosion.
     """
 
     def __init__(
         self,
         d_reflexive: float  = 1.0,    # m  — reflexive (short-range) threshold
-        d_predictive: float = 4.0,    # m  — predictive (long-range) threshold
+        d_predictive: float = 2.0,    # m  — predictive (long-range) threshold
         W0: float           = 1.0,    # reflexive gain (fixed)
         W1_init: float      = 0.5,    # initial predictive gain (learned)
+        W1_max: float       = 10.0,    # safety cap; prevents runaway at very close range
         mu_s: float         = 0.3,    # ICP learning rate
-        gamma_s: float      = 0.007,  # ICP forgetting rate  (paper: 0.0001 → ~2.8h; 0.001 → ~100s)
-        k_s: float          = 0.1,    # ICP offset           (paper: 0.01  → ~2.8h; 0.1   → ~100s)
+        gamma_s: float      = 0.3,  # ICP forgetting rate  (paper: 0.0001→2.8h; 0.3→~50s half-life)
+        k_s: float          = 0.5,  # ICP offset           (paper: 0.01;  raised for faster decay; ~8s half-life at W1=0.5)
     ):
         self.d_ref   = d_reflexive
         self.d_pred  = d_predictive
         self.W0      = W0
         self.W1      = W1_init
+        self.W1_max  = W1_max
         self.mu_s    = mu_s
         self.gamma_s = gamma_s
         self.k_s     = k_s
@@ -322,34 +335,47 @@ class AdaptiveSpeedController:
         return x if x >= 1.0 else 0.0
 
     # ------------------------------------------------------------------
-    def step(self, d_min: float, dt: float) -> tuple[float, float]:
-        """Run one ICP step and return (speed_scale, W1).
+    def step(
+        self, d_fwd: float, dt: float, d_emergency: float | None = None
+    ) -> tuple[float, float, float, float]:
+        """Run one ICP step and return (speed_scale, W1, X0_eff, X1).
 
-        d_min  : nearest forward obstacle distance in **metres**.
-        dt     : seconds since last call.
-        Returns: speed_scale ∈ [0, 1]  (1 = full speed, 0 = stop)
-                 W1          (current predictive weight, for logging)
+        d_fwd      : nearest obstacle in the 3 forward sectors (m) — drives X1 (predictive).
+        dt         : seconds since last call.
+        d_emergency: nearest obstacle across ALL 5 sectors (m).  When any sector is
+                     inside d_reflexive, X0 is forced to 1.0 regardless of d_fwd.
+                     Defaults to d_fwd (same as old behaviour).
+
+        Separating d_fwd and d_emergency lets the predictive slow-down track forward
+        threats while the reflexive brake catches any side obstacle that enters the
+        danger zone — fixing the blind-spot crash pattern.
         """
-        # S1 output: predictive signal
-        X1 = max(0.0, self._s1(d_min))
+        if d_emergency is None:
+            d_emergency = d_fwd
 
-        # Rm output: reflexive signal (fires only when X1 ≥ 1 → d ≤ d_ref)
+        # S1 output: predictive signal (forward sectors only)
+        X1 = max(0.0, self._s1(d_fwd))
+
+        # Rm output: reflexive from forward S1
         X0 = self._rm(X1)
 
-        # ICP weight update (Eq. 4)
-        dX0_dt = (X0 - self._X0_prev) / max(dt, 1e-6)
+        # Emergency override: if ANY sector is inside d_ref, force X0 ≥ 1
+        X0_emerg = max(X0, self._rm(max(0.0, self._s1(d_emergency))))
+
+        # ICP weight update (Eq. 4, rate-independent discrete form)
+        # ΔW1 = μs·ΔX0·X1 − γs·(ks + P(t))·W1²·dt
+        dX0    = X0_emerg - self._X0_prev   # delta, not divided by dt
         P_t    = 0.05 * X1 if X1 > 0.0 else 0.0
-        dW1    = (self.mu_s * dX0_dt * X1
-                  - self.gamma_s * (self.k_s + P_t) * self.W1 ** 2)
-        self.W1 = max(0.0, self.W1 + dW1)   # W1 ≥ 0: never accelerate
-        self._X0_prev = X0
+        dW1    = (self.mu_s * dX0 * X1
+                  - self.gamma_s * (self.k_s + P_t) * self.W1 ** 2 * dt)
+        self.W1 = max(0.0, min(self.W1 + dW1, self.W1_max))
+        self._X0_prev = X0_emerg
 
         # S2: combine reflexive + predictive (Section D.1)
-        S2 = self.W0 * X0 + self.W1 * X1
+        S2 = self.W0 * X0_emerg + self.W1 * X1
 
-        # Map to speed scale: S2=0 → full; S2≥1 → stop
         speed_scale = max(0.0, 1.0 - S2)
-        return speed_scale, self.W1
+        return speed_scale, self.W1, X0_emerg, X1
 
 
 # ── Main ROS2 node ────────────────────────────────────────────────────────────
@@ -364,9 +390,9 @@ class StudentOffboardNode(Node):
         self._normalizer = normalizer
         self._goal_ned = goal_ned          # (goal_N, goal_E, goal_D)
         self._eff_max_vel = MAX_VELOCITY * vel_scale
-        self._eff_max_yaw = MAX_YAW_RATE * vel_scale
+        self._eff_max_yaw = MAX_YAW_RATE
         self._lidar_topic = args.lidar_topic
-        self._max_vz_down = args.max_vz        # downward NED velocity cap (m/s)
+        # max_vz retained in args but not used — student policy controls altitude directly
         # Altitude floor in NED D: don't go below (goal_alt - 0.5m)
         # NED D is negative altitude, so floor_D = goal_D + 0.5  (less negative = lower altitude)
         self._alt_floor_D = goal_ned[2] + 0.5  # e.g. goal at -1.5m → floor at -1.0m (1.0m above gnd)
@@ -377,6 +403,7 @@ class StudentOffboardNode(Node):
             d_reflexive  = args.d_reflexive,
             d_predictive = args.d_predictive,
             W1_init      = args.w1_init,
+            W1_max       = args.w1_max,
             gamma_s      = args.gamma_s,
             k_s          = args.k_s,
         )
@@ -397,12 +424,34 @@ class StudentOffboardNode(Node):
         self._yawspeed = 0.0
         self._fixed_alt = args.fixed_alt   # m above home, used by /goal_pose updates
 
+        # Per-step logging — always keep last 500 steps (5 s at 100 Hz) in RAM
+        # as a crash buffer; optionally write every step to a CSV file.
+        _LOG_HDR = [
+            't_mono', 'pos_N', 'pos_E', 'alt_m',
+            'vel_N', 'vel_E', 'vel_D', 'yaw_deg',
+            'd_fwd_m', 'd_all_m', 'speed_scale', 'W1', 'X0', 'X1',
+            'b_right', 'b_slR', 'b_ctr', 'b_slL', 'b_left',
+            'a_yaw', 'a_vx', 'a_vy', 'a_vz', 'fsm',
+            'lat_scan_ms', 'lat_policy_ms', 'lat_icp_ms', 'lat_total_ms',
+        ]
+        self._log_buf: collections.deque = collections.deque(maxlen=500)
+        self._log_hdr = _LOG_HDR
+        log_path = getattr(args, 'trial_log', '') or ''
+        self._log_path = log_path if log_path else None
+        self._log_file = None
+        self._log_writer = None
+        if self._log_path:
+            os.makedirs(os.path.dirname(os.path.abspath(self._log_path)), exist_ok=True)
+            self._log_file = open(self._log_path, 'w', newline='', buffering=65536)
+            self._log_writer = csv.writer(self._log_file)
+            self._log_writer.writerow(_LOG_HDR)
+
         # TF broadcaster — publishes 'map' → 'base_link' so RViz can show the drone
         self._tf_broadcaster = TransformBroadcaster(self)
 
         px4_qos = QoSProfile(
             reliability=QoSReliabilityPolicy.BEST_EFFORT,
-            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+            durability=QoSDurabilityPolicy.VOLATILE,
             history=QoSHistoryPolicy.KEEP_LAST,
             depth=1,
         )
@@ -443,6 +492,12 @@ class StudentOffboardNode(Node):
             VehicleCommand, "/fmu/in/vehicle_command", 10)
         self._pub_markers = self.create_publisher(
             MarkerArray, "/student/markers", 10)
+        # ICP status: [d_min_fwd, d_min_fwd(dup), speed_scale, X0, X1, W1, icp_enabled]
+        self._pub_icp = self.create_publisher(
+            Float32MultiArray, "/student/icp_status", 10)
+        # Pipeline latency: [scan_age_ms, policy_ms, icp_ms, total_ms]
+        self._pub_latency = self.create_publisher(
+            Float32MultiArray, "/student/latency", 10)
 
         # Control timer
         self._step = 0
@@ -464,6 +519,8 @@ class StudentOffboardNode(Node):
             self.get_logger().info(f"NAV_STATE -> {msg.nav_state}")
         if msg.arming_state != self.arm_state:
             self.get_logger().info(f"ARM_STATE -> {msg.arming_state}")
+        if msg.pre_flight_checks_pass != self.flight_check:
+            self.get_logger().info(f"FLIGHT_CHECK -> {msg.pre_flight_checks_pass}")
         self.nav_state = msg.nav_state
         self.arm_state = msg.arming_state
         self.flight_check = msg.pre_flight_checks_pass
@@ -628,7 +685,7 @@ class StudentOffboardNode(Node):
     # ── Control loop ──────────────────────────────────────────────────────────
 
     def _control_cb(self):
-        pos, vel_ned, q, ang_vel_frd, lidar_msg, px4_yaw, ready = self._state.snapshot()
+        pos, vel_ned, q, ang_vel_frd, lidar_msg, px4_yaw, ready, t_scan_recv = self._state.snapshot()
 
         # Always tick FSM and publish to keep the offboard stream alive
         self._tick_fsm()
@@ -637,14 +694,18 @@ class StudentOffboardNode(Node):
             self._publish_zero()
             return
 
+        _t_cb = time.perf_counter()   # stage timing start
+
         obs = self._build_obs(pos, vel_ned, q, ang_vel_frd, lidar_msg)
         if obs is None:
             self._publish_zero()
             return
 
+        _t_inf0 = time.perf_counter()
         with torch.inference_mode():
             norm_obs = self._normalizer.normalize(obs)
             actions = self._student(norm_obs)   # (1, 4) in [-1, 1]
+        _t_inf1 = time.perf_counter()
 
         # Student policy outputs BODY-FRAME FLU velocities (not world frame).
         # The student was distilled from body-frame-only obs (lin_vel_b, goal_dir_b,
@@ -661,15 +722,32 @@ class StudentOffboardNode(Node):
         vz_b = float(actions[0, 3]) * self._eff_max_vel
 
         # MODANC adaptive speed control (IROS 2025, Section D.1).
-        # Uses forward sectors 1-3 (obs[12:15], ±54°) as d_min input.
-        # Lateral vy_b and yaw_rate are NOT scaled — student steers freely.
+        # Both X1 (predictive) and X0 (reflexive) driven by center sector only (-18° to +18°).
         now_t = time.monotonic()
         dt_ctrl = now_t - self._last_ctrl_t
         self._last_ctrl_t = now_t
-        fwd_min_norm = min(obs[0, 12].item(), obs[0, 13].item(), obs[0, 14].item())
-        d_min_m = fwd_min_norm * LIDAR_RANGE          # normalized [0,1] → metres
-        speed_scale, _W1 = self._speed_ctrl.step(d_min_m, dt_ctrl)
+
+        _t_icp0 = time.perf_counter()   # ICP stage: d_min extraction → compensated velocity
+        d_min_fwd = obs[0, 13].item() * LIDAR_RANGE
+
+        speed_scale, _W1, _X0, _X1 = self._speed_ctrl.step(d_min_fwd, dt_ctrl)
         vx_b *= speed_scale
+        # Lateral: keep policy direction for avoidance but cap magnitude proportionally.
+        # Floor at 0.3 so drone retains enough lateral authority to dodge at close range.
+        vy_max_eff = self._eff_max_vel * max(speed_scale, 0.3)
+        vy_b = max(-vy_max_eff, min(vy_max_eff, vy_b))
+        _t_icp1 = time.perf_counter()   # compensated velocity ready
+
+        # Pipeline latency (ms)
+        _lat_scan   = (now_t - t_scan_recv) * 1e3       # scan age: bridge + scheduling
+        _lat_policy = (_t_inf1 - _t_inf0)   * 1e3       # NN forward pass
+        _lat_icp    = (_t_icp1 - _t_icp0)   * 1e3       # d_min extraction → vx+vy scaled
+        _lat_total  = (_t_icp1 - _t_cb)     * 1e3       # obs-build through ICP done
+        if speed_scale < 0.9:
+            self.get_logger().warn(
+                f'ICP SLOWDOWN d_fwd={d_min_fwd:.2f}m '
+                f'scale={speed_scale:.2f} X0={_X0:.2f} X1={_X1:.2f} W1={_W1:.3f}'
+            )
 
         # Isaac body FLU (+X=fwd, +Y=left) → NED world using PX4 yaw (CW from North):
         #   fwd  unit in NE = (cos y,  sin y)
@@ -684,13 +762,27 @@ class StudentOffboardNode(Node):
         # NEUp → NED with clamping
         v_ned_n = max(-self._eff_max_vel, min(self._eff_max_vel, vx_world))
         v_ned_e = max(-self._eff_max_vel, min(self._eff_max_vel, vy_world))
-        # Vertical: Down = -Up; cap downward conservatively, allow full upward speed
-        v_ned_d_raw = -vz_b
-        v_ned_d = max(-self._eff_max_vel, min(self._max_vz_down, v_ned_d_raw))
-        # Altitude floor: if below goal_alt-0.5m, refuse further descent
+
+        # Vertical: student policy controls altitude via vz_b (FLU up = positive).
+        # NED D = −FLU_z, so positive vz_b → negative v_ned_d (climb).
         pD = pos[2]
-        if pD > self._alt_floor_D and v_ned_d > 0.0:
-            v_ned_d = 0.0
+        alt_m      = -pD
+        goal_alt_m = -self._goal_ned[2]
+        alt_err    = goal_alt_m - alt_m   # positive = goal above drone
+        v_ned_d_raw = -vz_b              # FLU up → NED climb (negative D)
+        v_ned_d = max(-self._eff_max_vel, min(self._eff_max_vel, v_ned_d_raw))
+
+        # Altitude safety corrections (replace wrong policy commands; not additive):
+        #  1. Overshoot prevention: when near or at goal, cap descent proportionally.
+        #     The policy commands full-speed descent even 0.1 m above goal, causing
+        #     large overshoots. Limit descent to alt_above * 2 m/s, min 0.15 m/s.
+        if v_ned_d > 0.0 and alt_err < 0.3:   # descending and within 0.3 m above goal
+            max_desc = max(0.15, -alt_err * 2.0)  # proportional: 0.15 m/s at goal, 0.6 at 0.3m above
+            v_ned_d = min(v_ned_d, max_desc)
+        #  2. Below-goal recovery: when the drone drifts below goal and policy still
+        #     commands descent, replace it with a gentle climb.
+        if alt_err > 0.3 and v_ned_d > 0.0:
+            v_ned_d = -min(0.5, 0.5 * alt_err)   # climb at up to 0.5 m/s
         # Yaw: Isaac FRU +Z=up → positive omega_z = CCW from above = yaw LEFT.
         # PX4 NED +Z=down → positive yawspeed = CW from above = yaw RIGHT.
         # Sign is OPPOSITE: negate to convert.
@@ -698,6 +790,21 @@ class StudentOffboardNode(Node):
 
         self._v_ned = (v_ned_n, v_ned_e, v_ned_d)
         self._yawspeed = yawspeed_ned
+
+        icp_msg = Float32MultiArray()
+        icp_msg.data = [
+            float(d_min_fwd), float(d_min_fwd),
+            float(speed_scale), float(_X0), float(_X1), float(_W1),
+            1.0,
+        ]
+        self._pub_icp.publish(icp_msg)
+
+        lat_msg = Float32MultiArray()
+        lat_msg.data = [
+            float(_lat_scan), float(_lat_policy),
+            float(_lat_icp),  float(_lat_total),
+        ]
+        self._pub_latency.publish(lat_msg)
 
         self._publish_tf(pos, q)
         self._publish_markers(pos, (v_ned_n, v_ned_e, v_ned_d), self._goal_ned)
@@ -716,18 +823,49 @@ class StudentOffboardNode(Node):
             raw_act = [float(actions[0, i]) for i in range(4)]
             self.get_logger().info(
                 f"[{self._step:6d}] {self._fsm_state:8s} | "
-                f"dist={dist:.2f}m | yaw={math.degrees(px4_yaw):+.0f}deg | "
-                f"goal_b=({goal_b[0]:+.2f},{goal_b[1]:+.2f},{goal_b[2]:+.2f}) | "
-                f"act=[yaw={raw_act[0]:+.2f} vx={raw_act[1]:+.2f} vy={raw_act[2]:+.2f} vz={raw_act[3]:+.2f}] | "
+                f"dist={dist:.2f}m | alt={alt_m:.2f}m(err={alt_err:+.2f}) | "
+                f"yaw={math.degrees(px4_yaw):+.0f}deg | "
+                f"act=[yaw={raw_act[0]:+.2f} vx={raw_act[1]:+.2f} "
+                f"vy={raw_act[2]:+.2f} vz={raw_act[3]:+.2f}] | "
                 f"vel_NED=({v_ned_n:+.2f},{v_ned_e:+.2f},{v_ned_d:+.2f}) | "
-                f"ICP[d={d_min_m:.1f}m spd={speed_scale:.2f} W1={_W1:.3f}] | "
+                f"ICP[fwd={d_min_fwd:.2f}m "
+                f"spd={speed_scale:.2f} X0={_X0:.2f} W1={_W1:.3f}] | "
                 f"beams={[f'{b:.2f}' for b in obs[0, 11:].tolist()]}"
             )
+
+        # Per-step log row (always buffered; written to file when --trial_log is set)
+        pN, pE, pD = pos
+        v_ned_n, v_ned_e, v_ned_d = self._v_ned
+        row = (
+            round(now_t, 4),
+            round(pN, 4), round(pE, 4), round(-pD, 4),
+            round(v_ned_n, 4), round(v_ned_e, 4), round(v_ned_d, 4),
+            round(math.degrees(px4_yaw), 2),
+            round(d_min_fwd, 4), round(d_min_fwd, 4),
+            round(speed_scale, 4), round(_W1, 4), round(_X0, 4), round(_X1, 4),
+            *(round(obs[0, 11 + i].item(), 4) for i in range(5)),
+            round(float(actions[0, 0]), 4), round(float(actions[0, 1]), 4),
+            round(float(actions[0, 2]), 4), round(float(actions[0, 3]), 4),
+            self._fsm_state,
+            round(_lat_scan, 3), round(_lat_policy, 3),
+            round(_lat_icp, 3), round(_lat_total, 3),
+        )
+        self._log_buf.append(row)
+        if self._log_writer is not None:
+            self._log_writer.writerow(row)
+
         self._step += 1
 
     # ── Arming FSM (same as sim2sim_px4.py) ──────────────────────────────────
 
     def _tick_fsm(self):
+        # Print status every 5 s (500 ticks at 100 Hz) so we can see if
+        # VehicleStatus is arriving (flight_check=True means it is).
+        if self._step % 500 == 0:
+            self.get_logger().info(
+                f"[diag] fsm={self._fsm_state} flight_check={self.flight_check} "
+                f"arm_req={self._arm_request} nav={self.nav_state} arm_st={self.arm_state}"
+            )
         match self._fsm_state:
             case "IDLE":
                 if self.flight_check and self._arm_request:
@@ -840,6 +978,30 @@ class StudentOffboardNode(Node):
         msg.from_external = True
         self._pub_cmd.publish(msg)
 
+    # ── Shutdown / log flush ──────────────────────────────────────────────────
+
+    def destroy_node(self):
+        if self._log_file is not None:
+            try:
+                self._log_file.flush()
+                self._log_file.close()
+            except Exception:
+                pass
+        # Always write the last 5 s of state as a crash buffer
+        if self._log_buf:
+            stem = self._log_path or '/tmp/student_node_crash'
+            crash_path = stem.replace('.csv', '') + '_last5s.csv'
+            try:
+                os.makedirs(os.path.dirname(os.path.abspath(crash_path)), exist_ok=True)
+                with open(crash_path, 'w', newline='') as f:
+                    w = csv.writer(f)
+                    w.writerow(self._log_hdr)
+                    w.writerows(self._log_buf)
+                print(f'[crash_log] {len(self._log_buf)} rows → {crash_path}')
+            except Exception as e:
+                print(f'[crash_log] write failed: {e}')
+        super().destroy_node()
+
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -868,21 +1030,24 @@ def main():
     # ── MODANC adaptive speed control (IROS 2025) ──
     parser.add_argument("--d_reflexive", type=float, default=1.0,
                         help="ICP short-range threshold (m): reflexive speed cut triggers "
-                             "when d_min ≤ this value. Paper default: 1.0 m.")
-    parser.add_argument("--d_predictive", type=float, default=4.0,
+                             "when d_min ≤ this value. Paper value: 1.0 m.")
+    parser.add_argument("--d_predictive", type=float, default=2.0,
                         help="ICP long-range threshold (m): predictive slow-down begins "
-                             "when d_min ≤ this value. Paper default: 4.0 m.")
+                             "when d_min ≤ this value. Paper value: 4.0 m.")
     parser.add_argument("--w1_init", type=float, default=0.5,
                         help="Initial predictive weight W1 (learned online via ICP). "
                              "0.0 = pure reflexive at start; 1.0 = strong predictive. "
                              "Default 0.5 for balanced immediate behavior.")
-    parser.add_argument("--gamma_s", type=float, default=0.001,
-                        help="ICP forgetting rate γs. Higher = faster W1 decay when "
-                             "no obstacles. Paper value 0.0001 (~2.8h to halve); "
-                             "default 0.001 (~100s). Try 0.005 for ~20s, 0.01 for ~10s.")
-    parser.add_argument("--k_s", type=float, default=0.1,
-                        help="ICP baseline decay offset ks. Scales with gamma_s. "
-                             "Paper value 0.01; default 0.1.")
+    parser.add_argument("--w1_max", type=float, default=5.0,
+                        help="Maximum allowed W1 value (safety cap). "
+                             "Prevents runaway at very close obstacle range. Default 5.0.")
+    parser.add_argument("--gamma_s", type=float, default=0.5,
+                        help="ICP forgetting rate γs (paper: 0.0001→2.8h half-life; 0.5→~30s).")
+    parser.add_argument("--k_s", type=float, default=0.5,
+                        help="ICP baseline decay offset ks (paper: 0.01; raised for faster decay; ~8s W1 half-life at 0.5).")
+    parser.add_argument("--trial_log", type=str, default="",
+                        help="Optional path for per-step CSV log (e.g. results/pa_trial_0_steps.csv). "
+                             "The last 5 s is always saved as <stem>_last5s.csv on shutdown.")
     args = parser.parse_args()
 
     # Load student checkpoint
@@ -913,7 +1078,7 @@ def main():
     print(f"[INFO] LiDAR topic : {args.lidar_topic}")
     t_half = 1.0 / (max(args.w1_init, 0.1) * args.gamma_s * args.k_s * 100)
     print(f"[INFO] ICP speed   : d_ref={args.d_reflexive}m  d_pred={args.d_predictive}m  "
-          f"W1_init={args.w1_init}  γs={args.gamma_s}  ks={args.k_s}  "
+          f"W1_init={args.w1_init}  W1_max={args.w1_max}  γs={args.gamma_s}  ks={args.k_s}  "
           f"(W1 halves in ~{t_half:.0f}s at rest)")
 
     rclpy.init()

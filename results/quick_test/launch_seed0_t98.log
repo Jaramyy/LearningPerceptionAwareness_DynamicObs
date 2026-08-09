@@ -1,0 +1,424 @@
+[INFO] [launch]: All log files can be found below /home/jaramy/.ros/log/2026-08-08-17-54-04-899987-jaramy-Legion-5-Pro-72317
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [parameter_bridge-1]: process started with pid [72324]
+[INFO] [static_transform_publisher-2]: process started with pid [72326]
+[INFO] [python3-3]: process started with pid [72328]
+[INFO] [python3-4]: process started with pid [72330]
+[INFO] [python3-5]: process started with pid [72332]
+[INFO] [python3-6]: process started with pid [72334]
+[INFO] [rviz2-7]: process started with pid [72336]
+[static_transform_publisher-2] [WARN] [1786186444.950533477] []: Old-style arguments are deprecated; see --help for new-style arguments
+[static_transform_publisher-2] [INFO] [1786186444.964195647] [static_tf_eval]: Spinning until stopped - publishing transform
+[static_transform_publisher-2] translation: ('0.000000', '0.000000', '0.000000')
+[static_transform_publisher-2] rotation: ('0.000000', '0.000000', '0.000000', '1.000000')
+[static_transform_publisher-2] from 'map' to 'agi_drone_depth_0/camera_link/realsense_d435'
+[parameter_bridge-1] [INFO] [1786186444.987470598] [gz_eval_bridge]: Creating GZ->ROS Bridge: [/scan (gz.msgs.LaserScan) -> /scan (sensor_msgs/msg/LaserScan)] (Lazy 0)
+[parameter_bridge-1] [INFO] [1786186444.989451200] [gz_eval_bridge]: Creating GZ->ROS Bridge: [/depth_camera/image (gz.msgs.Image) -> /depth_camera/image (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-1] [INFO] [1786186444.990068368] [gz_eval_bridge]: Creating GZ->ROS Bridge: [/depth_camera/depth_image (gz.msgs.Image) -> /depth_camera/depth_image (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-1] [INFO] [1786186444.990471164] [gz_eval_bridge]: Creating GZ->ROS Bridge: [/depth_camera/camera_info (gz.msgs.CameraInfo) -> /depth_camera/camera_info (sensor_msgs/msg/CameraInfo)] (Lazy 0)
+[python3-5] [INFO] [1786186445.235850981] [orb_visualizer]: ORB visualizer ready
+[python3-5]   → image   : /orb_debug/image
+[python3-5]   → latency : /orb/latency  [proc_ms, inter_ms, kp_count]
+[python3-4] [INFO] [1786186445.307098582] [gz_eval_monitor]: EvalMonitor: method=pa trial=98  goal_ned=(0.0, 12.0, -2.5)  timeout=90.0s
+[rviz2-7] [INFO] [1786186445.313449576] [rviz2]: Stereo is NOT SUPPORTED
+[rviz2-7] [INFO] [1786186445.313639541] [rviz2]: OpenGl version: 4.6 (GLSL 4.6)
+[rviz2-7] [INFO] [1786186445.331688373] [rviz2]: Stereo is NOT SUPPORTED
+[python3-6] [INFO] [1786186445.360012842] [gz_viz_markers]: VizMarkers ready — goal ENU=(12.0, 0.0, 2.5)  /viz/markers → RViz
+[python3-4] [INFO] [1786186445.388563180] [gz_eval_monitor]: Trial 98: airborne at alt=1.11 m
+[rviz2-7] [INFO] [1786186445.436774071] [rviz2]: Stereo is NOT SUPPORTED
+[rviz2-7] [INFO] [1786186445.451334843] [rviz2]: Stereo is NOT SUPPORTED
+[rviz2-7] [INFO] [1786186445.998220833] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 34.124 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186446.527635241] [student_offboard]: StudentOffboard ready | goal_NED=(0.0, 12.0, -2.5) | max_vel=1.1 m/s | lidar=/scan
+[python3-3] [INFO] [1786186446.527924156] [student_offboard]: Arm: ros2 topic pub --once /arm_message std_msgs/msg/Bool "data: true"
+[python3-3] [INFO] [1786186446.528571691] [student_offboard]: [diag] fsm=IDLE flight_check=False arm_req=False nav=31 arm_st=1
+[python3-3] [INFO] [1786186446.532877852] [student_offboard]: [diag] fsm=IDLE flight_check=False arm_req=False nav=31 arm_st=1
+[python3-3] [INFO] [1786186446.542982491] [student_offboard]: [diag] fsm=IDLE flight_check=False arm_req=False nav=31 arm_st=1
+[python3-3] [INFO] [1786186446.552972797] [student_offboard]: [diag] fsm=IDLE flight_check=False arm_req=False nav=31 arm_st=1
+[python3-3] [INFO] [1786186446.563084889] [student_offboard]: [diag] fsm=IDLE flight_check=False arm_req=False nav=31 arm_st=1
+[python3-3] [INFO] [1786186446.573018847] [student_offboard]: [diag] fsm=IDLE flight_check=False arm_req=False nav=31 arm_st=1
+[python3-3] [INFO] [1786186446.582976145] [student_offboard]: [diag] fsm=IDLE flight_check=False arm_req=False nav=31 arm_st=1
+[python3-3] [INFO] [1786186446.592997835] [student_offboard]: [diag] fsm=IDLE flight_check=False arm_req=False nav=31 arm_st=1
+[python3-3] [INFO] [1786186446.603002125] [student_offboard]: [diag] fsm=IDLE flight_check=False arm_req=False nav=31 arm_st=1
+[python3-3] [INFO] [1786186446.607857175] [student_offboard]: [     0] IDLE     | dist=12.20m | alt=1.12m(err=+1.38) | yaw=+89deg | act=[yaw=+0.14 vx=+1.00 vy=+0.02 vz=-1.00] | vel_NED=(+0.04,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.493] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786186446.608581718] [student_offboard]: NAV_STATE -> 4
+[python3-3] [INFO] [1786186446.608793641] [student_offboard]: FLIGHT_CHECK -> True
+[python3-3] [INFO] [1786186448.104456353] [student_offboard]: [   150] IDLE     | dist=12.18m | alt=1.04m(err=+1.46) | yaw=+90deg | act=[yaw=+0.16 vx=+1.00 vy=+0.09 vz=-1.00] | vel_NED=(+0.10,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.416] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-5] Traceback (most recent call last):
+[python3-5]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_orb_visualizer.py", line 130, in <module>
+[python3-5]     main()
+[python3-5]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_orb_visualizer.py", line 121, in main
+[python3-5]     rclpy.spin(node)
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[python3-5]     executor.spin_once()
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 808, in spin_once
+[python3-5]     self._spin_once_impl(timeout_sec)
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 805, in _spin_once_impl
+[python3-5]     raise handler.exception()
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/task.py", line 272, in _execute_coroutine_step
+[python3-5]     result = coro.send(None)
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 488, in handler
+[python3-5]     await call_coroutine(entity, arg)
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 407, in _execute_subscription
+[python3-5]     await await_or_execute(sub.callback, msg)
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 110, in await_or_execute
+[python3-5]     return callback(*args)
+[python3-5]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_orb_visualizer.py", line 114, in _cb
+[python3-5]     self._report(len(kps))
+[python3-5] AttributeError: 'OrbVisualizer' object has no attribute '_report'
+[ERROR] [python3-5]: process has died [pid 72332, exit code 1, cmd 'python3 /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_orb_visualizer.py'].
+[rviz2-7] [INFO] [1786186448.588909879] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 36.700 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186449.604638271] [student_offboard]: [   300] IDLE     | dist=12.17m | alt=0.96m(err=+1.54) | yaw=+90deg | act=[yaw=+0.19 vx=+1.00 vy=+0.11 vz=-1.00] | vel_NED=(+0.13,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.360] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786186451.104464611] [student_offboard]: [   450] IDLE     | dist=12.21m | alt=0.95m(err=+1.55) | yaw=+90deg | act=[yaw=+0.21 vx=+1.00 vy=+0.09 vz=-1.00] | vel_NED=(+0.10,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.317] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[rviz2-7] [INFO] [1786186451.149763872] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 39.272 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186451.603169790] [student_offboard]: [diag] fsm=IDLE flight_check=True arm_req=False nav=4 arm_st=1
+[python3-3] [INFO] [1786186451.897017058] [student_offboard]: FLIGHT_CHECK -> False
+[python3-3] [INFO] [1786186452.004981400] [student_offboard]: FLIGHT_CHECK -> True
+[python3-3] [INFO] [1786186452.603790688] [student_offboard]: [   600] IDLE     | dist=12.19m | alt=1.02m(err=+1.48) | yaw=+90deg | act=[yaw=+0.19 vx=+1.00 vy=+0.06 vz=-1.00] | vel_NED=(+0.06,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.283] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786186453.597356610] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186453.603067867] [student_offboard]: -> ARMING
+[python3-3] [INFO] [1786186453.630347210] [student_offboard]: ARM_STATE -> 2
+[rviz2-7] [INFO] [1786186453.709479649] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 41.848 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186453.713545704] [student_offboard]: -> TAKEOFF
+[python3-3] [INFO] [1786186453.745211503] [student_offboard]: NAV_STATE -> 17
+[python3-3] [INFO] [1786186453.753395663] [student_offboard]: -> LOITER (waiting for hover)
+[python3-3] [INFO] [1786186454.104643222] [student_offboard]: [   750] LOITER   | dist=12.22m | alt=1.06m(err=+1.44) | yaw=+90deg | act=[yaw=+0.18 vx=+1.00 vy=+0.05 vz=-1.00] | vel_NED=(+0.06,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.256] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786186454.597812930] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186455.597880710] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186455.604174079] [student_offboard]: [   900] LOITER   | dist=12.17m | alt=1.07m(err=+1.43) | yaw=+90deg | act=[yaw=+0.18 vx=+1.00 vy=+0.06 vz=-1.00] | vel_NED=(+0.07,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.234] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[rviz2-7] [INFO] [1786186456.237606194] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 44.356 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186456.597699549] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186456.603127688] [student_offboard]: [diag] fsm=LOITER flight_check=True arm_req=True nav=17 arm_st=2
+[python3-3] [INFO] [1786186457.105009414] [student_offboard]: [  1050] LOITER   | dist=12.15m | alt=1.08m(err=+1.42) | yaw=+90deg | act=[yaw=+0.17 vx=+1.00 vy=+0.06 vz=-1.00] | vel_NED=(+0.06,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.215] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786186457.598038823] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186458.598015017] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186458.604818493] [student_offboard]: [  1200] LOITER   | dist=12.15m | alt=1.10m(err=+1.40) | yaw=+90deg | act=[yaw=+0.16 vx=+1.00 vy=+0.06 vz=-1.00] | vel_NED=(+0.07,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.199] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[rviz2-7] [INFO] [1786186458.797024278] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 46.928 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186459.597985840] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186460.105018156] [student_offboard]: [  1350] LOITER   | dist=12.17m | alt=1.05m(err=+1.45) | yaw=+90deg | act=[yaw=+0.18 vx=+1.00 vy=+0.09 vz=-1.00] | vel_NED=(+0.10,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.185] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786186460.597903367] [student_offboard]: Arm request: True
+[rviz2-7] [INFO] [1786186461.389196186] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 49.504 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186461.597674637] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186461.603144759] [student_offboard]: [diag] fsm=LOITER flight_check=True arm_req=True nav=17 arm_st=2
+[python3-3] [INFO] [1786186461.605345247] [student_offboard]: [  1500] LOITER   | dist=12.21m | alt=1.04m(err=+1.46) | yaw=+90deg | act=[yaw=+0.18 vx=+1.00 vy=+0.12 vz=-1.00] | vel_NED=(+0.13,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.173] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786186462.598267430] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186463.104171105] [student_offboard]: [  1650] LOITER   | dist=12.22m | alt=0.98m(err=+1.52) | yaw=+90deg | act=[yaw=+0.20 vx=+1.00 vy=+0.12 vz=-1.00] | vel_NED=(+0.14,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.162] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786186463.597796039] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186463.921480942] [student_offboard]: ARM_STATE -> 1
+[python3-3] [INFO] [1786186463.933089258] [student_offboard]: ARM_STATE -> 2
+[rviz2-7] [INFO] [1786186463.949486144] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 52.076 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186464.598251459] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186464.604091850] [student_offboard]: [  1800] LOITER   | dist=12.23m | alt=0.88m(err=+1.62) | yaw=+90deg | act=[yaw=+0.23 vx=+1.00 vy=+0.14 vz=-1.00] | vel_NED=(+0.15,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.153] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786186465.597820221] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186466.105133452] [student_offboard]: [  1950] LOITER   | dist=12.21m | alt=0.82m(err=+1.68) | yaw=+90deg | act=[yaw=+0.25 vx=+1.00 vy=+0.18 vz=-1.00] | vel_NED=(+0.20,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.145] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[rviz2-7] [INFO] [1786186466.509829948] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 54.652 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186466.597732699] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186466.602939985] [student_offboard]: [diag] fsm=LOITER flight_check=True arm_req=True nav=17 arm_st=2
+[python3-3] [INFO] [1786186467.597954641] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186467.604683451] [student_offboard]: [  2100] LOITER   | dist=12.20m | alt=0.67m(err=+1.83) | yaw=+90deg | act=[yaw=+0.27 vx=+1.00 vy=+0.17 vz=-1.00] | vel_NED=(+0.19,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.137] | beams=['1.00', '1.00', '1.00', '0.68', '1.00']
+[python3-3] [INFO] [1786186468.597850924] [student_offboard]: Arm request: True
+[rviz2-7] [INFO] [1786186469.037451056] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 57.160 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186469.104892164] [student_offboard]: [  2250] LOITER   | dist=12.50m | alt=0.91m(err=+1.59) | yaw=+93deg | act=[yaw=+0.18 vx=+1.00 vy=+0.05 vz=-1.00] | vel_NED=(-0.00,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.131] | beams=['1.00', '1.00', '1.00', '0.73', '1.00']
+[python3-3] [INFO] [1786186469.597880883] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186470.598115075] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186470.603958205] [student_offboard]: [  2400] LOITER   | dist=12.60m | alt=1.62m(err=+0.88) | yaw=+93deg | act=[yaw=+0.19 vx=+1.00 vy=-0.12 vz=-1.00] | vel_NED=(-0.20,+1.12,-0.44) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.125] | beams=['1.00', '1.00', '1.00', '0.74', '1.00']
+[rviz2-7] [INFO] [1786186471.597775594] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 59.732 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186471.597926050] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186471.603215198] [student_offboard]: [diag] fsm=LOITER flight_check=True arm_req=True nav=17 arm_st=2
+[python3-3] [INFO] [1786186472.103951217] [student_offboard]: [  2550] LOITER   | dist=12.46m | alt=2.59m(err=-0.09) | yaw=+92deg | act=[yaw=-0.28 vx=+1.00 vy=-0.31 vz=-1.00] | vel_NED=(-0.40,+1.11,+0.17) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.119] | beams=['1.00', '1.00', '1.00', '0.71', '1.00']
+[python3-3] [INFO] [1786186472.120923850] [student_offboard]: NAV_STATE -> 4
+[python3-3] [INFO] [1786186472.123212424] [student_offboard]: -> OFFBOARD  student policy active
+[python3-3] [INFO] [1786186472.156558121] [student_offboard]: NAV_STATE -> 14
+[python3-3] [INFO] [1786186472.597805846] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186473.597844967] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186473.604724047] [student_offboard]: [  2700] OFFBOARD | dist=11.77m | alt=2.44m(err=+0.06) | yaw=+100deg | act=[yaw=+0.24 vx=+0.99 vy=+0.21 vz=-0.99] | vel_NED=(+0.03,+1.12,+0.15) | ICP[fwd=4.89m spd=1.00 X0=0.00 W1=0.114] | beams=['1.00', '1.00', '0.98', '0.61', '1.00']
+[rviz2-7] [INFO] [1786186474.125313692] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 62.240 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186474.597834116] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186475.104525840] [student_offboard]: [  2850] OFFBOARD | dist=10.74m | alt=2.41m(err=+0.09) | yaw=+106deg | act=[yaw=-0.20 vx=+0.95 vy=+0.12 vz=-0.96] | vel_NED=(-0.17,+1.07,+0.15) | ICP[fwd=3.94m spd=1.00 X0=0.00 W1=0.109] | beams=['1.00', '0.90', '0.79', '0.44', '0.45']
+[python3-3] [INFO] [1786186475.597780075] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186476.597727056] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186476.602893796] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[python3-3] [INFO] [1786186476.604503366] [student_offboard]: [  3000] OFFBOARD | dist=9.71m | alt=2.24m(err=+0.26) | yaw=+116deg | act=[yaw=+0.23 vx=+0.86 vy=+0.44 vz=-0.50] | vel_NED=(+0.03,+1.08,+0.15) | ICP[fwd=3.49m spd=1.00 X0=0.00 W1=0.105] | beams=['1.00', '0.73', '0.70', '0.54', '0.30']
+[rviz2-7] [INFO] [1786186476.685449412] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 64.816 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186477.597911027] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786186478.104383465] [student_offboard]: [  3150] OFFBOARD | dist=8.48m | alt=2.26m(err=+0.24) | yaw=+119deg | act=[yaw=-0.03 vx=+0.77 vy=+0.47 vz=-0.48] | vel_NED=(+0.03,+1.02,+0.15) | ICP[fwd=2.47m spd=1.00 X0=0.00 W1=0.101] | beams=['1.00', '0.60', '0.49', '0.30', '1.00']
+[rviz2-7] [INFO] [1786186479.213397564] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 67.324 for reason 'discarding message because the queue is full'
+[python3-3] [WARN] [1786186479.313917557] [student_offboard]: ICP SLOWDOWN d_fwd=0.55m scale=0.00 X0=1.45 X1=1.45 W1=0.725
+[python3-3] [WARN] [1786186479.323813738] [student_offboard]: ICP SLOWDOWN d_fwd=0.55m scale=0.00 X0=1.45 X1=1.45 W1=0.724
+[python3-3] [WARN] [1786186479.333837085] [student_offboard]: ICP SLOWDOWN d_fwd=0.55m scale=0.00 X0=1.45 X1=1.45 W1=0.722
+[python3-3] [WARN] [1786186479.343769946] [student_offboard]: ICP SLOWDOWN d_fwd=0.55m scale=0.00 X0=1.45 X1=1.45 W1=0.721
+[python3-3] [WARN] [1786186479.353967536] [student_offboard]: ICP SLOWDOWN d_fwd=0.55m scale=0.00 X0=1.45 X1=1.45 W1=0.719
+[python3-3] [WARN] [1786186479.363726893] [student_offboard]: ICP SLOWDOWN d_fwd=0.55m scale=0.00 X0=1.45 X1=1.45 W1=0.718
+[python3-3] [WARN] [1786186479.374222654] [student_offboard]: ICP SLOWDOWN d_fwd=0.55m scale=0.00 X0=1.45 X1=1.45 W1=0.717
+[python3-3] [WARN] [1786186479.383447129] [student_offboard]: ICP SLOWDOWN d_fwd=0.49m scale=0.00 X0=1.51 X1=1.51 W1=0.746
+[python3-3] [WARN] [1786186479.393535057] [student_offboard]: ICP SLOWDOWN d_fwd=0.49m scale=0.00 X0=1.51 X1=1.51 W1=0.744
+[python3-3] [WARN] [1786186479.403387755] [student_offboard]: ICP SLOWDOWN d_fwd=0.49m scale=0.00 X0=1.51 X1=1.51 W1=0.742
+[python3-3] [WARN] [1786186479.413818944] [student_offboard]: ICP SLOWDOWN d_fwd=0.49m scale=0.00 X0=1.51 X1=1.51 W1=0.741
+[python3-3] [WARN] [1786186479.424051864] [student_offboard]: ICP SLOWDOWN d_fwd=0.49m scale=0.00 X0=1.51 X1=1.51 W1=0.739
+[python3-3] [WARN] [1786186479.433531658] [student_offboard]: ICP SLOWDOWN d_fwd=0.49m scale=0.00 X0=1.51 X1=1.51 W1=0.738
+[python3-3] [WARN] [1786186479.443958888] [student_offboard]: ICP SLOWDOWN d_fwd=0.49m scale=0.00 X0=1.51 X1=1.51 W1=0.736
+[python3-3] [WARN] [1786186479.454028090] [student_offboard]: ICP SLOWDOWN d_fwd=0.44m scale=0.00 X0=1.56 X1=1.56 W1=0.754
+[python3-3] [WARN] [1786186479.463698795] [student_offboard]: ICP SLOWDOWN d_fwd=0.44m scale=0.00 X0=1.56 X1=1.56 W1=0.753
+[python3-3] [WARN] [1786186479.474014501] [student_offboard]: ICP SLOWDOWN d_fwd=0.44m scale=0.00 X0=1.56 X1=1.56 W1=0.751
+[python3-3] [WARN] [1786186479.483679843] [student_offboard]: ICP SLOWDOWN d_fwd=0.44m scale=0.00 X0=1.56 X1=1.56 W1=0.749
+[python3-3] [WARN] [1786186479.494119422] [student_offboard]: ICP SLOWDOWN d_fwd=0.44m scale=0.00 X0=1.56 X1=1.56 W1=0.748
+[python3-3] [WARN] [1786186479.503886092] [student_offboard]: ICP SLOWDOWN d_fwd=0.44m scale=0.00 X0=1.56 X1=1.56 W1=0.746
+[python3-3] [WARN] [1786186479.514085840] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.779
+[python3-3] [WARN] [1786186479.523680712] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.777
+[python3-3] [WARN] [1786186479.534065827] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.775
+[python3-3] [WARN] [1786186479.543747571] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.773
+[python3-3] [WARN] [1786186479.553797770] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.772
+[python3-3] [WARN] [1786186479.564014617] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.770
+[python3-3] [WARN] [1786186479.574003700] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.768
+[python3-3] [WARN] [1786186479.583826943] [student_offboard]: ICP SLOWDOWN d_fwd=0.31m scale=0.00 X0=1.69 X1=1.69 W1=0.798
+[python3-3] [WARN] [1786186479.594157950] [student_offboard]: ICP SLOWDOWN d_fwd=0.31m scale=0.00 X0=1.69 X1=1.69 W1=0.796
+[python3-3] [WARN] [1786186479.603365719] [student_offboard]: ICP SLOWDOWN d_fwd=0.31m scale=0.00 X0=1.69 X1=1.69 W1=0.795
+[python3-3] [INFO] [1786186479.604314655] [student_offboard]: [  3300] OFFBOARD | dist=7.32m | alt=2.28m(err=+0.22) | yaw=+116deg | act=[yaw=+0.13 vx=+0.25 vy=+0.13 vz=-0.59] | vel_NED=(+0.14,+0.07,+0.15) | ICP[fwd=0.31m spd=0.00 X0=1.69 W1=0.795] | beams=['0.56', '0.33', '0.06', '0.06', '0.08']
+[python3-3] [WARN] [1786186479.613535144] [student_offboard]: ICP SLOWDOWN d_fwd=0.31m scale=0.00 X0=1.69 X1=1.69 W1=0.793
+[python3-3] [WARN] [1786186479.623798247] [student_offboard]: ICP SLOWDOWN d_fwd=0.31m scale=0.00 X0=1.69 X1=1.69 W1=0.791
+[python3-3] [WARN] [1786186479.633888077] [student_offboard]: ICP SLOWDOWN d_fwd=0.31m scale=0.00 X0=1.69 X1=1.69 W1=0.789
+[python3-3] [WARN] [1786186479.643905311] [student_offboard]: ICP SLOWDOWN d_fwd=0.26m scale=0.00 X0=1.74 X1=1.74 W1=0.813
+[python3-3] [WARN] [1786186479.653807047] [student_offboard]: ICP SLOWDOWN d_fwd=0.26m scale=0.00 X0=1.74 X1=1.74 W1=0.811
+[python3-3] [WARN] [1786186479.663761634] [student_offboard]: ICP SLOWDOWN d_fwd=0.26m scale=0.00 X0=1.74 X1=1.74 W1=0.809
+[python3-3] [WARN] [1786186479.673879477] [student_offboard]: ICP SLOWDOWN d_fwd=0.26m scale=0.00 X0=1.74 X1=1.74 W1=0.807
+[python3-3] [WARN] [1786186479.683751407] [student_offboard]: ICP SLOWDOWN d_fwd=0.26m scale=0.00 X0=1.74 X1=1.74 W1=0.805
+[python3-3] [WARN] [1786186479.693892791] [student_offboard]: ICP SLOWDOWN d_fwd=0.26m scale=0.00 X0=1.74 X1=1.74 W1=0.803
+[python3-3] [WARN] [1786186479.703918912] [student_offboard]: ICP SLOWDOWN d_fwd=0.26m scale=0.00 X0=1.74 X1=1.74 W1=0.801
+[python3-3] [WARN] [1786186479.713935330] [student_offboard]: ICP SLOWDOWN d_fwd=0.26m scale=0.00 X0=1.74 X1=1.74 W1=0.799
+[python3-3] [WARN] [1786186479.723819420] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.831
+[python3-3] [WARN] [1786186479.733910585] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.829
+[python3-3] [WARN] [1786186479.743744225] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.827
+[python3-3] [WARN] [1786186479.753948846] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.825
+[python3-3] [WARN] [1786186479.763845519] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.823
+[python3-3] [WARN] [1786186479.773962273] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.837
+[python3-3] [WARN] [1786186479.784009264] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.835
+[python3-3] [WARN] [1786186479.793712085] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.833
+[python3-3] [WARN] [1786186479.803278134] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.831
+[python3-3] [WARN] [1786186479.814678894] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.829
+[python3-3] [WARN] [1786186479.823510181] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.827
+[python3-3] [WARN] [1786186479.833614204] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.825
+[python3-3] [WARN] [1786186479.843540820] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.843
+[python3-3] [WARN] [1786186479.853425779] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.841
+[python3-3] [WARN] [1786186479.863986409] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.839
+[python3-3] [WARN] [1786186479.873419305] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.837
+[python3-3] [WARN] [1786186479.883713217] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.834
+[python3-3] [WARN] [1786186479.895057679] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.832
+[python3-3] [WARN] [1786186479.903798695] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.830
+[python3-3] [WARN] [1786186479.913844422] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.828
+[python3-3] [WARN] [1786186479.923870892] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.827
+[python3-3] [WARN] [1786186479.933768051] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.825
+[python3-3] [WARN] [1786186479.943966471] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.823
+[python3-3] [WARN] [1786186479.953677460] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.821
+[python3-3] [WARN] [1786186479.963687612] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.819
+[python3-3] [WARN] [1786186479.978341122] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.816
+[python3-3] [WARN] [1786186479.983768610] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.821
+[python3-3] [WARN] [1786186479.993966954] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.819
+[python3-3] [WARN] [1786186480.003970232] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.817
+[python3-3] [WARN] [1786186480.013695404] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.815
+[python3-3] [WARN] [1786186480.023947990] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.813
+[python3-3] [WARN] [1786186480.033884744] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.811
+[python3-3] [WARN] [1786186480.043955077] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.803
+[python3-3] [WARN] [1786186480.054093677] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.801
+[python3-3] [WARN] [1786186480.063990182] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.799
+[python3-3] [WARN] [1786186480.074028258] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.797
+[python3-3] [WARN] [1786186480.083751236] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.795
+[python3-3] [WARN] [1786186480.094257007] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.793
+[python3-3] [WARN] [1786186480.103920347] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.792
+[python3-3] [WARN] [1786186480.114022250] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.779
+[python3-3] [WARN] [1786186480.123916027] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.778
+[python3-3] [WARN] [1786186480.133905758] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.776
+[python3-3] [WARN] [1786186480.143936607] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.774
+[python3-3] [WARN] [1786186480.154313460] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.772
+[python3-3] [WARN] [1786186480.163863301] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.771
+[python3-3] [WARN] [1786186480.174302600] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.769
+[python3-3] [WARN] [1786186480.183926751] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.775
+[python3-3] [WARN] [1786186480.194207340] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.773
+[python3-3] [WARN] [1786186480.204001957] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.772
+[python3-3] [WARN] [1786186480.213888984] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.770
+[python3-3] [WARN] [1786186480.223899237] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.768
+[python3-3] [WARN] [1786186480.233955058] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.766
+[python3-3] [WARN] [1786186480.243974694] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.765
+[python3-3] [WARN] [1786186480.253830541] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.760
+[python3-3] [WARN] [1786186480.263363730] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.758
+[python3-3] [WARN] [1786186480.273827051] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.756
+[python3-3] [WARN] [1786186480.285977929] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.754
+[python3-3] [WARN] [1786186480.293702093] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.753
+[python3-3] [WARN] [1786186480.304131207] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.751
+[python3-3] [WARN] [1786186480.314250286] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.736
+[python3-3] [WARN] [1786186480.323718932] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.735
+[python3-3] [WARN] [1786186480.333426205] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.733
+[python3-3] [WARN] [1786186480.343920124] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.732
+[python3-3] [WARN] [1786186480.353328709] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.730
+[python3-3] [WARN] [1786186480.363894473] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.728
+[python3-3] [WARN] [1786186480.373433852] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.727
+[python3-3] [WARN] [1786186480.383810995] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.725
+[python3-3] [WARN] [1786186480.394020538] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.724
+[python3-3] [WARN] [1786186480.403772091] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.722
+[python3-3] [WARN] [1786186480.413869273] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.721
+[python3-3] [WARN] [1786186480.423674743] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.719
+[python3-3] [WARN] [1786186480.434141711] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.702
+[python3-3] [WARN] [1786186480.443749732] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.701
+[python3-3] [WARN] [1786186480.453586318] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.699
+[python3-3] [WARN] [1786186480.463865458] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.698
+[python3-3] [WARN] [1786186480.473854466] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.696
+[python3-3] [WARN] [1786186480.483757263] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.695
+[python3-3] [WARN] [1786186480.493842639] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.693
+[python3-3] [WARN] [1786186480.503830766] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.698
+[python3-3] [WARN] [1786186480.513514297] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.696
+[python3-3] [WARN] [1786186480.523354100] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.695
+[python3-3] [WARN] [1786186480.533595333] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.693
+[python3-3] [WARN] [1786186480.543809038] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.692
+[python3-3] [WARN] [1786186480.554112477] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.690
+[python3-3] [WARN] [1786186480.563858047] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.689
+[python3-3] [WARN] [1786186480.573945735] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.678
+[python3-3] [WARN] [1786186480.583602602] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.676
+[python3-3] [WARN] [1786186480.593858698] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.675
+[python3-3] [WARN] [1786186480.603461274] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.674
+[python3-3] [WARN] [1786186480.614391506] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.672
+[python3-3] [WARN] [1786186480.624139270] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.671
+[python3-3] [WARN] [1786186480.633897129] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.670
+[python3-3] [WARN] [1786186480.643651094] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.656
+[python3-3] [WARN] [1786186480.653394223] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.655
+[python3-3] [WARN] [1786186480.663550971] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.654
+[python3-3] [WARN] [1786186480.673516513] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.653
+[python3-3] [WARN] [1786186480.683393818] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.651
+[python3-3] [WARN] [1786186480.693681214] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.650
+[python3-3] [WARN] [1786186480.703556409] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.649
+[python3-3] [WARN] [1786186480.714026990] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.648
+[python3-3] [WARN] [1786186480.723988720] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.647
+[python3-3] [WARN] [1786186480.733508055] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.645
+[python3-3] [WARN] [1786186480.743666735] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.644
+[python3-3] [WARN] [1786186480.754432090] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.643
+[python3-3] [WARN] [1786186480.763991635] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.642
+[python3-3] [WARN] [1786186480.774081261] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.640
+[python3-3] [WARN] [1786186480.783702402] [student_offboard]: ICP SLOWDOWN d_fwd=0.25m scale=0.00 X0=1.75 X1=1.75 W1=0.627
+[python3-3] [WARN] [1786186480.793824191] [student_offboard]: ICP SLOWDOWN d_fwd=0.25m scale=0.00 X0=1.75 X1=1.75 W1=0.625
+[python3-3] [WARN] [1786186480.803866974] [student_offboard]: ICP SLOWDOWN d_fwd=0.25m scale=0.00 X0=1.75 X1=1.75 W1=0.624
+[python3-3] [WARN] [1786186480.813467647] [student_offboard]: ICP SLOWDOWN d_fwd=0.25m scale=0.00 X0=1.75 X1=1.75 W1=0.623
+[python3-3] [WARN] [1786186480.823765051] [student_offboard]: ICP SLOWDOWN d_fwd=0.25m scale=0.00 X0=1.75 X1=1.75 W1=0.622
+[python3-3] [WARN] [1786186480.834008463] [student_offboard]: ICP SLOWDOWN d_fwd=0.25m scale=0.00 X0=1.75 X1=1.75 W1=0.621
+[python3-3] [WARN] [1786186480.843921573] [student_offboard]: ICP SLOWDOWN d_fwd=0.27m scale=0.00 X0=1.73 X1=1.73 W1=0.610
+[python3-3] [WARN] [1786186480.853571001] [student_offboard]: ICP SLOWDOWN d_fwd=0.27m scale=0.00 X0=1.73 X1=1.73 W1=0.609
+[python3-3] [WARN] [1786186480.863838607] [student_offboard]: ICP SLOWDOWN d_fwd=0.27m scale=0.00 X0=1.73 X1=1.73 W1=0.608
+[python3-3] [WARN] [1786186480.873736480] [student_offboard]: ICP SLOWDOWN d_fwd=0.27m scale=0.00 X0=1.73 X1=1.73 W1=0.607
+[python3-3] [WARN] [1786186480.883823597] [student_offboard]: ICP SLOWDOWN d_fwd=0.27m scale=0.00 X0=1.73 X1=1.73 W1=0.606
+[python3-3] [WARN] [1786186480.894079872] [student_offboard]: ICP SLOWDOWN d_fwd=0.27m scale=0.00 X0=1.73 X1=1.73 W1=0.605
+[python3-3] [WARN] [1786186480.903621191] [student_offboard]: ICP SLOWDOWN d_fwd=0.36m scale=0.00 X0=1.64 X1=1.64 W1=0.560
+[python3-3] [WARN] [1786186480.913951857] [student_offboard]: ICP SLOWDOWN d_fwd=0.36m scale=0.00 X0=1.64 X1=1.64 W1=0.559
+[python3-3] [WARN] [1786186480.923735648] [student_offboard]: ICP SLOWDOWN d_fwd=0.36m scale=0.00 X0=1.64 X1=1.64 W1=0.558
+[python3-3] [WARN] [1786186480.933520940] [student_offboard]: ICP SLOWDOWN d_fwd=0.36m scale=0.00 X0=1.64 X1=1.64 W1=0.557
+[python3-3] [WARN] [1786186480.943925082] [student_offboard]: ICP SLOWDOWN d_fwd=0.36m scale=0.00 X0=1.64 X1=1.64 W1=0.556
+[python3-3] [WARN] [1786186480.953557323] [student_offboard]: ICP SLOWDOWN d_fwd=0.36m scale=0.00 X0=1.64 X1=1.64 W1=0.556
+[python3-3] [WARN] [1786186480.963820291] [student_offboard]: ICP SLOWDOWN d_fwd=0.36m scale=0.00 X0=1.64 X1=1.64 W1=0.555
+[python3-3] [INFO] [1786186481.104902014] [student_offboard]: [  3450] OFFBOARD | dist=7.00m | alt=2.24m(err=+0.26) | yaw=+111deg | act=[yaw=+0.03 vx=+0.89 vy=+0.32 vz=+0.66] | vel_NED=(-0.03,+1.06,-0.74) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.544] | beams=['0.05', '0.06', '1.00', '0.74', '1.00']
+[python3-3] [INFO] [1786186481.603238392] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[rviz2-7] [INFO] [1786186481.773936680] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 69.896 for reason 'discarding message because the queue is full'
+[python3-4] [INFO] [1786186482.390691614] [gz_eval_monitor]: Trial 98 DONE: result=collision  t=37.0s  orb=268±157  lat=32.0ms  [scan=33.5 policy=0.5 icp=0.0]ms
+[python3-4] [INFO] [1786186482.391186833] [gz_eval_monitor]: Results → /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/results/quick_test/pa_trial_98.json
+[python3-3] [INFO] [1786186482.603997426] [student_offboard]: [  3600] OFFBOARD | dist=5.74m | alt=2.77m(err=-0.27) | yaw=+144deg | act=[yaw=-0.11 vx=+0.55 vy=+0.90 vz=-0.37] | vel_NED=(+0.09,+1.12,+0.42) | ICP[fwd=3.59m spd=1.00 X0=0.00 W1=0.452] | beams=['0.21', '0.45', '0.72', '1.00', '0.51']
+[INFO] [python3-4]: process has finished cleanly [pid 72330]
+[python3-3] [INFO] [1786186484.104803073] [student_offboard]: [  3750] OFFBOARD | dist=4.71m | alt=2.47m(err=+0.03) | yaw=+164deg | act=[yaw=+0.03 vx=+0.24 vy=+0.96 vz=-0.86] | vel_NED=(+0.04,+1.11,+0.15) | ICP[fwd=3.02m spd=1.00 X0=0.00 W1=0.386] | beams=['0.41', '0.55', '0.60', '1.00', '1.00']
+[rviz2-7] [INFO] [1786186484.333346973] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 72.472 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186485.604753544] [student_offboard]: [  3900] OFFBOARD | dist=3.47m | alt=2.38m(err=+0.12) | yaw=+163deg | act=[yaw=-0.11 vx=+0.21 vy=+0.84 vz=-0.29] | vel_NED=(+0.05,+0.98,+0.15) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.337] | beams=['0.69', '0.55', '1.00', '1.00', '1.00']
+[python3-3] [INFO] [1786186486.602908523] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[rviz2-7] [INFO] [1786186486.861913093] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 74.980 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186487.104859395] [student_offboard]: [  4050] OFFBOARD | dist=2.32m | alt=2.23m(err=+0.27) | yaw=+163deg | act=[yaw=+0.08 vx=+0.13 vy=+0.66 vz=+0.05] | vel_NED=(+0.08,+0.75,-0.06) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.299] | beams=['0.87', '0.61', '1.00', '1.00', '1.00']
+[python3-3] [INFO] [1786186488.604247750] [student_offboard]: [  4200] OFFBOARD | dist=1.28m | alt=2.31m(err=+0.19) | yaw=+121deg | act=[yaw=-0.15 vx=-0.09 vy=-0.06 vz=+0.21] | vel_NED=(+0.00,-0.12,-0.24) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.269] | beams=['1.00', '1.00', '1.00', '1.00', '1.00']
+[rviz2-7] [INFO] [1786186489.422026856] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 77.552 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186490.104490331] [student_offboard]: [  4350] OFFBOARD | dist=0.76m | alt=2.46m(err=+0.04) | yaw=+160deg | act=[yaw=-0.08 vx=-0.06 vy=-0.14 vz=-0.03] | vel_NED=(+0.01,-0.18,+0.04) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.245] | beams=['0.92', '1.00', '1.00', '0.96', '0.87']
+[python3-3] [INFO] [1786186491.603237058] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[python3-3] [INFO] [1786186491.605649218] [student_offboard]: [  4500] OFFBOARD | dist=0.75m | alt=2.50m(err=+0.00) | yaw=-174deg | act=[yaw=-0.28 vx=-0.15 vy=-0.22 vz=-0.25] | vel_NED=(+0.19,-0.23,+0.15) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.224] | beams=['1.00', '0.99', '1.00', '1.00', '0.82']
+[rviz2-7] [INFO] [1786186492.013519617] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 80.128 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186493.104239494] [student_offboard]: [  4650] OFFBOARD | dist=0.80m | alt=2.45m(err=+0.05) | yaw=-161deg | act=[yaw=-0.14 vx=-0.02 vy=-0.16 vz=+0.16] | vel_NED=(+0.08,-0.16,-0.18) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.207] | beams=['0.62', '1.00', '1.00', '1.00', '0.84']
+[rviz2-7] [INFO] [1786186494.573972122] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 82.700 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186494.604836664] [student_offboard]: [  4800] OFFBOARD | dist=0.75m | alt=2.43m(err=+0.07) | yaw=-151deg | act=[yaw=+0.08 vx=-0.01 vy=-0.08 vz=+0.30] | vel_NED=(+0.05,-0.07,-0.34) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.192] | beams=['0.64', '1.00', '1.00', '1.00', '0.97']
+[python3-3] [INFO] [1786186496.104633564] [student_offboard]: [  4950] OFFBOARD | dist=0.69m | alt=2.46m(err=+0.04) | yaw=-156deg | act=[yaw=+0.07 vx=+0.01 vy=-0.05 vz=-0.06] | vel_NED=(+0.01,-0.06,+0.06) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.179] | beams=['0.65', '1.00', '1.00', '1.00', '0.88']
+[python3-3] [INFO] [1786186496.603196951] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[rviz2-7] [INFO] [1786186497.166141039] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 85.276 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186497.604731259] [student_offboard]: [  5100] OFFBOARD | dist=0.66m | alt=2.49m(err=+0.01) | yaw=-144deg | act=[yaw=+0.16 vx=+0.01 vy=+0.01 vz=-0.18] | vel_NED=(-0.02,-0.00,+0.15) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.168] | beams=['0.65', '1.00', '1.00', '1.00', '1.00']
+[python3-3] [INFO] [1786186499.105098093] [student_offboard]: [  5250] OFFBOARD | dist=0.72m | alt=2.54m(err=-0.04) | yaw=-137deg | act=[yaw=-0.06 vx=+0.07 vy=-0.03 vz=-0.22] | vel_NED=(-0.03,-0.07,+0.15) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.158] | beams=['0.68', '1.00', '1.00', '1.00', '1.00']
+[rviz2-7] [INFO] [1786186499.727081454] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 87.848 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186500.606624574] [student_offboard]: [  5400] OFFBOARD | dist=0.71m | alt=2.49m(err=+0.01) | yaw=-140deg | act=[yaw=-0.10 vx=-0.00 vy=-0.10 vz=+0.14] | vel_NED=(+0.07,-0.08,-0.15) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.149] | beams=['0.69', '1.00', '1.00', '1.00', '1.00']
+[python3-3] [INFO] [1786186501.603001553] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[python3-3] [INFO] [1786186502.104878165] [student_offboard]: [  5550] OFFBOARD | dist=0.62m | alt=2.49m(err=+0.01) | yaw=-132deg | act=[yaw=-0.18 vx=-0.01 vy=-0.10 vz=+0.27] | vel_NED=(+0.09,-0.07,-0.30) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.141] | beams=['0.71', '1.00', '1.00', '1.00', '1.00']
+[rviz2-7] [INFO] [1786186502.285727105] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 90.424 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186503.603893401] [student_offboard]: [  5700] OFFBOARD | dist=0.62m | alt=2.50m(err=-0.00) | yaw=-111deg | act=[yaw=+0.07 vx=-0.01 vy=-0.10 vz=-0.06] | vel_NED=(+0.11,-0.02,+0.06) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.134] | beams=['0.81', '0.72', '1.00', '1.00', '1.00']
+[rviz2-7] [INFO] [1786186504.814511990] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 92.932 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786186505.104249472] [student_offboard]: [  5850] OFFBOARD | dist=0.60m | alt=2.51m(err=-0.01) | yaw=-82deg | act=[yaw=+0.18 vx=+0.05 vy=+0.05 vz=-0.18] | vel_NED=(-0.05,-0.07,+0.15) | ICP[fwd=3.70m spd=1.00 X0=0.00 W1=0.128] | beams=['1.00', '0.86', '0.74', '0.98', '1.00']
+[static_transform_publisher-2] [INFO] [1786186506.052301377] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[rviz2-7] [INFO] [1786186506.052302374] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[parameter_bridge-1] [INFO] [1786186506.052314491] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[python3-6] Traceback (most recent call last):
+[python3-6]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_viz_markers.py", line 312, in main
+[python3-6]     rclpy.spin(node)
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[python3-6]     executor.spin_once()
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 808, in spin_once
+[python3-6]     self._spin_once_impl(timeout_sec)
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 797, in _spin_once_impl
+[python3-6]     handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 780, in wait_for_ready_callbacks
+[python3-6]     return next(self._cb_iter)
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 681, in _wait_for_ready_callbacks
+[python3-6]     raise ExternalShutdownException()
+[python3-6] rclpy.executors.ExternalShutdownException
+[python3-6] 
+[python3-6] During handling of the above exception, another exception occurred:
+[python3-6] 
+[python3-6] Traceback (most recent call last):
+[python3-6]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_viz_markers.py", line 321, in <module>
+[python3-6]     main()
+[python3-6]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_viz_markers.py", line 317, in main
+[python3-6]     rclpy.shutdown()
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+[python3-6]     _shutdown(context=context)
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+[python3-6]     return context.shutdown()
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+[python3-6]     self.__context.shutdown()
+[python3-6] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241
+[python3-3] [INFO] Checkpoint  : /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/logs/dagger/student_latest.pth
+[python3-3] [INFO] Obs dim     : 16
+[python3-3] [INFO] Hidden dims : [256, 128]
+[python3-3] [INFO] DAgger iter : 199
+[python3-3] [INFO] Final beta  : 0.0500
+[python3-3] [INFO] Goal NED    : (0.0, 12.0, -2.5)  (N=0.0, E=12.0, alt=2.5m)
+[python3-3] [INFO] vel_scale   : 0.375  (max 1.1 m/s)
+[python3-3] [INFO] LiDAR topic : /scan
+[python3-3] [INFO] ICP speed   : d_ref=1.0m  d_pred=2.0m  W1_init=0.5  W1_max=5.0  γs=0.5  ks=0.5  (W1 halves in ~0s at rest)
+[python3-3] [crash_log] 500 rows → /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/results/quick_test/pa_trial_98_steps_last5s.csv
+[python3-3] Traceback (most recent call last):
+[python3-3]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/student_ros2_node_icp.py", line 1087, in main
+[python3-3]     rclpy.spin(node)
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[python3-3]     executor.spin_once()
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 808, in spin_once
+[python3-3]     self._spin_once_impl(timeout_sec)
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 797, in _spin_once_impl
+[python3-3]     handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 780, in wait_for_ready_callbacks
+[python3-3]     return next(self._cb_iter)
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 681, in _wait_for_ready_callbacks
+[python3-3]     raise ExternalShutdownException()
+[python3-3] rclpy.executors.ExternalShutdownException
+[python3-3] 
+[python3-3] During handling of the above exception, another exception occurred:
+[python3-3] 
+[python3-3] Traceback (most recent call last):
+[python3-3]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/student_ros2_node_icp.py", line 1097, in <module>
+[python3-3]     main()
+[python3-3]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/student_ros2_node_icp.py", line 1092, in main
+[python3-3]     rclpy.shutdown()
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+[python3-3]     _shutdown(context=context)
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+[python3-3]     return context.shutdown()
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+[python3-3]     self.__context.shutdown()
+[python3-3] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241
+[parameter_bridge-1] [INFO] [1786186506.101138464] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[parameter_bridge-1] [INFO] [1786186506.113608242] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[INFO] [static_transform_publisher-2]: process has finished cleanly [pid 72326]
+[INFO] [parameter_bridge-1]: process has finished cleanly [pid 72324]
+[ERROR] [python3-6]: process has died [pid 72334, exit code 1, cmd 'python3 /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_viz_markers.py --goal_east 12.0 --goal_north 0.0 --goal_alt 2.5'].
+[INFO] [rviz2-7]: process has finished cleanly [pid 72336]
+[ERROR] [python3-3]: process has died [pid 72328, exit code 1, cmd 'python3 /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/student_ros2_node_icp.py --checkpoint /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/logs/dagger/student_latest.pth --goal_north 0.0 --goal_east 12.0 --goal_alt 2.5 --takeoff_alt 2.5 --vel_scale 0.375 --d_reflexive 1.0 --d_predictive 2.0 --lidar_topic /scan --trial_log /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/results/quick_test/pa_trial_98_steps.csv'].

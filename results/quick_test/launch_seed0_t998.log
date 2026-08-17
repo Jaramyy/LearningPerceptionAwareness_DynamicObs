@@ -1,0 +1,1184 @@
+[INFO] [launch]: All log files can be found below /home/jaramy/.ros/log/2026-08-13-00-53-27-238815-jaramy-Legion-5-Pro-170345
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [parameter_bridge-1]: process started with pid [170352]
+[INFO] [static_transform_publisher-2]: process started with pid [170354]
+[INFO] [python3-3]: process started with pid [170356]
+[INFO] [python3-4]: process started with pid [170358]
+[INFO] [python3-5]: process started with pid [170360]
+[INFO] [python3-6]: process started with pid [170362]
+[INFO] [rviz2-7]: process started with pid [170364]
+[static_transform_publisher-2] [WARN] [1786557207.286635184] []: Old-style arguments are deprecated; see --help for new-style arguments
+[static_transform_publisher-2] [INFO] [1786557207.299219802] [static_tf_eval]: Spinning until stopped - publishing transform
+[static_transform_publisher-2] translation: ('0.000000', '0.000000', '0.000000')
+[static_transform_publisher-2] rotation: ('0.000000', '0.000000', '0.000000', '1.000000')
+[static_transform_publisher-2] from 'map' to 'agi_drone_depth_0/camera_link/realsense_d435'
+[parameter_bridge-1] [INFO] [1786557207.321772136] [gz_eval_bridge]: Creating GZ->ROS Bridge: [/scan (gz.msgs.LaserScan) -> /scan (sensor_msgs/msg/LaserScan)] (Lazy 0)
+[parameter_bridge-1] [INFO] [1786557207.323679699] [gz_eval_bridge]: Creating GZ->ROS Bridge: [/depth_camera/image (gz.msgs.Image) -> /depth_camera/image (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-1] [INFO] [1786557207.324188645] [gz_eval_bridge]: Creating GZ->ROS Bridge: [/depth_camera/depth_image (gz.msgs.Image) -> /depth_camera/depth_image (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-1] [INFO] [1786557207.324565118] [gz_eval_bridge]: Creating GZ->ROS Bridge: [/depth_camera/camera_info (gz.msgs.CameraInfo) -> /depth_camera/camera_info (sensor_msgs/msg/CameraInfo)] (Lazy 0)
+[python3-5] [INFO] [1786557207.564123205] [orb_visualizer]: ORB visualizer ready
+[python3-5]   → image   : /orb_debug/image
+[python3-5]   → latency : /orb/latency  [proc_ms, inter_ms, kp_count]
+[rviz2-7] [INFO] [1786557207.612181453] [rviz2]: Stereo is NOT SUPPORTED
+[rviz2-7] [INFO] [1786557207.612353253] [rviz2]: OpenGl version: 4.6 (GLSL 4.6)
+[rviz2-7] [INFO] [1786557207.631371436] [rviz2]: Stereo is NOT SUPPORTED
+[python3-6] [INFO] [1786557207.726482847] [gz_viz_markers]: VizMarkers ready — goal ENU=(12.0, 0.0, 2.5)  /viz/markers → RViz
+[python3-4] [INFO] [1786557207.750767762] [gz_eval_monitor]: EvalMonitor: method=pa trial=998  goal_ned=(0.0, 12.0, -2.5)  timeout=90.0s
+[rviz2-7] [INFO] [1786557207.751789880] [rviz2]: Stereo is NOT SUPPORTED
+[rviz2-7] [INFO] [1786557207.766833978] [rviz2]: Stereo is NOT SUPPORTED
+[python3-4] [INFO] [1786557207.809449337] [gz_eval_monitor]: Trial 998: airborne at alt=0.73 m
+[rviz2-7] [INFO] [1786557208.385920435] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 34.256 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557209.156355818] [student_offboard]: StudentOffboard ready | goal_NED=(0.0, 12.0, -2.5) | max_vel=1.1 m/s | lidar=/scan
+[python3-3] [INFO] [1786557209.156885090] [student_offboard]: Arm: ros2 topic pub --once /arm_message std_msgs/msg/Bool "data: true"
+[python3-3] [INFO] [1786557209.157867202] [student_offboard]: [diag] fsm=IDLE flight_check=False arm_req=False nav=31 arm_st=1
+[python3-3] [INFO] [1786557209.165736595] [student_offboard]: [diag] fsm=IDLE flight_check=False arm_req=False nav=31 arm_st=1
+[python3-3] [INFO] [1786557209.168538983] [student_offboard]: [     0] IDLE     | dist=12.34m | alt=0.72m(err=+1.78) | yaw=+90deg | act=[yaw=+0.31 vx=+1.00 vy=+0.16 vz=-1.00] | vel_NED=(+0.19,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.496] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786557209.169800556] [student_offboard]: NAV_STATE -> 4
+[python3-3] [INFO] [1786557209.170173612] [student_offboard]: FLIGHT_CHECK -> True
+[python3-5] Traceback (most recent call last):
+[python3-5]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_orb_visualizer.py", line 130, in <module>
+[python3-5]     main()
+[python3-5]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_orb_visualizer.py", line 121, in main
+[python3-5]     rclpy.spin(node)
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[python3-5]     executor.spin_once()
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 808, in spin_once
+[python3-5]     self._spin_once_impl(timeout_sec)
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 805, in _spin_once_impl
+[python3-5]     raise handler.exception()
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/task.py", line 272, in _execute_coroutine_step
+[python3-5]     result = coro.send(None)
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 488, in handler
+[python3-5]     await call_coroutine(entity, arg)
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 407, in _execute_subscription
+[python3-5]     await await_or_execute(sub.callback, msg)
+[python3-5]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 110, in await_or_execute
+[python3-5]     return callback(*args)
+[python3-5]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_orb_visualizer.py", line 114, in _cb
+[python3-5]     self._report(len(kps))
+[python3-5] AttributeError: 'OrbVisualizer' object has no attribute '_report'
+[ERROR] [python3-5]: process has died [pid 170360, exit code 1, cmd 'python3 /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_orb_visualizer.py'].
+[python3-3] [INFO] [1786557210.668384444] [student_offboard]: [   150] IDLE     | dist=12.31m | alt=0.77m(err=+1.73) | yaw=+90deg | act=[yaw=+0.29 vx=+1.00 vy=+0.16 vz=-1.00] | vel_NED=(+0.19,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.418] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[rviz2-7] [INFO] [1786557210.913537924] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 36.764 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557212.167364855] [student_offboard]: [   300] IDLE     | dist=12.32m | alt=0.75m(err=+1.75) | yaw=+90deg | act=[yaw=+0.30 vx=+1.00 vy=+0.16 vz=-1.00] | vel_NED=(+0.19,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.362] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[rviz2-7] [INFO] [1786557213.473198715] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 39.340 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557213.667182557] [student_offboard]: [   450] IDLE     | dist=12.30m | alt=0.76m(err=+1.74) | yaw=+90deg | act=[yaw=+0.30 vx=+1.00 vy=+0.16 vz=-1.00] | vel_NED=(+0.18,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.318] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786557214.165802063] [student_offboard]: [diag] fsm=IDLE flight_check=True arm_req=False nav=4 arm_st=1
+[python3-3] [INFO] [1786557215.167157358] [student_offboard]: [   600] IDLE     | dist=12.35m | alt=0.79m(err=+1.71) | yaw=+89deg | act=[yaw=+0.30 vx=+1.00 vy=+0.11 vz=-1.00] | vel_NED=(+0.13,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.284] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786557215.949309007] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557215.955633314] [student_offboard]: -> ARMING
+[python3-3] [INFO] [1786557215.972342647] [student_offboard]: ARM_STATE -> 2
+[rviz2-7] [INFO] [1786557216.033218684] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 41.912 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557216.065947792] [student_offboard]: -> TAKEOFF
+[python3-3] [INFO] [1786557216.091155638] [student_offboard]: NAV_STATE -> 17
+[python3-3] [INFO] [1786557216.096297874] [student_offboard]: -> LOITER (waiting for hover)
+[python3-3] [INFO] [1786557216.667424244] [student_offboard]: [   750] LOITER   | dist=12.34m | alt=0.84m(err=+1.66) | yaw=+89deg | act=[yaw=+0.27 vx=+1.00 vy=+0.07 vz=-1.00] | vel_NED=(+0.10,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.257] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786557216.949701133] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557217.949553054] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557218.166874710] [student_offboard]: [   900] LOITER   | dist=12.36m | alt=0.85m(err=+1.65) | yaw=+89deg | act=[yaw=+0.26 vx=+1.00 vy=+0.08 vz=-1.00] | vel_NED=(+0.10,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.234] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[rviz2-7] [INFO] [1786557218.561800736] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 44.420 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557218.950161263] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557219.165520413] [student_offboard]: [diag] fsm=LOITER flight_check=True arm_req=True nav=17 arm_st=2
+[python3-3] [INFO] [1786557219.666859266] [student_offboard]: [  1050] LOITER   | dist=12.37m | alt=0.81m(err=+1.69) | yaw=+89deg | act=[yaw=+0.27 vx=+1.00 vy=+0.11 vz=-1.00] | vel_NED=(+0.14,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.215] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786557219.949595550] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557220.949843157] [student_offboard]: Arm request: True
+[rviz2-7] [INFO] [1786557221.121143469] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 46.996 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557221.167352256] [student_offboard]: [  1200] LOITER   | dist=12.36m | alt=0.87m(err=+1.63) | yaw=+89deg | act=[yaw=+0.24 vx=+1.00 vy=+0.11 vz=-1.00] | vel_NED=(+0.13,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.199] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786557221.949857123] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557222.667398486] [student_offboard]: [  1350] LOITER   | dist=12.29m | alt=0.93m(err=+1.57) | yaw=+89deg | act=[yaw=+0.22 vx=+1.00 vy=+0.10 vz=-1.00] | vel_NED=(+0.12,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.185] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786557222.949880949] [student_offboard]: Arm request: True
+[rviz2-7] [INFO] [1786557223.649510051] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 49.504 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557223.949855768] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557224.165580211] [student_offboard]: [diag] fsm=LOITER flight_check=True arm_req=True nav=17 arm_st=2
+[python3-3] [INFO] [1786557224.167113533] [student_offboard]: [  1500] LOITER   | dist=12.26m | alt=0.95m(err=+1.55) | yaw=+90deg | act=[yaw=+0.21 vx=+1.00 vy=+0.11 vz=-1.00] | vel_NED=(+0.13,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.173] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786557224.949739166] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557225.667757681] [student_offboard]: [  1650] LOITER   | dist=12.31m | alt=0.95m(err=+1.55) | yaw=+90deg | act=[yaw=+0.22 vx=+1.00 vy=+0.11 vz=-1.00] | vel_NED=(+0.13,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.163] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786557225.949603364] [student_offboard]: Arm request: True
+[rviz2-7] [INFO] [1786557226.209363613] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 52.076 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557226.222944629] [student_offboard]: ARM_STATE -> 1
+[python3-3] [INFO] [1786557226.230955381] [student_offboard]: ARM_STATE -> 2
+[python3-3] [INFO] [1786557226.949886859] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557227.167331084] [student_offboard]: [  1800] LOITER   | dist=12.36m | alt=0.93m(err=+1.57) | yaw=+90deg | act=[yaw=+0.22 vx=+1.00 vy=+0.11 vz=-1.00] | vel_NED=(+0.13,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.153] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786557227.949561849] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557228.667485419] [student_offboard]: [  1950] LOITER   | dist=12.31m | alt=1.02m(err=+1.48) | yaw=+90deg | act=[yaw=+0.18 vx=+1.00 vy=+0.11 vz=-1.00] | vel_NED=(+0.13,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.145] | beams=['1.00', '1.00', '1.00', '0.68', '1.00']
+[rviz2-7] [INFO] [1786557228.801750342] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 54.652 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557228.949527534] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557229.165615815] [student_offboard]: [diag] fsm=LOITER flight_check=True arm_req=True nav=17 arm_st=2
+[python3-3] [INFO] [1786557229.950089806] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557230.166816896] [student_offboard]: [  2100] LOITER   | dist=12.26m | alt=1.14m(err=+1.36) | yaw=+90deg | act=[yaw=+0.12 vx=+1.00 vy=+0.12 vz=-1.00] | vel_NED=(+0.13,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.138] | beams=['1.00', '1.00', '1.00', '0.67', '1.00']
+[python3-3] [INFO] [1786557230.949569652] [student_offboard]: Arm request: True
+[rviz2-7] [INFO] [1786557231.329324375] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 57.092 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557231.667191173] [student_offboard]: [  2250] LOITER   | dist=12.39m | alt=1.21m(err=+1.29) | yaw=+90deg | act=[yaw=-0.33 vx=+1.00 vy=+0.06 vz=-1.00] | vel_NED=(+0.07,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.131] | beams=['0.82', '1.00', '1.00', '0.71', '1.00']
+[python3-3] [INFO] [1786557231.949974720] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557232.949897942] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557233.167426874] [student_offboard]: [  2400] LOITER   | dist=12.70m | alt=1.44m(err=+1.06) | yaw=+90deg | act=[yaw=-0.11 vx=+1.00 vy=-0.22 vz=-1.00] | vel_NED=(-0.26,+1.12,-0.50) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.125] | beams=['0.70', '0.96', '1.00', '0.77', '1.00']
+[rviz2-7] [INFO] [1786557233.889420032] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 59.668 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557233.949521665] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557234.165682176] [student_offboard]: [diag] fsm=LOITER flight_check=True arm_req=True nav=17 arm_st=2
+[python3-3] [INFO] [1786557234.667465511] [student_offboard]: [  2550] LOITER   | dist=12.75m | alt=1.96m(err=+0.54) | yaw=+91deg | act=[yaw=-0.17 vx=+1.00 vy=+0.10 vz=-1.00] | vel_NED=(+0.09,+1.12,-0.27) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.119] | beams=['1.00', '1.00', '1.00', '0.81', '1.00']
+[python3-3] [INFO] [1786557234.949664993] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557235.949787790] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557236.166697055] [student_offboard]: [  2700] LOITER   | dist=12.68m | alt=2.58m(err=-0.08) | yaw=+88deg | act=[yaw=-0.16 vx=+1.00 vy=-0.25 vz=-1.00] | vel_NED=(-0.24,+1.12,+0.17) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.114] | beams=['1.00', '1.00', '1.00', '0.81', '1.00']
+[python3-3] [INFO] [1786557236.396846850] [student_offboard]: NAV_STATE -> 4
+[python3-3] [INFO] [1786557236.405926841] [student_offboard]: -> OFFBOARD  student policy active
+[rviz2-7] [INFO] [1786557236.417848973] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 62.176 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557236.432096274] [student_offboard]: NAV_STATE -> 14
+[python3-3] [INFO] [1786557236.949753649] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557237.667266385] [student_offboard]: [  2850] OFFBOARD | dist=12.21m | alt=2.44m(err=+0.06) | yaw=+105deg | act=[yaw=+0.07 vx=+0.99 vy=+0.78 vz=-1.00] | vel_NED=(+0.55,+1.12,+0.15) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.109] | beams=['1.00', '1.00', '1.00', '0.74', '1.00']
+[python3-3] [INFO] [1786557237.949847488] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557238.949842765] [student_offboard]: Arm request: True
+[rviz2-7] [INFO] [1786557238.977249350] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 64.748 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557239.165671138] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[python3-3] [INFO] [1786557239.167800435] [student_offboard]: [  3000] OFFBOARD | dist=11.36m | alt=2.06m(err=+0.44) | yaw=+104deg | act=[yaw=+0.17 vx=+0.98 vy=+0.56 vz=-1.00] | vel_NED=(+0.35,+1.12,-0.22) | ICP[fwd=4.70m spd=1.00 X0=0.00 W1=0.105] | beams=['1.00', '0.86', '0.94', '0.66', '0.62']
+[python3-3] [INFO] [1786557239.949804186] [student_offboard]: Arm request: True
+[python3-3] [INFO] [1786557240.666615104] [student_offboard]: [  3150] OFFBOARD | dist=10.40m | alt=2.20m(err=+0.30) | yaw=+105deg | act=[yaw=-0.11 vx=+0.95 vy=+0.59 vz=-0.86] | vel_NED=(+0.37,+1.12,+0.15) | ICP[fwd=3.71m spd=1.00 X0=0.00 W1=0.101] | beams=['1.00', '0.69', '0.74', '0.67', '0.51']
+[rviz2-7] [INFO] [1786557241.569543066] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 67.324 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557242.167081783] [student_offboard]: [  3300] OFFBOARD | dist=9.32m | alt=2.18m(err=+0.32) | yaw=+102deg | act=[yaw=-0.19 vx=+0.84 vy=+0.38 vz=-0.45] | vel_NED=(+0.23,+1.01,-0.16) | ICP[fwd=2.65m spd=1.00 X0=0.00 W1=0.097] | beams=['1.00', '0.52', '0.53', '0.45', '0.46']
+[python3-3] [INFO] [1786557243.667069092] [student_offboard]: [  3450] OFFBOARD | dist=8.06m | alt=2.29m(err=+0.21) | yaw=+107deg | act=[yaw=+0.06 vx=+0.69 vy=+0.44 vz=+0.40] | vel_NED=(+0.25,+0.88,-0.45) | ICP[fwd=2.77m spd=1.00 X0=0.00 W1=0.094] | beams=['0.48', '0.35', '0.55', '0.20', '1.00']
+[python3-3] [WARN] [1786557244.056389728] [student_offboard]: ICP SLOWDOWN d_fwd=0.79m scale=0.00 X0=1.21 X1=1.21 W1=0.529
+[python3-3] [WARN] [1786557244.066359064] [student_offboard]: ICP SLOWDOWN d_fwd=0.79m scale=0.00 X0=1.21 X1=1.21 W1=0.529
+[python3-3] [WARN] [1786557244.076668246] [student_offboard]: ICP SLOWDOWN d_fwd=0.79m scale=0.00 X0=1.21 X1=1.21 W1=0.528
+[python3-3] [WARN] [1786557244.086304942] [student_offboard]: ICP SLOWDOWN d_fwd=0.79m scale=0.00 X0=1.21 X1=1.21 W1=0.527
+[python3-3] [WARN] [1786557244.102339333] [student_offboard]: ICP SLOWDOWN d_fwd=0.79m scale=0.00 X0=1.21 X1=1.21 W1=0.526
+[python3-3] [WARN] [1786557244.106959168] [student_offboard]: ICP SLOWDOWN d_fwd=0.79m scale=0.00 X0=1.21 X1=1.21 W1=0.525
+[python3-3] [WARN] [1786557244.116397668] [student_offboard]: ICP SLOWDOWN d_fwd=0.70m scale=0.00 X0=1.30 X1=1.30 W1=0.560
+[python3-3] [WARN] [1786557244.126091796] [student_offboard]: ICP SLOWDOWN d_fwd=0.70m scale=0.00 X0=1.30 X1=1.30 W1=0.560
+[rviz2-7] [INFO] [1786557244.129119199] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 69.896 for reason 'discarding message because the queue is full'
+[python3-3] [WARN] [1786557244.136209850] [student_offboard]: ICP SLOWDOWN d_fwd=0.70m scale=0.00 X0=1.30 X1=1.30 W1=0.559
+[python3-3] [WARN] [1786557244.145991807] [student_offboard]: ICP SLOWDOWN d_fwd=0.70m scale=0.00 X0=1.30 X1=1.30 W1=0.558
+[python3-3] [WARN] [1786557244.157565501] [student_offboard]: ICP SLOWDOWN d_fwd=0.70m scale=0.00 X0=1.30 X1=1.30 W1=0.557
+[python3-3] [INFO] [1786557244.165619812] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[python3-3] [WARN] [1786557244.166724052] [student_offboard]: ICP SLOWDOWN d_fwd=0.70m scale=0.00 X0=1.30 X1=1.30 W1=0.556
+[python3-3] [WARN] [1786557244.177095369] [student_offboard]: ICP SLOWDOWN d_fwd=0.70m scale=0.00 X0=1.30 X1=1.30 W1=0.555
+[python3-3] [WARN] [1786557244.186320356] [student_offboard]: ICP SLOWDOWN d_fwd=0.60m scale=0.00 X0=1.40 X1=1.40 W1=0.598
+[python3-3] [WARN] [1786557244.196639063] [student_offboard]: ICP SLOWDOWN d_fwd=0.60m scale=0.00 X0=1.40 X1=1.40 W1=0.597
+[python3-3] [WARN] [1786557244.206444537] [student_offboard]: ICP SLOWDOWN d_fwd=0.60m scale=0.00 X0=1.40 X1=1.40 W1=0.596
+[python3-3] [WARN] [1786557244.216471204] [student_offboard]: ICP SLOWDOWN d_fwd=0.60m scale=0.00 X0=1.40 X1=1.40 W1=0.595
+[python3-3] [WARN] [1786557244.226575959] [student_offboard]: ICP SLOWDOWN d_fwd=0.60m scale=0.00 X0=1.40 X1=1.40 W1=0.594
+[python3-3] [WARN] [1786557244.236470714] [student_offboard]: ICP SLOWDOWN d_fwd=0.60m scale=0.00 X0=1.40 X1=1.40 W1=0.593
+[python3-3] [WARN] [1786557244.246053971] [student_offboard]: ICP SLOWDOWN d_fwd=0.60m scale=0.00 X0=1.40 X1=1.40 W1=0.592
+[python3-3] [WARN] [1786557244.256215140] [student_offboard]: ICP SLOWDOWN d_fwd=0.52m scale=0.00 X0=1.48 X1=1.48 W1=0.624
+[python3-3] [WARN] [1786557244.266344530] [student_offboard]: ICP SLOWDOWN d_fwd=0.52m scale=0.00 X0=1.48 X1=1.48 W1=0.623
+[python3-3] [WARN] [1786557244.276590258] [student_offboard]: ICP SLOWDOWN d_fwd=0.52m scale=0.00 X0=1.48 X1=1.48 W1=0.622
+[python3-3] [WARN] [1786557244.286423831] [student_offboard]: ICP SLOWDOWN d_fwd=0.52m scale=0.00 X0=1.48 X1=1.48 W1=0.621
+[python3-3] [WARN] [1786557244.296594930] [student_offboard]: ICP SLOWDOWN d_fwd=0.52m scale=0.00 X0=1.48 X1=1.48 W1=0.619
+[python3-3] [WARN] [1786557244.306453960] [student_offboard]: ICP SLOWDOWN d_fwd=0.52m scale=0.00 X0=1.48 X1=1.48 W1=0.618
+[python3-3] [WARN] [1786557244.316442428] [student_offboard]: ICP SLOWDOWN d_fwd=0.48m scale=0.00 X0=1.52 X1=1.52 W1=0.639
+[python3-3] [WARN] [1786557244.326139913] [student_offboard]: ICP SLOWDOWN d_fwd=0.48m scale=0.00 X0=1.52 X1=1.52 W1=0.638
+[python3-3] [WARN] [1786557244.336464300] [student_offboard]: ICP SLOWDOWN d_fwd=0.48m scale=0.00 X0=1.52 X1=1.52 W1=0.637
+[python3-3] [WARN] [1786557244.346296668] [student_offboard]: ICP SLOWDOWN d_fwd=0.48m scale=0.00 X0=1.52 X1=1.52 W1=0.635
+[python3-3] [WARN] [1786557244.356472938] [student_offboard]: ICP SLOWDOWN d_fwd=0.48m scale=0.00 X0=1.52 X1=1.52 W1=0.634
+[python3-3] [WARN] [1786557244.366340276] [student_offboard]: ICP SLOWDOWN d_fwd=0.48m scale=0.00 X0=1.52 X1=1.52 W1=0.633
+[python3-3] [WARN] [1786557244.376702916] [student_offboard]: ICP SLOWDOWN d_fwd=0.48m scale=0.00 X0=1.52 X1=1.52 W1=0.632
+[python3-3] [WARN] [1786557244.386393178] [student_offboard]: ICP SLOWDOWN d_fwd=0.43m scale=0.00 X0=1.57 X1=1.57 W1=0.651
+[python3-3] [WARN] [1786557244.398386603] [student_offboard]: ICP SLOWDOWN d_fwd=0.43m scale=0.00 X0=1.57 X1=1.57 W1=0.650
+[python3-3] [WARN] [1786557244.406413528] [student_offboard]: ICP SLOWDOWN d_fwd=0.43m scale=0.00 X0=1.57 X1=1.57 W1=0.649
+[python3-3] [WARN] [1786557244.421309995] [student_offboard]: ICP SLOWDOWN d_fwd=0.43m scale=0.00 X0=1.57 X1=1.57 W1=0.647
+[python3-3] [WARN] [1786557244.426271311] [student_offboard]: ICP SLOWDOWN d_fwd=0.43m scale=0.00 X0=1.57 X1=1.57 W1=0.646
+[python3-3] [WARN] [1786557244.436582714] [student_offboard]: ICP SLOWDOWN d_fwd=0.43m scale=0.00 X0=1.57 X1=1.57 W1=0.645
+[python3-3] [WARN] [1786557244.446312846] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.670
+[python3-3] [WARN] [1786557244.456257011] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.668
+[python3-3] [WARN] [1786557244.466409205] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.667
+[python3-3] [WARN] [1786557244.476577795] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.666
+[python3-3] [WARN] [1786557244.486389411] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.665
+[python3-3] [WARN] [1786557244.496573388] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.663
+[python3-3] [WARN] [1786557244.506465704] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.662
+[python3-3] [WARN] [1786557244.516432452] [student_offboard]: ICP SLOWDOWN d_fwd=0.35m scale=0.00 X0=1.65 X1=1.65 W1=0.675
+[python3-3] [WARN] [1786557244.526756793] [student_offboard]: ICP SLOWDOWN d_fwd=0.35m scale=0.00 X0=1.65 X1=1.65 W1=0.674
+[python3-3] [WARN] [1786557244.536544321] [student_offboard]: ICP SLOWDOWN d_fwd=0.35m scale=0.00 X0=1.65 X1=1.65 W1=0.673
+[python3-3] [WARN] [1786557244.545897478] [student_offboard]: ICP SLOWDOWN d_fwd=0.35m scale=0.00 X0=1.65 X1=1.65 W1=0.671
+[python3-3] [WARN] [1786557244.556579783] [student_offboard]: ICP SLOWDOWN d_fwd=0.35m scale=0.00 X0=1.65 X1=1.65 W1=0.670
+[python3-3] [WARN] [1786557244.565981760] [student_offboard]: ICP SLOWDOWN d_fwd=0.35m scale=0.00 X0=1.65 X1=1.65 W1=0.669
+[python3-3] [WARN] [1786557244.576557000] [student_offboard]: ICP SLOWDOWN d_fwd=0.35m scale=0.00 X0=1.65 X1=1.65 W1=0.667
+[python3-3] [WARN] [1786557244.586536291] [student_offboard]: ICP SLOWDOWN d_fwd=0.32m scale=0.00 X0=1.68 X1=1.68 W1=0.682
+[python3-3] [WARN] [1786557244.596427226] [student_offboard]: ICP SLOWDOWN d_fwd=0.32m scale=0.00 X0=1.68 X1=1.68 W1=0.681
+[python3-3] [WARN] [1786557244.606315086] [student_offboard]: ICP SLOWDOWN d_fwd=0.32m scale=0.00 X0=1.68 X1=1.68 W1=0.679
+[python3-3] [WARN] [1786557244.616466961] [student_offboard]: ICP SLOWDOWN d_fwd=0.32m scale=0.00 X0=1.68 X1=1.68 W1=0.678
+[python3-3] [WARN] [1786557244.626440477] [student_offboard]: ICP SLOWDOWN d_fwd=0.32m scale=0.00 X0=1.68 X1=1.68 W1=0.677
+[python3-3] [WARN] [1786557244.636793567] [student_offboard]: ICP SLOWDOWN d_fwd=0.32m scale=0.00 X0=1.68 X1=1.68 W1=0.675
+[python3-3] [WARN] [1786557244.646452016] [student_offboard]: ICP SLOWDOWN d_fwd=0.32m scale=0.00 X0=1.68 X1=1.68 W1=0.674
+[python3-3] [WARN] [1786557244.657852577] [student_offboard]: ICP SLOWDOWN d_fwd=0.28m scale=0.00 X0=1.72 X1=1.72 W1=0.693
+[python3-3] [WARN] [1786557244.666331055] [student_offboard]: ICP SLOWDOWN d_fwd=0.28m scale=0.00 X0=1.72 X1=1.72 W1=0.692
+[python3-3] [WARN] [1786557244.676600520] [student_offboard]: ICP SLOWDOWN d_fwd=0.28m scale=0.00 X0=1.72 X1=1.72 W1=0.691
+[python3-3] [WARN] [1786557244.685937290] [student_offboard]: ICP SLOWDOWN d_fwd=0.28m scale=0.00 X0=1.72 X1=1.72 W1=0.689
+[python3-3] [WARN] [1786557244.700222851] [student_offboard]: ICP SLOWDOWN d_fwd=0.28m scale=0.00 X0=1.72 X1=1.72 W1=0.688
+[python3-3] [WARN] [1786557244.706483834] [student_offboard]: ICP SLOWDOWN d_fwd=0.28m scale=0.00 X0=1.72 X1=1.72 W1=0.687
+[python3-3] [WARN] [1786557244.716641332] [student_offboard]: ICP SLOWDOWN d_fwd=0.25m scale=0.00 X0=1.75 X1=1.75 W1=0.702
+[python3-3] [WARN] [1786557244.726338583] [student_offboard]: ICP SLOWDOWN d_fwd=0.25m scale=0.00 X0=1.75 X1=1.75 W1=0.701
+[python3-3] [WARN] [1786557244.736460537] [student_offboard]: ICP SLOWDOWN d_fwd=0.25m scale=0.00 X0=1.75 X1=1.75 W1=0.699
+[python3-3] [WARN] [1786557244.746378076] [student_offboard]: ICP SLOWDOWN d_fwd=0.25m scale=0.00 X0=1.75 X1=1.75 W1=0.698
+[python3-3] [WARN] [1786557244.756523634] [student_offboard]: ICP SLOWDOWN d_fwd=0.25m scale=0.00 X0=1.75 X1=1.75 W1=0.696
+[python3-3] [WARN] [1786557244.766486657] [student_offboard]: ICP SLOWDOWN d_fwd=0.25m scale=0.00 X0=1.75 X1=1.75 W1=0.695
+[python3-3] [WARN] [1786557244.776357384] [student_offboard]: ICP SLOWDOWN d_fwd=0.21m scale=0.00 X0=1.79 X1=1.79 W1=0.712
+[python3-3] [WARN] [1786557244.786332100] [student_offboard]: ICP SLOWDOWN d_fwd=0.21m scale=0.00 X0=1.79 X1=1.79 W1=0.710
+[python3-3] [WARN] [1786557244.796473444] [student_offboard]: ICP SLOWDOWN d_fwd=0.21m scale=0.00 X0=1.79 X1=1.79 W1=0.709
+[python3-3] [WARN] [1786557244.806372789] [student_offboard]: ICP SLOWDOWN d_fwd=0.21m scale=0.00 X0=1.79 X1=1.79 W1=0.707
+[python3-3] [WARN] [1786557244.816567908] [student_offboard]: ICP SLOWDOWN d_fwd=0.21m scale=0.00 X0=1.79 X1=1.79 W1=0.706
+[python3-3] [WARN] [1786557244.826050619] [student_offboard]: ICP SLOWDOWN d_fwd=0.21m scale=0.00 X0=1.79 X1=1.79 W1=0.704
+[python3-3] [WARN] [1786557244.836238098] [student_offboard]: ICP SLOWDOWN d_fwd=0.21m scale=0.00 X0=1.79 X1=1.79 W1=0.703
+[python3-3] [WARN] [1786557244.846874052] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.710
+[python3-3] [WARN] [1786557244.856471767] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.708
+[python3-3] [WARN] [1786557244.866375424] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.707
+[python3-3] [WARN] [1786557244.876693847] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.705
+[python3-3] [WARN] [1786557244.886096847] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.704
+[python3-3] [WARN] [1786557244.898997012] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.702
+[python3-3] [WARN] [1786557244.906436512] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.701
+[python3-3] [WARN] [1786557244.916405772] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.719
+[python3-3] [WARN] [1786557244.926446785] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.717
+[python3-3] [WARN] [1786557244.938259272] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.715
+[python3-3] [WARN] [1786557244.946299409] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.714
+[python3-3] [WARN] [1786557244.956468470] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.713
+[python3-3] [WARN] [1786557244.966376474] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.711
+[python3-3] [WARN] [1786557244.976792767] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.720
+[python3-3] [WARN] [1786557244.986316091] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.719
+[python3-3] [WARN] [1786557244.996547467] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.717
+[python3-3] [WARN] [1786557245.006271938] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.716
+[python3-3] [WARN] [1786557245.016459328] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.714
+[python3-3] [WARN] [1786557245.026468495] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.713
+[python3-3] [WARN] [1786557245.036390708] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.717
+[python3-3] [WARN] [1786557245.046309524] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.715
+[python3-3] [WARN] [1786557245.056522547] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.714
+[python3-3] [WARN] [1786557245.066064875] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.712
+[python3-3] [WARN] [1786557245.076456065] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.711
+[python3-3] [WARN] [1786557245.086351412] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.709
+[python3-3] [WARN] [1786557245.096647103] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.708
+[python3-3] [WARN] [1786557245.106247480] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.706
+[python3-3] [WARN] [1786557245.116113440] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.707
+[python3-3] [WARN] [1786557245.126109922] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.706
+[python3-3] [WARN] [1786557245.136223088] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.704
+[python3-3] [WARN] [1786557245.146300432] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.703
+[python3-3] [WARN] [1786557245.156601607] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.701
+[python3-3] [WARN] [1786557245.166378544] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.700
+[python3-3] [INFO] [1786557245.167899641] [student_offboard]: [  3600] OFFBOARD | dist=7.26m | alt=2.18m(err=+0.32) | yaw=+87deg | act=[yaw=-0.07 vx=+0.57 vy=+0.11 vz=-0.70] | vel_NED=(+0.13,-0.01,-0.16) | ICP[fwd=0.13m spd=0.00 X0=1.87 W1=0.700] | beams=['0.30', '0.03', '0.03', '0.03', '1.00']
+[python3-3] [WARN] [1786557245.176463400] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.696
+[python3-3] [WARN] [1786557245.186122425] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.694
+[python3-3] [WARN] [1786557245.196455969] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.693
+[python3-3] [WARN] [1786557245.206319204] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.691
+[python3-3] [WARN] [1786557245.216503808] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.690
+[python3-3] [WARN] [1786557245.226035533] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.689
+[python3-3] [WARN] [1786557245.236360085] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.695
+[python3-3] [WARN] [1786557245.245977847] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.693
+[python3-3] [WARN] [1786557245.256487579] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.692
+[python3-3] [WARN] [1786557245.266304225] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.691
+[python3-3] [WARN] [1786557245.276656913] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.689
+[python3-3] [WARN] [1786557245.285957591] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.688
+[python3-3] [WARN] [1786557245.296205352] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.686
+[python3-3] [WARN] [1786557245.306348211] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.680
+[python3-3] [WARN] [1786557245.316500191] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.679
+[python3-3] [WARN] [1786557245.326338171] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.677
+[python3-3] [WARN] [1786557245.336590880] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.676
+[python3-3] [WARN] [1786557245.346290936] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.674
+[python3-3] [WARN] [1786557245.356609584] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.673
+[python3-3] [WARN] [1786557245.366961468] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.672
+[python3-3] [WARN] [1786557245.376353757] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.671
+[python3-3] [WARN] [1786557245.386508649] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.670
+[python3-3] [WARN] [1786557245.396355887] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.668
+[python3-3] [WARN] [1786557245.406554989] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.667
+[python3-3] [WARN] [1786557245.416127768] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.666
+[python3-3] [WARN] [1786557245.426093313] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.664
+[python3-3] [WARN] [1786557245.436431213] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.662
+[python3-3] [WARN] [1786557245.446353913] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.661
+[python3-3] [WARN] [1786557245.456413067] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.659
+[python3-3] [WARN] [1786557245.466349070] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.658
+[python3-3] [WARN] [1786557245.476670798] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.657
+[python3-3] [WARN] [1786557245.486371286] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.655
+[python3-3] [WARN] [1786557245.496679497] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.654
+[python3-3] [WARN] [1786557245.506441640] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.660
+[python3-3] [WARN] [1786557245.516564916] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.658
+[python3-3] [WARN] [1786557245.526311798] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.657
+[python3-3] [WARN] [1786557245.536289749] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.656
+[python3-3] [WARN] [1786557245.546356880] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.655
+[python3-3] [WARN] [1786557245.556491118] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.653
+[python3-3] [WARN] [1786557245.566378074] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.644
+[python3-3] [WARN] [1786557245.576690584] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.643
+[python3-3] [WARN] [1786557245.586384668] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.642
+[python3-3] [WARN] [1786557245.596662574] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.641
+[python3-3] [WARN] [1786557245.606317744] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.639
+[python3-3] [WARN] [1786557245.617157633] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.638
+[python3-3] [WARN] [1786557245.626620847] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.637
+[python3-3] [WARN] [1786557245.636509844] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.642
+[python3-3] [WARN] [1786557245.646308760] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.641
+[python3-3] [WARN] [1786557245.660057965] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.639
+[python3-3] [WARN] [1786557245.666389565] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.639
+[python3-3] [WARN] [1786557245.676570893] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.637
+[python3-3] [WARN] [1786557245.686460056] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.636
+[python3-3] [WARN] [1786557245.696387620] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.630
+[python3-3] [WARN] [1786557245.706409576] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.629
+[python3-3] [WARN] [1786557245.716185312] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.627
+[python3-3] [WARN] [1786557245.726558346] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.626
+[python3-3] [WARN] [1786557245.736440217] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.625
+[python3-3] [WARN] [1786557245.746366284] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.624
+[python3-3] [WARN] [1786557245.756537028] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.623
+[python3-3] [WARN] [1786557245.766733477] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.622
+[python3-3] [WARN] [1786557245.776621942] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.618
+[python3-3] [WARN] [1786557245.785981488] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.616
+[python3-3] [WARN] [1786557245.796535524] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.615
+[python3-3] [WARN] [1786557245.806318931] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.614
+[python3-3] [WARN] [1786557245.816781902] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.613
+[python3-3] [WARN] [1786557245.826018134] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.617
+[python3-3] [WARN] [1786557245.836396676] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.615
+[python3-3] [WARN] [1786557245.846443454] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.614
+[python3-3] [WARN] [1786557245.856433633] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.613
+[python3-3] [WARN] [1786557245.866344637] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.612
+[python3-3] [WARN] [1786557245.876781836] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.611
+[python3-3] [WARN] [1786557245.886376111] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.610
+[python3-3] [WARN] [1786557245.896470527] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.609
+[python3-3] [WARN] [1786557245.906046811] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.608
+[python3-3] [WARN] [1786557245.916346278] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.607
+[python3-3] [WARN] [1786557245.926399657] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.606
+[python3-3] [WARN] [1786557245.936434447] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.605
+[python3-3] [WARN] [1786557245.946043055] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.604
+[python3-3] [WARN] [1786557245.957196590] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.602
+[python3-3] [WARN] [1786557245.966293965] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.602
+[python3-3] [WARN] [1786557245.976538174] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.601
+[python3-3] [WARN] [1786557245.986394167] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.600
+[python3-3] [WARN] [1786557245.996481769] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.599
+[python3-3] [WARN] [1786557246.006309743] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.598
+[python3-3] [WARN] [1786557246.016765761] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.596
+[python3-3] [WARN] [1786557246.027160844] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.595
+[python3-3] [WARN] [1786557246.036700517] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.594
+[python3-3] [WARN] [1786557246.046094511] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.593
+[python3-3] [WARN] [1786557246.056769036] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.592
+[python3-3] [WARN] [1786557246.066420159] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.591
+[python3-3] [WARN] [1786557246.076593185] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.590
+[python3-3] [WARN] [1786557246.086724438] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.588
+[python3-3] [WARN] [1786557246.096426105] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.593
+[python3-3] [WARN] [1786557246.106282317] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.592
+[python3-3] [WARN] [1786557246.116297263] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.591
+[python3-3] [WARN] [1786557246.126343951] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.590
+[python3-3] [WARN] [1786557246.136598660] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.589
+[python3-3] [WARN] [1786557246.146390804] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.588
+[python3-3] [WARN] [1786557246.158354625] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.587
+[python3-3] [WARN] [1786557246.168144483] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.583
+[python3-3] [WARN] [1786557246.176647857] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.582
+[python3-3] [WARN] [1786557246.186321663] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.581
+[python3-3] [WARN] [1786557246.199168186] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.580
+[python3-3] [WARN] [1786557246.206347002] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.579
+[python3-3] [WARN] [1786557246.222324370] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.578
+[python3-3] [WARN] [1786557246.228169339] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.577
+[python3-3] [WARN] [1786557246.236420016] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.569
+[python3-3] [WARN] [1786557246.246404391] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.568
+[python3-3] [WARN] [1786557246.256621757] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.567
+[python3-3] [WARN] [1786557246.266306989] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.566
+[python3-3] [WARN] [1786557246.276772551] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.565
+[python3-3] [WARN] [1786557246.288778784] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.564
+[python3-3] [WARN] [1786557246.296325914] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.573
+[python3-3] [WARN] [1786557246.306483490] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.572
+[python3-3] [WARN] [1786557246.316637782] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.571
+[python3-3] [WARN] [1786557246.326077416] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.570
+[python3-3] [WARN] [1786557246.336431270] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.569
+[python3-3] [WARN] [1786557246.346114880] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.568
+[python3-3] [WARN] [1786557246.356128042] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.567
+[python3-3] [WARN] [1786557246.366303150] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.559
+[python3-3] [WARN] [1786557246.378929762] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.558
+[python3-3] [WARN] [1786557246.386324989] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.557
+[python3-3] [WARN] [1786557246.396389681] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.556
+[python3-3] [WARN] [1786557246.406353130] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.555
+[python3-3] [WARN] [1786557246.416597546] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.554
+[python3-3] [WARN] [1786557246.425969908] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.554
+[python3-3] [WARN] [1786557246.436232991] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.553
+[python3-3] [WARN] [1786557246.446387359] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.552
+[python3-3] [WARN] [1786557246.456350526] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.551
+[python3-3] [WARN] [1786557246.466315642] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.551
+[python3-3] [WARN] [1786557246.476732854] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.550
+[python3-3] [WARN] [1786557246.486423755] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.549
+[python3-3] [WARN] [1786557246.496376208] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.546
+[python3-3] [WARN] [1786557246.506254805] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.545
+[python3-3] [WARN] [1786557246.516460007] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.544
+[python3-3] [WARN] [1786557246.526281549] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.543
+[python3-3] [WARN] [1786557246.536530883] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.542
+[python3-3] [WARN] [1786557246.546950629] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.541
+[python3-3] [WARN] [1786557246.556431011] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.549
+[python3-3] [WARN] [1786557246.566513505] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.548
+[python3-3] [WARN] [1786557246.576534554] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.547
+[python3-3] [WARN] [1786557246.586417124] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.546
+[python3-3] [WARN] [1786557246.597025499] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.545
+[python3-3] [WARN] [1786557246.606457200] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.544
+[python3-3] [WARN] [1786557246.616649241] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.544
+[python3-3] [WARN] [1786557246.626487691] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.532
+[python3-3] [WARN] [1786557246.636554416] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.531
+[python3-3] [WARN] [1786557246.646316164] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.530
+[python3-3] [WARN] [1786557246.656405407] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.529
+[python3-3] [WARN] [1786557246.665929972] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.529
+[python3-3] [INFO] [1786557246.666902642] [student_offboard]: [  3750] OFFBOARD | dist=7.34m | alt=2.22m(err=+0.28) | yaw=+102deg | act=[yaw=+0.27 vx=+0.50 vy=+0.32 vz=-0.85] | vel_NED=(+0.33,+0.07,+0.15) | ICP[fwd=0.14m spd=0.00 X0=1.86 W1=0.529] | beams=['0.32', '0.03', '0.03', '0.03', '1.00']
+[python3-3] [WARN] [1786557246.676227588] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.528
+[python3-3] [WARN] [1786557246.686807076] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.527
+[python3-3] [WARN] [1786557246.696737764] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.530
+[python3-3] [WARN] [1786557246.706408915] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.529
+[python3-3] [WARN] [1786557246.716482091] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.528
+[rviz2-7] [INFO] [1786557246.721565227] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 72.472 for reason 'discarding message because the queue is full'
+[python3-3] [WARN] [1786557246.726620337] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.528
+[python3-3] [WARN] [1786557246.736515896] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.527
+[python3-3] [WARN] [1786557246.746801237] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.526
+[python3-3] [WARN] [1786557246.757758793] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.525
+[python3-3] [WARN] [1786557246.766301302] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.525
+[python3-3] [WARN] [1786557246.776672995] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.525
+[python3-3] [WARN] [1786557246.786314336] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.524
+[python3-3] [WARN] [1786557246.797071694] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.523
+[python3-3] [WARN] [1786557246.806354232] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.522
+[python3-3] [WARN] [1786557246.816444355] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.521
+[python3-3] [WARN] [1786557246.826469091] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.514
+[python3-3] [WARN] [1786557246.836491166] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.514
+[python3-3] [WARN] [1786557246.846432592] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.513
+[python3-3] [WARN] [1786557246.860321180] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.512
+[python3-3] [WARN] [1786557246.866304037] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.511
+[python3-3] [WARN] [1786557246.876206158] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.511
+[python3-3] [WARN] [1786557246.886540074] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.510
+[python3-3] [WARN] [1786557246.896431859] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.517
+[python3-3] [WARN] [1786557246.906425217] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.517
+[python3-3] [WARN] [1786557246.916623054] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.516
+[python3-3] [WARN] [1786557246.926343114] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.515
+[python3-3] [WARN] [1786557246.936945524] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.514
+[python3-3] [WARN] [1786557246.950326377] [student_offboard]: ICP SLOWDOWN d_fwd=0.12m scale=0.00 X0=1.88 X1=1.88 W1=0.513
+[python3-3] [WARN] [1786557246.956379333] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.511
+[python3-3] [WARN] [1786557246.966285718] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.510
+[python3-3] [WARN] [1786557246.979315103] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.509
+[python3-3] [WARN] [1786557246.986393103] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.508
+[python3-3] [WARN] [1786557246.996427123] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.507
+[python3-3] [WARN] [1786557247.006390590] [student_offboard]: ICP SLOWDOWN d_fwd=0.13m scale=0.00 X0=1.87 X1=1.87 W1=0.507
+[python3-3] [WARN] [1786557247.016403018] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.493
+[python3-3] [WARN] [1786557247.026879121] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.492
+[python3-3] [WARN] [1786557247.036489840] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.491
+[python3-3] [WARN] [1786557247.046624711] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.490
+[python3-3] [WARN] [1786557247.056476236] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.490
+[python3-3] [WARN] [1786557247.067760689] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.489
+[python3-3] [WARN] [1786557247.077669082] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.488
+[python3-3] [WARN] [1786557247.086607749] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.488
+[python3-3] [WARN] [1786557247.096442294] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.489
+[python3-3] [WARN] [1786557247.106352276] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.488
+[python3-3] [WARN] [1786557247.116414341] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.487
+[python3-3] [WARN] [1786557247.126402031] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.487
+[python3-3] [WARN] [1786557247.136222775] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.486
+[python3-3] [WARN] [1786557247.145967295] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.485
+[python3-3] [WARN] [1786557247.156086430] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.491
+[python3-3] [WARN] [1786557247.166036911] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.491
+[python3-3] [WARN] [1786557247.177866650] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.490
+[python3-3] [WARN] [1786557247.186385072] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.489
+[python3-3] [WARN] [1786557247.196549899] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.488
+[python3-3] [WARN] [1786557247.206461166] [student_offboard]: ICP SLOWDOWN d_fwd=0.14m scale=0.00 X0=1.86 X1=1.86 W1=0.488
+[python3-3] [WARN] [1786557247.216330058] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.465
+[python3-3] [WARN] [1786557247.226184644] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.464
+[python3-3] [WARN] [1786557247.236090349] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.464
+[python3-3] [WARN] [1786557247.246029948] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.463
+[python3-3] [WARN] [1786557247.256513319] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.462
+[python3-3] [WARN] [1786557247.266357299] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.462
+[python3-3] [WARN] [1786557247.276916692] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.461
+[python3-3] [WARN] [1786557247.286389205] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.470
+[python3-3] [WARN] [1786557247.296269981] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.470
+[python3-3] [WARN] [1786557247.306310949] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.469
+[python3-3] [WARN] [1786557247.316454516] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.468
+[python3-3] [WARN] [1786557247.326396896] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.468
+[python3-3] [WARN] [1786557247.336847907] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.467
+[python3-3] [WARN] [1786557247.346443536] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.466
+[python3-3] [WARN] [1786557247.356068213] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.465
+[python3-3] [WARN] [1786557247.365952956] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.464
+[python3-3] [WARN] [1786557247.376238093] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.464
+[python3-3] [WARN] [1786557247.385915871] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.463
+[python3-3] [WARN] [1786557247.396714611] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.462
+[python3-3] [WARN] [1786557247.406524117] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.462
+[python3-3] [WARN] [1786557247.416355687] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.448
+[python3-3] [WARN] [1786557247.426423241] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.448
+[python3-3] [WARN] [1786557247.436507502] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.447
+[python3-3] [WARN] [1786557247.446279511] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.447
+[python3-3] [WARN] [1786557247.456518984] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.446
+[python3-3] [WARN] [1786557247.466325733] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.446
+[python3-3] [WARN] [1786557247.477223638] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.445
+[python3-3] [WARN] [1786557247.486358006] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.443
+[python3-3] [WARN] [1786557247.496550800] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.443
+[python3-3] [WARN] [1786557247.506436298] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.442
+[python3-3] [WARN] [1786557247.516567434] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.442
+[python3-3] [WARN] [1786557247.526347957] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.441
+[python3-3] [WARN] [1786557247.536229922] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.440
+[python3-3] [WARN] [1786557247.546154213] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.440
+[python3-3] [WARN] [1786557247.557230544] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.446
+[python3-3] [WARN] [1786557247.566297544] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.446
+[python3-3] [WARN] [1786557247.576740169] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.445
+[python3-3] [WARN] [1786557247.586337705] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.445
+[python3-3] [WARN] [1786557247.596518810] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.444
+[python3-3] [WARN] [1786557247.607099647] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.443
+[python3-3] [WARN] [1786557247.616542510] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.442
+[python3-3] [WARN] [1786557247.626366887] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.441
+[python3-3] [WARN] [1786557247.637990293] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.440
+[python3-3] [WARN] [1786557247.646043304] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.440
+[python3-3] [WARN] [1786557247.656075299] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.439
+[python3-3] [WARN] [1786557247.666018798] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.439
+[python3-3] [WARN] [1786557247.676908543] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.438
+[python3-3] [WARN] [1786557247.686334771] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.447
+[python3-3] [WARN] [1786557247.696518251] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.446
+[python3-3] [WARN] [1786557247.711292532] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.445
+[python3-3] [WARN] [1786557247.716393135] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.445
+[python3-3] [WARN] [1786557247.726373877] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.444
+[python3-3] [WARN] [1786557247.736673700] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.444
+[python3-3] [WARN] [1786557247.746302546] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.435
+[python3-3] [WARN] [1786557247.756451076] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.435
+[python3-3] [WARN] [1786557247.766221628] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.434
+[python3-3] [WARN] [1786557247.776468301] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.434
+[python3-3] [WARN] [1786557247.786304907] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.433
+[python3-3] [WARN] [1786557247.796804217] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.433
+[python3-3] [WARN] [1786557247.806563643] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.442
+[python3-3] [WARN] [1786557247.816502142] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.441
+[python3-3] [WARN] [1786557247.826350195] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.441
+[python3-3] [WARN] [1786557247.836071878] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.440
+[python3-3] [WARN] [1786557247.846368306] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.439
+[python3-3] [WARN] [1786557247.857148133] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.439
+[python3-3] [WARN] [1786557247.866287330] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.438
+[python3-3] [WARN] [1786557247.876498789] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.438
+[python3-3] [WARN] [1786557247.886354350] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.428
+[python3-3] [WARN] [1786557247.896068123] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.427
+[python3-3] [WARN] [1786557247.906415420] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.427
+[python3-3] [WARN] [1786557247.916632542] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.426
+[python3-3] [WARN] [1786557247.926350895] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.426
+[python3-3] [WARN] [1786557247.938182730] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.425
+[python3-3] [WARN] [1786557247.946598183] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.428
+[python3-3] [WARN] [1786557247.956453129] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.427
+[python3-3] [WARN] [1786557247.966284141] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.426
+[python3-3] [WARN] [1786557247.976455252] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.426
+[python3-3] [WARN] [1786557247.986297643] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.425
+[python3-3] [WARN] [1786557247.999901966] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.425
+[python3-3] [WARN] [1786557248.006719961] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.424
+[python3-3] [WARN] [1786557248.016569096] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.418
+[python3-3] [WARN] [1786557248.026555515] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.417
+[python3-3] [WARN] [1786557248.037140913] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.417
+[python3-3] [WARN] [1786557248.046121400] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.416
+[python3-3] [WARN] [1786557248.056161057] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.416
+[python3-3] [WARN] [1786557248.071323203] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.415
+[python3-3] [WARN] [1786557248.075924227] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.422
+[python3-3] [WARN] [1786557248.085958591] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.421
+[python3-3] [WARN] [1786557248.096489396] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.421
+[python3-3] [WARN] [1786557248.106346396] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.420
+[python3-3] [WARN] [1786557248.117873426] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.420
+[python3-3] [WARN] [1786557248.126292030] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.419
+[python3-3] [WARN] [1786557248.137047439] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.419
+[python3-3] [WARN] [1786557248.146319491] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.412
+[python3-3] [WARN] [1786557248.156458917] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.411
+[python3-3] [WARN] [1786557248.165963577] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.411
+[python3-3] [INFO] [1786557248.166947060] [student_offboard]: [  3900] OFFBOARD | dist=7.32m | alt=2.04m(err=+0.46) | yaw=+118deg | act=[yaw=+0.18 vx=+0.24 vy=+0.65 vz=-0.96] | vel_NED=(+0.30,+0.16,-0.23) | ICP[fwd=0.18m spd=0.00 X0=1.82 W1=0.411] | beams=['0.05', '0.03', '0.04', '0.06', '1.00']
+[python3-3] [WARN] [1786557248.176161391] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.410
+[python3-3] [WARN] [1786557248.186391064] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.410
+[python3-3] [WARN] [1786557248.196744938] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.409
+[python3-3] [WARN] [1786557248.206448003] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.409
+[python3-3] [WARN] [1786557248.216371057] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.418
+[python3-3] [WARN] [1786557248.226300479] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.418
+[python3-3] [WARN] [1786557248.236556791] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.417
+[python3-3] [WARN] [1786557248.246296053] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.417
+[python3-3] [WARN] [1786557248.256509530] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.416
+[python3-3] [WARN] [1786557248.266404615] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.416
+[python3-3] [WARN] [1786557248.276516295] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.414
+[python3-3] [WARN] [1786557248.286326381] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.413
+[python3-3] [WARN] [1786557248.296539484] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.413
+[python3-3] [WARN] [1786557248.306301080] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.412
+[python3-3] [WARN] [1786557248.317362158] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.412
+[python3-3] [WARN] [1786557248.326058851] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.411
+[python3-3] [WARN] [1786557248.336942755] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.411
+[python3-3] [WARN] [1786557248.345945531] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.413
+[python3-3] [WARN] [1786557248.357582904] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.413
+[python3-3] [WARN] [1786557248.366319732] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.412
+[python3-3] [WARN] [1786557248.376176775] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.412
+[python3-3] [WARN] [1786557248.386400586] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.411
+[python3-3] [WARN] [1786557248.396684011] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.411
+[python3-3] [WARN] [1786557248.406331711] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.414
+[python3-3] [WARN] [1786557248.416484241] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.413
+[python3-3] [WARN] [1786557248.425943661] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.413
+[python3-3] [WARN] [1786557248.436475818] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.412
+[python3-3] [WARN] [1786557248.446374935] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.412
+[python3-3] [WARN] [1786557248.456373143] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.411
+[python3-3] [WARN] [1786557248.466465987] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.405
+[python3-3] [WARN] [1786557248.476742525] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.404
+[python3-3] [WARN] [1786557248.486036963] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.404
+[python3-3] [WARN] [1786557248.496274956] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.404
+[python3-3] [WARN] [1786557248.505960930] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.403
+[python3-3] [WARN] [1786557248.516269539] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.403
+[python3-3] [WARN] [1786557248.526544838] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.402
+[python3-3] [WARN] [1786557248.538179983] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.402
+[python3-3] [WARN] [1786557248.545917810] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.401
+[python3-3] [WARN] [1786557248.556161289] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.401
+[python3-3] [WARN] [1786557248.566365228] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.400
+[python3-3] [WARN] [1786557248.576739257] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.400
+[python3-3] [WARN] [1786557248.586428498] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.399
+[python3-3] [WARN] [1786557248.596478795] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.399
+[python3-3] [WARN] [1786557248.606292994] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.396
+[python3-3] [WARN] [1786557248.620223618] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.395
+[python3-3] [WARN] [1786557248.625887810] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.395
+[python3-3] [WARN] [1786557248.636085877] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.395
+[python3-3] [WARN] [1786557248.646377499] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.394
+[python3-3] [WARN] [1786557248.656444355] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.394
+[python3-3] [WARN] [1786557248.666867398] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.393
+[python3-3] [WARN] [1786557248.680030147] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.394
+[python3-3] [WARN] [1786557248.686314564] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.394
+[python3-3] [WARN] [1786557248.696048890] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.394
+[python3-3] [WARN] [1786557248.706053414] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.393
+[python3-3] [WARN] [1786557248.716401491] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.393
+[python3-3] [WARN] [1786557248.726323009] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.392
+[python3-3] [WARN] [1786557248.736061237] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.386
+[python3-3] [WARN] [1786557248.748447328] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.386
+[python3-3] [WARN] [1786557248.756057216] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.385
+[python3-3] [WARN] [1786557248.766402415] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.385
+[python3-3] [WARN] [1786557248.776722911] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.384
+[python3-3] [WARN] [1786557248.786381402] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.384
+[python3-3] [WARN] [1786557248.796227737] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.384
+[python3-3] [WARN] [1786557248.806455775] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.392
+[python3-3] [WARN] [1786557248.816584164] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.392
+[python3-3] [WARN] [1786557248.826521237] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.391
+[python3-3] [WARN] [1786557248.836298716] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.391
+[python3-3] [WARN] [1786557248.846374302] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.391
+[python3-3] [WARN] [1786557248.856353842] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.390
+[python3-3] [WARN] [1786557248.866466487] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.390
+[python3-3] [WARN] [1786557248.876673940] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.379
+[python3-3] [WARN] [1786557248.886234486] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.379
+[python3-3] [WARN] [1786557248.897168668] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.378
+[python3-3] [WARN] [1786557248.906309995] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.378
+[python3-3] [WARN] [1786557248.917803005] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.377
+[python3-3] [WARN] [1786557248.926565731] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.377
+[python3-3] [WARN] [1786557248.936543191] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.376
+[python3-3] [WARN] [1786557248.946403435] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.383
+[python3-3] [WARN] [1786557248.956465803] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.383
+[python3-3] [WARN] [1786557248.966363676] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.382
+[python3-3] [WARN] [1786557248.977432127] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.382
+[python3-3] [WARN] [1786557248.986346759] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.381
+[python3-3] [WARN] [1786557248.996806893] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.381
+[python3-3] [WARN] [1786557249.006285644] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.385
+[python3-3] [WARN] [1786557249.016472634] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.384
+[python3-3] [WARN] [1786557249.025971825] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.384
+[python3-3] [WARN] [1786557249.036174218] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.384
+[python3-3] [WARN] [1786557249.045930840] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.383
+[python3-3] [WARN] [1786557249.056403891] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.383
+[python3-3] [WARN] [1786557249.068058289] [student_offboard]: ICP SLOWDOWN d_fwd=0.15m scale=0.00 X0=1.85 X1=1.85 W1=0.382
+[python3-3] [WARN] [1786557249.076539175] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.367
+[python3-3] [WARN] [1786557249.086303326] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.367
+[python3-3] [WARN] [1786557249.096463619] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.367
+[python3-3] [WARN] [1786557249.106317272] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.366
+[python3-3] [WARN] [1786557249.116519827] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.366
+[python3-3] [WARN] [1786557249.126511475] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.365
+[python3-3] [WARN] [1786557249.136461682] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.375
+[python3-3] [WARN] [1786557249.146086071] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.374
+[python3-3] [WARN] [1786557249.156174261] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.374
+[python3-3] [INFO] [1786557249.165692016] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[python3-3] [WARN] [1786557249.166795525] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.374
+[python3-3] [WARN] [1786557249.176410300] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.373
+[python3-3] [WARN] [1786557249.186443606] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.373
+[python3-3] [WARN] [1786557249.198083647] [student_offboard]: ICP SLOWDOWN d_fwd=0.16m scale=0.00 X0=1.84 X1=1.84 W1=0.372
+[python3-3] [WARN] [1786557249.206332187] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.364
+[python3-3] [WARN] [1786557249.217083348] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.363
+[python3-3] [WARN] [1786557249.226409116] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.363
+[python3-3] [WARN] [1786557249.236349886] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.362
+[python3-3] [WARN] [1786557249.246293431] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.362
+[python3-3] [WARN] [1786557249.260793748] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.362
+[python3-3] [WARN] [1786557249.265979099] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.362
+[python3-3] [WARN] [1786557249.276122560] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.361
+[rviz2-7] [INFO] [1786557249.281401153] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 75.044 for reason 'discarding message because the queue is full'
+[python3-3] [WARN] [1786557249.286637460] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.361
+[python3-3] [WARN] [1786557249.296468770] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.360
+[python3-3] [WARN] [1786557249.306275633] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.360
+[python3-3] [WARN] [1786557249.316624509] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.360
+[python3-3] [WARN] [1786557249.326436743] [student_offboard]: ICP SLOWDOWN d_fwd=0.17m scale=0.00 X0=1.83 X1=1.83 W1=0.359
+[python3-3] [WARN] [1786557249.336394397] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.353
+[python3-3] [WARN] [1786557249.346313362] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.352
+[python3-3] [WARN] [1786557249.356509194] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.352
+[python3-3] [WARN] [1786557249.366271946] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.351
+[python3-3] [WARN] [1786557249.376588031] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.351
+[python3-3] [WARN] [1786557249.386537418] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.351
+[python3-3] [WARN] [1786557249.396405149] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.352
+[python3-3] [WARN] [1786557249.406048677] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.352
+[python3-3] [WARN] [1786557249.416470395] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.351
+[python3-3] [WARN] [1786557249.426335328] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.351
+[python3-3] [WARN] [1786557249.436463724] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.351
+[python3-3] [WARN] [1786557249.446302810] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.350
+[python3-3] [WARN] [1786557249.456319822] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.350
+[python3-3] [WARN] [1786557249.466321490] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.345
+[python3-3] [WARN] [1786557249.476603760] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.345
+[python3-3] [WARN] [1786557249.486326493] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.345
+[python3-3] [WARN] [1786557249.496512411] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.344
+[python3-3] [WARN] [1786557249.506378475] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.344
+[python3-3] [WARN] [1786557249.517566352] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.344
+[python3-3] [WARN] [1786557249.526361322] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.343
+[python3-3] [WARN] [1786557249.536517250] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.341
+[python3-3] [WARN] [1786557249.546368664] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.341
+[python3-3] [WARN] [1786557249.556387071] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.340
+[python3-3] [WARN] [1786557249.566330265] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.340
+[python3-3] [WARN] [1786557249.576552518] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.339
+[python3-3] [WARN] [1786557249.586576491] [student_offboard]: ICP SLOWDOWN d_fwd=0.19m scale=0.00 X0=1.81 X1=1.81 W1=0.339
+[python3-3] [WARN] [1786557249.596302131] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.344
+[python3-3] [WARN] [1786557249.605938996] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.344
+[python3-3] [WARN] [1786557249.616479105] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.343
+[python3-3] [WARN] [1786557249.626556396] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.343
+[python3-3] [WARN] [1786557249.637271394] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.343
+[python3-3] [WARN] [1786557249.646576688] [student_offboard]: ICP SLOWDOWN d_fwd=0.18m scale=0.00 X0=1.82 X1=1.82 W1=0.342
+[python3-3] [WARN] [1786557249.656310257] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.335
+[python3-3] [WARN] [1786557249.666391044] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.335
+[python3-3] [INFO] [1786557249.667680939] [student_offboard]: [  4050] OFFBOARD | dist=7.26m | alt=2.08m(err=+0.42) | yaw=+116deg | act=[yaw=+0.18 vx=+0.51 vy=+0.86 vz=-0.97] | vel_NED=(+0.30,+0.15,-0.21) | ICP[fwd=0.20m spd=0.00 X0=1.80 W1=0.335] | beams=['0.05', '0.04', '0.04', '0.79', '1.00']
+[python3-3] [WARN] [1786557249.676579327] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.334
+[python3-3] [WARN] [1786557249.686361429] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.334
+[python3-3] [WARN] [1786557249.696369745] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.334
+[python3-3] [WARN] [1786557249.706315858] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.334
+[python3-3] [WARN] [1786557249.716566029] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.333
+[python3-3] [WARN] [1786557249.727062620] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.333
+[python3-3] [WARN] [1786557249.736594231] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.333
+[python3-3] [WARN] [1786557249.746347330] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.333
+[python3-3] [WARN] [1786557249.756460210] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.333
+[python3-3] [WARN] [1786557249.766392382] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.332
+[python3-3] [WARN] [1786557249.776523050] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.332
+[python3-3] [WARN] [1786557249.786617386] [student_offboard]: ICP SLOWDOWN d_fwd=0.20m scale=0.00 X0=1.80 X1=1.80 W1=0.332
+[python3-3] [WARN] [1786557249.796107486] [student_offboard]: ICP SLOWDOWN d_fwd=0.22m scale=0.00 X0=1.78 X1=1.78 W1=0.319
+[python3-3] [WARN] [1786557249.805902927] [student_offboard]: ICP SLOWDOWN d_fwd=0.22m scale=0.00 X0=1.78 X1=1.78 W1=0.319
+[python3-3] [WARN] [1786557249.816659482] [student_offboard]: ICP SLOWDOWN d_fwd=0.22m scale=0.00 X0=1.78 X1=1.78 W1=0.319
+[python3-3] [WARN] [1786557249.826331131] [student_offboard]: ICP SLOWDOWN d_fwd=0.22m scale=0.00 X0=1.78 X1=1.78 W1=0.318
+[python3-3] [WARN] [1786557249.836573394] [student_offboard]: ICP SLOWDOWN d_fwd=0.22m scale=0.00 X0=1.78 X1=1.78 W1=0.318
+[python3-3] [WARN] [1786557249.846474376] [student_offboard]: ICP SLOWDOWN d_fwd=0.22m scale=0.00 X0=1.78 X1=1.78 W1=0.318
+[python3-3] [WARN] [1786557249.856622789] [student_offboard]: ICP SLOWDOWN d_fwd=0.22m scale=0.00 X0=1.78 X1=1.78 W1=0.318
+[python3-3] [WARN] [1786557249.866317975] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.311
+[python3-3] [WARN] [1786557249.876442132] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.311
+[python3-3] [WARN] [1786557249.886339990] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.310
+[python3-3] [WARN] [1786557249.896486859] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.310
+[python3-3] [WARN] [1786557249.906295150] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.310
+[python3-3] [WARN] [1786557249.916696964] [student_offboard]: ICP SLOWDOWN d_fwd=0.23m scale=0.00 X0=1.77 X1=1.77 W1=0.310
+[python3-3] [WARN] [1786557249.926412016] [student_offboard]: ICP SLOWDOWN d_fwd=0.24m scale=0.00 X0=1.76 X1=1.76 W1=0.304
+[python3-3] [WARN] [1786557249.936461333] [student_offboard]: ICP SLOWDOWN d_fwd=0.24m scale=0.00 X0=1.76 X1=1.76 W1=0.304
+[python3-3] [WARN] [1786557249.946288790] [student_offboard]: ICP SLOWDOWN d_fwd=0.24m scale=0.00 X0=1.76 X1=1.76 W1=0.304
+[python3-3] [WARN] [1786557249.956552901] [student_offboard]: ICP SLOWDOWN d_fwd=0.24m scale=0.00 X0=1.76 X1=1.76 W1=0.304
+[python3-3] [WARN] [1786557249.966331336] [student_offboard]: ICP SLOWDOWN d_fwd=0.24m scale=0.00 X0=1.76 X1=1.76 W1=0.303
+[python3-3] [WARN] [1786557249.976544565] [student_offboard]: ICP SLOWDOWN d_fwd=0.24m scale=0.00 X0=1.76 X1=1.76 W1=0.303
+[python3-3] [WARN] [1786557249.986769134] [student_offboard]: ICP SLOWDOWN d_fwd=0.24m scale=0.00 X0=1.76 X1=1.76 W1=0.303
+[python3-3] [WARN] [1786557249.996190043] [student_offboard]: ICP SLOWDOWN d_fwd=0.27m scale=0.00 X0=1.73 X1=1.73 W1=0.286
+[python3-3] [WARN] [1786557250.006410070] [student_offboard]: ICP SLOWDOWN d_fwd=0.27m scale=0.00 X0=1.73 X1=1.73 W1=0.286
+[python3-3] [WARN] [1786557250.016572148] [student_offboard]: ICP SLOWDOWN d_fwd=0.27m scale=0.00 X0=1.73 X1=1.73 W1=0.286
+[python3-3] [WARN] [1786557250.026335919] [student_offboard]: ICP SLOWDOWN d_fwd=0.27m scale=0.00 X0=1.73 X1=1.73 W1=0.285
+[python3-3] [WARN] [1786557250.036813520] [student_offboard]: ICP SLOWDOWN d_fwd=0.27m scale=0.00 X0=1.73 X1=1.73 W1=0.285
+[python3-3] [WARN] [1786557250.046082148] [student_offboard]: ICP SLOWDOWN d_fwd=0.27m scale=0.00 X0=1.73 X1=1.73 W1=0.285
+[python3-3] [WARN] [1786557250.056577823] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.234
+[python3-3] [WARN] [1786557250.066441053] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.234
+[python3-3] [WARN] [1786557250.076418637] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.234
+[python3-3] [WARN] [1786557250.086388124] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.234
+[python3-3] [WARN] [1786557250.096569375] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.233
+[python3-3] [WARN] [1786557250.106294009] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.233
+[python3-3] [WARN] [1786557250.120595399] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.233
+[python3-3] [INFO] [1786557251.166604109] [student_offboard]: [  4200] OFFBOARD | dist=6.66m | alt=2.44m(err=+0.06) | yaw=+102deg | act=[yaw=-0.20 vx=+0.89 vy=-0.24 vz=+0.18] | vel_NED=(-0.47,+0.92,-0.20) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.220] | beams=['0.16', '0.45', '1.00', '0.66', '1.00']
+[python3-4] [INFO] [1786557251.712291175] [gz_eval_monitor]: Trial 998 DONE: result=collision  t=43.9s  orb=255±174  lat=31.9ms  [scan=33.4 policy=0.5 icp=0.0]ms
+[python3-4] [INFO] [1786557251.712771617] [gz_eval_monitor]: Results → /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/results/quick_test/pa_trial_998.json
+[rviz2-7] [INFO] [1786557251.841557653] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 77.620 for reason 'discarding message because the queue is full'
+[INFO] [python3-4]: process has finished cleanly [pid 170358]
+[python3-3] [INFO] [1786557252.666900154] [student_offboard]: [  4350] OFFBOARD | dist=5.53m | alt=2.49m(err=+0.01) | yaw=+88deg | act=[yaw=+0.08 vx=+0.64 vy=-0.40 vz=-0.13] | vel_NED=(-0.43,+0.74,+0.14) | ICP[fwd=2.02m spd=1.00 X0=0.00 W1=0.203] | beams=['0.46', '1.00', '0.40', '0.66', '1.00']
+[python3-3] [WARN] [1786557253.486378664] [student_offboard]: ICP SLOWDOWN d_fwd=1.46m scale=0.89 X0=0.00 X1=0.54 W1=0.195
+[python3-3] [WARN] [1786557253.496477607] [student_offboard]: ICP SLOWDOWN d_fwd=1.46m scale=0.89 X0=0.00 X1=0.54 W1=0.194
+[python3-3] [WARN] [1786557253.505997630] [student_offboard]: ICP SLOWDOWN d_fwd=1.46m scale=0.89 X0=0.00 X1=0.54 W1=0.194
+[python3-3] [WARN] [1786557253.519010049] [student_offboard]: ICP SLOWDOWN d_fwd=1.46m scale=0.89 X0=0.00 X1=0.54 W1=0.194
+[python3-3] [WARN] [1786557253.526371425] [student_offboard]: ICP SLOWDOWN d_fwd=1.46m scale=0.89 X0=0.00 X1=0.54 W1=0.194
+[python3-3] [WARN] [1786557253.536071613] [student_offboard]: ICP SLOWDOWN d_fwd=1.46m scale=0.89 X0=0.00 X1=0.54 W1=0.194
+[python3-3] [WARN] [1786557253.546353491] [student_offboard]: ICP SLOWDOWN d_fwd=1.46m scale=0.89 X0=0.00 X1=0.54 W1=0.194
+[python3-3] [WARN] [1786557253.556347012] [student_offboard]: ICP SLOWDOWN d_fwd=1.44m scale=0.89 X0=0.00 X1=0.56 W1=0.194
+[python3-3] [WARN] [1786557253.566367797] [student_offboard]: ICP SLOWDOWN d_fwd=1.44m scale=0.89 X0=0.00 X1=0.56 W1=0.194
+[python3-3] [WARN] [1786557253.576596310] [student_offboard]: ICP SLOWDOWN d_fwd=1.44m scale=0.89 X0=0.00 X1=0.56 W1=0.194
+[python3-3] [WARN] [1786557253.586343963] [student_offboard]: ICP SLOWDOWN d_fwd=1.44m scale=0.89 X0=0.00 X1=0.56 W1=0.194
+[python3-3] [WARN] [1786557253.596413887] [student_offboard]: ICP SLOWDOWN d_fwd=1.44m scale=0.89 X0=0.00 X1=0.56 W1=0.193
+[python3-3] [WARN] [1786557253.606292109] [student_offboard]: ICP SLOWDOWN d_fwd=1.44m scale=0.89 X0=0.00 X1=0.56 W1=0.193
+[python3-3] [WARN] [1786557253.617027298] [student_offboard]: ICP SLOWDOWN d_fwd=1.44m scale=0.89 X0=0.00 X1=0.56 W1=0.193
+[python3-3] [WARN] [1786557253.626333228] [student_offboard]: ICP SLOWDOWN d_fwd=1.41m scale=0.89 X0=0.00 X1=0.59 W1=0.193
+[python3-3] [WARN] [1786557253.636534941] [student_offboard]: ICP SLOWDOWN d_fwd=1.41m scale=0.89 X0=0.00 X1=0.59 W1=0.193
+[python3-3] [WARN] [1786557253.646284408] [student_offboard]: ICP SLOWDOWN d_fwd=1.41m scale=0.89 X0=0.00 X1=0.59 W1=0.193
+[python3-3] [WARN] [1786557253.656296382] [student_offboard]: ICP SLOWDOWN d_fwd=1.41m scale=0.89 X0=0.00 X1=0.59 W1=0.193
+[python3-3] [WARN] [1786557253.666331667] [student_offboard]: ICP SLOWDOWN d_fwd=1.41m scale=0.89 X0=0.00 X1=0.59 W1=0.193
+[python3-3] [WARN] [1786557253.677179741] [student_offboard]: ICP SLOWDOWN d_fwd=1.41m scale=0.89 X0=0.00 X1=0.59 W1=0.193
+[python3-3] [WARN] [1786557253.686452118] [student_offboard]: ICP SLOWDOWN d_fwd=1.34m scale=0.87 X0=0.00 X1=0.66 W1=0.193
+[python3-3] [WARN] [1786557253.696448092] [student_offboard]: ICP SLOWDOWN d_fwd=1.34m scale=0.87 X0=0.00 X1=0.66 W1=0.193
+[python3-3] [WARN] [1786557253.706102214] [student_offboard]: ICP SLOWDOWN d_fwd=1.34m scale=0.87 X0=0.00 X1=0.66 W1=0.192
+[python3-3] [WARN] [1786557253.716016071] [student_offboard]: ICP SLOWDOWN d_fwd=1.34m scale=0.87 X0=0.00 X1=0.66 W1=0.192
+[python3-3] [WARN] [1786557253.726337651] [student_offboard]: ICP SLOWDOWN d_fwd=1.34m scale=0.87 X0=0.00 X1=0.66 W1=0.192
+[python3-3] [WARN] [1786557253.736647603] [student_offboard]: ICP SLOWDOWN d_fwd=1.34m scale=0.87 X0=0.00 X1=0.66 W1=0.192
+[python3-3] [WARN] [1786557253.746446528] [student_offboard]: ICP SLOWDOWN d_fwd=1.34m scale=0.87 X0=0.00 X1=0.66 W1=0.192
+[python3-3] [WARN] [1786557253.756570185] [student_offboard]: ICP SLOWDOWN d_fwd=1.33m scale=0.87 X0=0.00 X1=0.67 W1=0.192
+[python3-3] [WARN] [1786557253.772280119] [student_offboard]: ICP SLOWDOWN d_fwd=1.33m scale=0.87 X0=0.00 X1=0.67 W1=0.192
+[python3-3] [WARN] [1786557253.776467042] [student_offboard]: ICP SLOWDOWN d_fwd=1.33m scale=0.87 X0=0.00 X1=0.67 W1=0.192
+[python3-3] [WARN] [1786557253.786340559] [student_offboard]: ICP SLOWDOWN d_fwd=1.33m scale=0.87 X0=0.00 X1=0.67 W1=0.192
+[python3-3] [WARN] [1786557253.797767242] [student_offboard]: ICP SLOWDOWN d_fwd=1.33m scale=0.87 X0=0.00 X1=0.67 W1=0.192
+[python3-3] [WARN] [1786557253.806353862] [student_offboard]: ICP SLOWDOWN d_fwd=1.33m scale=0.87 X0=0.00 X1=0.67 W1=0.191
+[python3-3] [WARN] [1786557253.818176838] [student_offboard]: ICP SLOWDOWN d_fwd=1.33m scale=0.87 X0=0.00 X1=0.67 W1=0.191
+[python3-3] [WARN] [1786557253.826555685] [student_offboard]: ICP SLOWDOWN d_fwd=1.30m scale=0.87 X0=0.00 X1=0.70 W1=0.191
+[python3-3] [WARN] [1786557253.836444302] [student_offboard]: ICP SLOWDOWN d_fwd=1.30m scale=0.87 X0=0.00 X1=0.70 W1=0.191
+[python3-3] [WARN] [1786557253.846273855] [student_offboard]: ICP SLOWDOWN d_fwd=1.30m scale=0.87 X0=0.00 X1=0.70 W1=0.191
+[python3-3] [WARN] [1786557253.856340656] [student_offboard]: ICP SLOWDOWN d_fwd=1.30m scale=0.87 X0=0.00 X1=0.70 W1=0.191
+[python3-3] [WARN] [1786557253.866306811] [student_offboard]: ICP SLOWDOWN d_fwd=1.30m scale=0.87 X0=0.00 X1=0.70 W1=0.191
+[python3-3] [WARN] [1786557253.876483796] [student_offboard]: ICP SLOWDOWN d_fwd=1.30m scale=0.87 X0=0.00 X1=0.70 W1=0.191
+[python3-3] [WARN] [1786557253.886385450] [student_offboard]: ICP SLOWDOWN d_fwd=1.27m scale=0.86 X0=0.00 X1=0.73 W1=0.191
+[python3-3] [WARN] [1786557253.896440200] [student_offboard]: ICP SLOWDOWN d_fwd=1.27m scale=0.86 X0=0.00 X1=0.73 W1=0.191
+[python3-3] [WARN] [1786557253.906268588] [student_offboard]: ICP SLOWDOWN d_fwd=1.27m scale=0.86 X0=0.00 X1=0.73 W1=0.190
+[python3-3] [WARN] [1786557253.916421991] [student_offboard]: ICP SLOWDOWN d_fwd=1.27m scale=0.86 X0=0.00 X1=0.73 W1=0.190
+[python3-3] [WARN] [1786557253.926197011] [student_offboard]: ICP SLOWDOWN d_fwd=1.27m scale=0.86 X0=0.00 X1=0.73 W1=0.190
+[python3-3] [WARN] [1786557253.936228389] [student_offboard]: ICP SLOWDOWN d_fwd=1.27m scale=0.86 X0=0.00 X1=0.73 W1=0.190
+[python3-3] [WARN] [1786557253.946456077] [student_offboard]: ICP SLOWDOWN d_fwd=1.27m scale=0.86 X0=0.00 X1=0.73 W1=0.190
+[python3-3] [WARN] [1786557253.956576251] [student_offboard]: ICP SLOWDOWN d_fwd=1.23m scale=0.85 X0=0.00 X1=0.77 W1=0.190
+[python3-3] [WARN] [1786557253.966283783] [student_offboard]: ICP SLOWDOWN d_fwd=1.23m scale=0.85 X0=0.00 X1=0.77 W1=0.190
+[python3-3] [WARN] [1786557253.976523076] [student_offboard]: ICP SLOWDOWN d_fwd=1.23m scale=0.85 X0=0.00 X1=0.77 W1=0.190
+[python3-3] [WARN] [1786557253.986361657] [student_offboard]: ICP SLOWDOWN d_fwd=1.23m scale=0.85 X0=0.00 X1=0.77 W1=0.190
+[python3-3] [WARN] [1786557253.997457887] [student_offboard]: ICP SLOWDOWN d_fwd=1.23m scale=0.85 X0=0.00 X1=0.77 W1=0.190
+[python3-3] [WARN] [1786557254.005938298] [student_offboard]: ICP SLOWDOWN d_fwd=1.23m scale=0.85 X0=0.00 X1=0.77 W1=0.189
+[python3-3] [WARN] [1786557254.016077242] [student_offboard]: ICP SLOWDOWN d_fwd=1.21m scale=0.85 X0=0.00 X1=0.79 W1=0.189
+[python3-3] [WARN] [1786557254.026391119] [student_offboard]: ICP SLOWDOWN d_fwd=1.21m scale=0.85 X0=0.00 X1=0.79 W1=0.189
+[python3-3] [WARN] [1786557254.036391603] [student_offboard]: ICP SLOWDOWN d_fwd=1.21m scale=0.85 X0=0.00 X1=0.79 W1=0.189
+[python3-3] [WARN] [1786557254.046309207] [student_offboard]: ICP SLOWDOWN d_fwd=1.21m scale=0.85 X0=0.00 X1=0.79 W1=0.189
+[python3-3] [WARN] [1786557254.056317035] [student_offboard]: ICP SLOWDOWN d_fwd=1.21m scale=0.85 X0=0.00 X1=0.79 W1=0.189
+[python3-3] [WARN] [1786557254.066460068] [student_offboard]: ICP SLOWDOWN d_fwd=1.21m scale=0.85 X0=0.00 X1=0.79 W1=0.189
+[python3-3] [WARN] [1786557254.077093710] [student_offboard]: ICP SLOWDOWN d_fwd=1.21m scale=0.85 X0=0.00 X1=0.79 W1=0.189
+[python3-3] [WARN] [1786557254.086548348] [student_offboard]: ICP SLOWDOWN d_fwd=1.17m scale=0.84 X0=0.00 X1=0.83 W1=0.189
+[python3-3] [WARN] [1786557254.096688971] [student_offboard]: ICP SLOWDOWN d_fwd=1.17m scale=0.84 X0=0.00 X1=0.83 W1=0.189
+[python3-3] [WARN] [1786557254.106492332] [student_offboard]: ICP SLOWDOWN d_fwd=1.17m scale=0.84 X0=0.00 X1=0.83 W1=0.189
+[python3-3] [WARN] [1786557254.116784592] [student_offboard]: ICP SLOWDOWN d_fwd=1.17m scale=0.84 X0=0.00 X1=0.83 W1=0.188
+[python3-3] [WARN] [1786557254.126447002] [student_offboard]: ICP SLOWDOWN d_fwd=1.17m scale=0.84 X0=0.00 X1=0.83 W1=0.188
+[python3-3] [WARN] [1786557254.136684945] [student_offboard]: ICP SLOWDOWN d_fwd=1.17m scale=0.84 X0=0.00 X1=0.83 W1=0.188
+[python3-3] [WARN] [1786557254.146441512] [student_offboard]: ICP SLOWDOWN d_fwd=1.13m scale=0.84 X0=0.00 X1=0.87 W1=0.188
+[python3-3] [WARN] [1786557254.156537943] [student_offboard]: ICP SLOWDOWN d_fwd=1.13m scale=0.84 X0=0.00 X1=0.87 W1=0.188
+[python3-3] [INFO] [1786557254.165648897] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[python3-3] [WARN] [1786557254.166896121] [student_offboard]: ICP SLOWDOWN d_fwd=1.13m scale=0.84 X0=0.00 X1=0.87 W1=0.188
+[python3-3] [INFO] [1786557254.168339205] [student_offboard]: [  4500] OFFBOARD | dist=4.77m | alt=2.34m(err=+0.16) | yaw=+89deg | act=[yaw=-0.05 vx=+0.46 vy=-0.24 vz=+0.35] | vel_NED=(-0.27,+0.44,-0.39) | ICP[fwd=1.13m spd=0.84 X0=0.00 W1=0.188] | beams=['0.81', '0.25', '0.23', '0.51', '1.00']
+[python3-3] [WARN] [1786557254.179377023] [student_offboard]: ICP SLOWDOWN d_fwd=1.13m scale=0.84 X0=0.00 X1=0.87 W1=0.188
+[python3-3] [WARN] [1786557254.185947019] [student_offboard]: ICP SLOWDOWN d_fwd=1.13m scale=0.84 X0=0.00 X1=0.87 W1=0.188
+[python3-3] [WARN] [1786557254.196225507] [student_offboard]: ICP SLOWDOWN d_fwd=1.13m scale=0.84 X0=0.00 X1=0.87 W1=0.188
+[python3-3] [WARN] [1786557254.206493790] [student_offboard]: ICP SLOWDOWN d_fwd=1.13m scale=0.84 X0=0.00 X1=0.87 W1=0.188
+[python3-3] [WARN] [1786557254.216486684] [student_offboard]: ICP SLOWDOWN d_fwd=1.10m scale=0.83 X0=0.00 X1=0.90 W1=0.187
+[python3-3] [WARN] [1786557254.225890594] [student_offboard]: ICP SLOWDOWN d_fwd=1.10m scale=0.83 X0=0.00 X1=0.90 W1=0.187
+[python3-3] [WARN] [1786557254.236123917] [student_offboard]: ICP SLOWDOWN d_fwd=1.10m scale=0.83 X0=0.00 X1=0.90 W1=0.187
+[python3-3] [WARN] [1786557254.245909472] [student_offboard]: ICP SLOWDOWN d_fwd=1.10m scale=0.83 X0=0.00 X1=0.90 W1=0.187
+[python3-3] [WARN] [1786557254.256033262] [student_offboard]: ICP SLOWDOWN d_fwd=1.10m scale=0.83 X0=0.00 X1=0.90 W1=0.187
+[python3-3] [WARN] [1786557254.266367041] [student_offboard]: ICP SLOWDOWN d_fwd=1.10m scale=0.83 X0=0.00 X1=0.90 W1=0.187
+[python3-3] [WARN] [1786557254.276852110] [student_offboard]: ICP SLOWDOWN d_fwd=1.10m scale=0.83 X0=0.00 X1=0.90 W1=0.187
+[python3-3] [WARN] [1786557254.286355247] [student_offboard]: ICP SLOWDOWN d_fwd=1.07m scale=0.83 X0=0.00 X1=0.93 W1=0.187
+[python3-3] [WARN] [1786557254.296560920] [student_offboard]: ICP SLOWDOWN d_fwd=1.07m scale=0.83 X0=0.00 X1=0.93 W1=0.187
+[python3-3] [WARN] [1786557254.306330968] [student_offboard]: ICP SLOWDOWN d_fwd=1.07m scale=0.83 X0=0.00 X1=0.93 W1=0.187
+[python3-3] [WARN] [1786557254.316388585] [student_offboard]: ICP SLOWDOWN d_fwd=1.07m scale=0.83 X0=0.00 X1=0.93 W1=0.187
+[python3-3] [WARN] [1786557254.326364936] [student_offboard]: ICP SLOWDOWN d_fwd=1.07m scale=0.83 X0=0.00 X1=0.93 W1=0.186
+[python3-3] [WARN] [1786557254.336864665] [student_offboard]: ICP SLOWDOWN d_fwd=1.07m scale=0.83 X0=0.00 X1=0.93 W1=0.186
+[python3-3] [WARN] [1786557254.346217983] [student_offboard]: ICP SLOWDOWN d_fwd=1.04m scale=0.82 X0=0.00 X1=0.96 W1=0.186
+[python3-3] [WARN] [1786557254.360225457] [student_offboard]: ICP SLOWDOWN d_fwd=1.04m scale=0.82 X0=0.00 X1=0.96 W1=0.186
+[python3-3] [WARN] [1786557254.366150469] [student_offboard]: ICP SLOWDOWN d_fwd=1.04m scale=0.82 X0=0.00 X1=0.96 W1=0.186
+[rviz2-7] [INFO] [1786557254.369361693] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 80.128 for reason 'discarding message because the queue is full'
+[python3-3] [WARN] [1786557254.376108544] [student_offboard]: ICP SLOWDOWN d_fwd=1.04m scale=0.82 X0=0.00 X1=0.96 W1=0.186
+[python3-3] [WARN] [1786557254.386317583] [student_offboard]: ICP SLOWDOWN d_fwd=1.04m scale=0.82 X0=0.00 X1=0.96 W1=0.186
+[python3-3] [WARN] [1786557254.396938810] [student_offboard]: ICP SLOWDOWN d_fwd=1.04m scale=0.82 X0=0.00 X1=0.96 W1=0.186
+[python3-3] [WARN] [1786557254.406603264] [student_offboard]: ICP SLOWDOWN d_fwd=1.04m scale=0.82 X0=0.00 X1=0.96 W1=0.186
+[python3-3] [WARN] [1786557254.416434149] [student_offboard]: ICP SLOWDOWN d_fwd=1.01m scale=0.82 X0=0.00 X1=0.99 W1=0.186
+[python3-3] [WARN] [1786557254.426331492] [student_offboard]: ICP SLOWDOWN d_fwd=1.01m scale=0.82 X0=0.00 X1=0.99 W1=0.185
+[python3-3] [WARN] [1786557254.436525135] [student_offboard]: ICP SLOWDOWN d_fwd=1.01m scale=0.82 X0=0.00 X1=0.99 W1=0.185
+[python3-3] [WARN] [1786557254.446331782] [student_offboard]: ICP SLOWDOWN d_fwd=1.01m scale=0.82 X0=0.00 X1=0.99 W1=0.185
+[python3-3] [WARN] [1786557254.456507844] [student_offboard]: ICP SLOWDOWN d_fwd=1.01m scale=0.82 X0=0.00 X1=0.99 W1=0.185
+[python3-3] [WARN] [1786557254.466355835] [student_offboard]: ICP SLOWDOWN d_fwd=1.01m scale=0.82 X0=0.00 X1=0.99 W1=0.185
+[python3-3] [WARN] [1786557254.476758064] [student_offboard]: ICP SLOWDOWN d_fwd=1.01m scale=0.82 X0=0.00 X1=0.99 W1=0.185
+[python3-3] [WARN] [1786557254.486325054] [student_offboard]: ICP SLOWDOWN d_fwd=0.97m scale=0.00 X0=1.03 X1=1.03 W1=0.503
+[python3-3] [WARN] [1786557254.496406712] [student_offboard]: ICP SLOWDOWN d_fwd=0.97m scale=0.00 X0=1.03 X1=1.03 W1=0.503
+[python3-3] [WARN] [1786557254.505985147] [student_offboard]: ICP SLOWDOWN d_fwd=0.97m scale=0.00 X0=1.03 X1=1.03 W1=0.502
+[python3-3] [WARN] [1786557254.516465708] [student_offboard]: ICP SLOWDOWN d_fwd=0.97m scale=0.00 X0=1.03 X1=1.03 W1=0.501
+[python3-3] [WARN] [1786557254.526090759] [student_offboard]: ICP SLOWDOWN d_fwd=0.97m scale=0.00 X0=1.03 X1=1.03 W1=0.501
+[python3-3] [WARN] [1786557254.536197842] [student_offboard]: ICP SLOWDOWN d_fwd=0.97m scale=0.00 X0=1.03 X1=1.03 W1=0.500
+[python3-3] [WARN] [1786557254.545962650] [student_offboard]: ICP SLOWDOWN d_fwd=0.94m scale=0.00 X0=1.06 X1=1.06 W1=0.510
+[python3-3] [WARN] [1786557254.556160515] [student_offboard]: ICP SLOWDOWN d_fwd=0.94m scale=0.00 X0=1.06 X1=1.06 W1=0.510
+[python3-3] [WARN] [1786557254.566411466] [student_offboard]: ICP SLOWDOWN d_fwd=0.94m scale=0.00 X0=1.06 X1=1.06 W1=0.509
+[python3-3] [WARN] [1786557254.576564530] [student_offboard]: ICP SLOWDOWN d_fwd=0.94m scale=0.00 X0=1.06 X1=1.06 W1=0.508
+[python3-3] [WARN] [1786557254.586369111] [student_offboard]: ICP SLOWDOWN d_fwd=0.94m scale=0.00 X0=1.06 X1=1.06 W1=0.507
+[python3-3] [WARN] [1786557254.596650671] [student_offboard]: ICP SLOWDOWN d_fwd=0.94m scale=0.00 X0=1.06 X1=1.06 W1=0.507
+[python3-3] [WARN] [1786557254.605936653] [student_offboard]: ICP SLOWDOWN d_fwd=0.94m scale=0.00 X0=1.06 X1=1.06 W1=0.506
+[python3-3] [WARN] [1786557254.616414012] [student_offboard]: ICP SLOWDOWN d_fwd=0.90m scale=0.00 X0=1.10 X1=1.10 W1=0.517
+[python3-3] [WARN] [1786557254.626371987] [student_offboard]: ICP SLOWDOWN d_fwd=0.90m scale=0.00 X0=1.10 X1=1.10 W1=0.517
+[python3-3] [WARN] [1786557254.636548478] [student_offboard]: ICP SLOWDOWN d_fwd=0.90m scale=0.00 X0=1.10 X1=1.10 W1=0.516
+[python3-3] [WARN] [1786557254.645920229] [student_offboard]: ICP SLOWDOWN d_fwd=0.90m scale=0.00 X0=1.10 X1=1.10 W1=0.515
+[python3-3] [WARN] [1786557254.656297571] [student_offboard]: ICP SLOWDOWN d_fwd=0.90m scale=0.00 X0=1.10 X1=1.10 W1=0.514
+[python3-3] [WARN] [1786557254.666181469] [student_offboard]: ICP SLOWDOWN d_fwd=0.90m scale=0.00 X0=1.10 X1=1.10 W1=0.514
+[python3-3] [WARN] [1786557254.676437574] [student_offboard]: ICP SLOWDOWN d_fwd=0.86m scale=0.00 X0=1.14 X1=1.14 W1=0.525
+[python3-3] [WARN] [1786557254.686366483] [student_offboard]: ICP SLOWDOWN d_fwd=0.86m scale=0.00 X0=1.14 X1=1.14 W1=0.524
+[python3-3] [WARN] [1786557254.696529648] [student_offboard]: ICP SLOWDOWN d_fwd=0.86m scale=0.00 X0=1.14 X1=1.14 W1=0.523
+[python3-3] [WARN] [1786557254.706271224] [student_offboard]: ICP SLOWDOWN d_fwd=0.86m scale=0.00 X0=1.14 X1=1.14 W1=0.523
+[python3-3] [WARN] [1786557254.716532785] [student_offboard]: ICP SLOWDOWN d_fwd=0.86m scale=0.00 X0=1.14 X1=1.14 W1=0.522
+[python3-3] [WARN] [1786557254.727282215] [student_offboard]: ICP SLOWDOWN d_fwd=0.86m scale=0.00 X0=1.14 X1=1.14 W1=0.521
+[python3-3] [WARN] [1786557254.736565604] [student_offboard]: ICP SLOWDOWN d_fwd=0.86m scale=0.00 X0=1.14 X1=1.14 W1=0.520
+[python3-3] [WARN] [1786557254.746344631] [student_offboard]: ICP SLOWDOWN d_fwd=0.83m scale=0.00 X0=1.17 X1=1.17 W1=0.532
+[python3-3] [WARN] [1786557254.756647503] [student_offboard]: ICP SLOWDOWN d_fwd=0.83m scale=0.00 X0=1.17 X1=1.17 W1=0.531
+[python3-3] [WARN] [1786557254.766340634] [student_offboard]: ICP SLOWDOWN d_fwd=0.83m scale=0.00 X0=1.17 X1=1.17 W1=0.531
+[python3-3] [WARN] [1786557254.776641612] [student_offboard]: ICP SLOWDOWN d_fwd=0.83m scale=0.00 X0=1.17 X1=1.17 W1=0.530
+[python3-3] [WARN] [1786557254.786325677] [student_offboard]: ICP SLOWDOWN d_fwd=0.83m scale=0.00 X0=1.17 X1=1.17 W1=0.529
+[python3-3] [WARN] [1786557254.796107102] [student_offboard]: ICP SLOWDOWN d_fwd=0.83m scale=0.00 X0=1.17 X1=1.17 W1=0.528
+[python3-3] [WARN] [1786557254.806471127] [student_offboard]: ICP SLOWDOWN d_fwd=0.79m scale=0.00 X0=1.21 X1=1.21 W1=0.539
+[python3-3] [WARN] [1786557254.816522189] [student_offboard]: ICP SLOWDOWN d_fwd=0.79m scale=0.00 X0=1.21 X1=1.21 W1=0.539
+[python3-3] [WARN] [1786557254.826401166] [student_offboard]: ICP SLOWDOWN d_fwd=0.79m scale=0.00 X0=1.21 X1=1.21 W1=0.538
+[python3-3] [WARN] [1786557254.836396830] [student_offboard]: ICP SLOWDOWN d_fwd=0.79m scale=0.00 X0=1.21 X1=1.21 W1=0.537
+[python3-3] [WARN] [1786557254.846241038] [student_offboard]: ICP SLOWDOWN d_fwd=0.79m scale=0.00 X0=1.21 X1=1.21 W1=0.536
+[python3-3] [WARN] [1786557254.858232384] [student_offboard]: ICP SLOWDOWN d_fwd=0.79m scale=0.00 X0=1.21 X1=1.21 W1=0.535
+[python3-3] [WARN] [1786557254.866573956] [student_offboard]: ICP SLOWDOWN d_fwd=0.79m scale=0.00 X0=1.21 X1=1.21 W1=0.535
+[python3-3] [WARN] [1786557254.876538892] [student_offboard]: ICP SLOWDOWN d_fwd=0.77m scale=0.00 X0=1.23 X1=1.23 W1=0.542
+[python3-3] [WARN] [1786557254.886405666] [student_offboard]: ICP SLOWDOWN d_fwd=0.77m scale=0.00 X0=1.23 X1=1.23 W1=0.541
+[python3-3] [WARN] [1786557254.896507151] [student_offboard]: ICP SLOWDOWN d_fwd=0.77m scale=0.00 X0=1.23 X1=1.23 W1=0.540
+[python3-3] [WARN] [1786557254.906322616] [student_offboard]: ICP SLOWDOWN d_fwd=0.77m scale=0.00 X0=1.23 X1=1.23 W1=0.539
+[python3-3] [WARN] [1786557254.916227650] [student_offboard]: ICP SLOWDOWN d_fwd=0.77m scale=0.00 X0=1.23 X1=1.23 W1=0.538
+[python3-3] [WARN] [1786557254.926009810] [student_offboard]: ICP SLOWDOWN d_fwd=0.77m scale=0.00 X0=1.23 X1=1.23 W1=0.538
+[python3-3] [WARN] [1786557254.936262468] [student_offboard]: ICP SLOWDOWN d_fwd=0.77m scale=0.00 X0=1.23 X1=1.23 W1=0.537
+[python3-3] [WARN] [1786557254.945987621] [student_offboard]: ICP SLOWDOWN d_fwd=0.72m scale=0.00 X0=1.28 X1=1.28 W1=0.558
+[python3-3] [WARN] [1786557254.956178415] [student_offboard]: ICP SLOWDOWN d_fwd=0.72m scale=0.00 X0=1.28 X1=1.28 W1=0.557
+[python3-3] [WARN] [1786557254.966314694] [student_offboard]: ICP SLOWDOWN d_fwd=0.72m scale=0.00 X0=1.28 X1=1.28 W1=0.557
+[python3-3] [WARN] [1786557254.976488965] [student_offboard]: ICP SLOWDOWN d_fwd=0.72m scale=0.00 X0=1.28 X1=1.28 W1=0.556
+[python3-3] [WARN] [1786557254.986322411] [student_offboard]: ICP SLOWDOWN d_fwd=0.72m scale=0.00 X0=1.28 X1=1.28 W1=0.555
+[python3-3] [WARN] [1786557254.996831975] [student_offboard]: ICP SLOWDOWN d_fwd=0.72m scale=0.00 X0=1.28 X1=1.28 W1=0.554
+[python3-3] [WARN] [1786557255.006355632] [student_offboard]: ICP SLOWDOWN d_fwd=0.69m scale=0.00 X0=1.31 X1=1.31 W1=0.561
+[python3-3] [WARN] [1786557255.016586176] [student_offboard]: ICP SLOWDOWN d_fwd=0.69m scale=0.00 X0=1.31 X1=1.31 W1=0.560
+[python3-3] [WARN] [1786557255.026091313] [student_offboard]: ICP SLOWDOWN d_fwd=0.69m scale=0.00 X0=1.31 X1=1.31 W1=0.559
+[python3-3] [WARN] [1786557255.036057846] [student_offboard]: ICP SLOWDOWN d_fwd=0.69m scale=0.00 X0=1.31 X1=1.31 W1=0.559
+[python3-3] [WARN] [1786557255.046024963] [student_offboard]: ICP SLOWDOWN d_fwd=0.69m scale=0.00 X0=1.31 X1=1.31 W1=0.558
+[python3-3] [WARN] [1786557255.056592016] [student_offboard]: ICP SLOWDOWN d_fwd=0.69m scale=0.00 X0=1.31 X1=1.31 W1=0.557
+[python3-3] [WARN] [1786557255.066460324] [student_offboard]: ICP SLOWDOWN d_fwd=0.69m scale=0.00 X0=1.31 X1=1.31 W1=0.556
+[python3-3] [WARN] [1786557255.076532121] [student_offboard]: ICP SLOWDOWN d_fwd=0.66m scale=0.00 X0=1.34 X1=1.34 W1=0.568
+[python3-3] [WARN] [1786557255.086318351] [student_offboard]: ICP SLOWDOWN d_fwd=0.66m scale=0.00 X0=1.34 X1=1.34 W1=0.567
+[python3-3] [WARN] [1786557255.101634209] [student_offboard]: ICP SLOWDOWN d_fwd=0.66m scale=0.00 X0=1.34 X1=1.34 W1=0.565
+[python3-3] [WARN] [1786557255.106212345] [student_offboard]: ICP SLOWDOWN d_fwd=0.66m scale=0.00 X0=1.34 X1=1.34 W1=0.565
+[python3-3] [WARN] [1786557255.116341678] [student_offboard]: ICP SLOWDOWN d_fwd=0.66m scale=0.00 X0=1.34 X1=1.34 W1=0.564
+[python3-3] [WARN] [1786557255.126567575] [student_offboard]: ICP SLOWDOWN d_fwd=0.66m scale=0.00 X0=1.34 X1=1.34 W1=0.563
+[python3-3] [WARN] [1786557255.136728034] [student_offboard]: ICP SLOWDOWN d_fwd=0.66m scale=0.00 X0=1.34 X1=1.34 W1=0.562
+[python3-3] [WARN] [1786557255.146320921] [student_offboard]: ICP SLOWDOWN d_fwd=0.64m scale=0.00 X0=1.36 X1=1.36 W1=0.570
+[python3-3] [WARN] [1786557255.155993105] [student_offboard]: ICP SLOWDOWN d_fwd=0.64m scale=0.00 X0=1.36 X1=1.36 W1=0.569
+[python3-3] [WARN] [1786557255.166283463] [student_offboard]: ICP SLOWDOWN d_fwd=0.64m scale=0.00 X0=1.36 X1=1.36 W1=0.568
+[python3-3] [WARN] [1786557255.176483253] [student_offboard]: ICP SLOWDOWN d_fwd=0.64m scale=0.00 X0=1.36 X1=1.36 W1=0.567
+[python3-3] [WARN] [1786557255.186043755] [student_offboard]: ICP SLOWDOWN d_fwd=0.64m scale=0.00 X0=1.36 X1=1.36 W1=0.566
+[python3-3] [WARN] [1786557255.196794309] [student_offboard]: ICP SLOWDOWN d_fwd=0.64m scale=0.00 X0=1.36 X1=1.36 W1=0.565
+[python3-3] [WARN] [1786557255.206334538] [student_offboard]: ICP SLOWDOWN d_fwd=0.62m scale=0.00 X0=1.38 X1=1.38 W1=0.575
+[python3-3] [WARN] [1786557255.216568064] [student_offboard]: ICP SLOWDOWN d_fwd=0.62m scale=0.00 X0=1.38 X1=1.38 W1=0.574
+[python3-3] [WARN] [1786557255.226030000] [student_offboard]: ICP SLOWDOWN d_fwd=0.62m scale=0.00 X0=1.38 X1=1.38 W1=0.573
+[python3-3] [WARN] [1786557255.236143734] [student_offboard]: ICP SLOWDOWN d_fwd=0.62m scale=0.00 X0=1.38 X1=1.38 W1=0.572
+[python3-3] [WARN] [1786557255.246358004] [student_offboard]: ICP SLOWDOWN d_fwd=0.62m scale=0.00 X0=1.38 X1=1.38 W1=0.571
+[python3-3] [WARN] [1786557255.256505456] [student_offboard]: ICP SLOWDOWN d_fwd=0.62m scale=0.00 X0=1.38 X1=1.38 W1=0.570
+[python3-3] [WARN] [1786557255.266562278] [student_offboard]: ICP SLOWDOWN d_fwd=0.62m scale=0.00 X0=1.38 X1=1.38 W1=0.569
+[python3-3] [WARN] [1786557255.276506033] [student_offboard]: ICP SLOWDOWN d_fwd=0.57m scale=0.00 X0=1.43 X1=1.43 W1=0.587
+[python3-3] [WARN] [1786557255.286398801] [student_offboard]: ICP SLOWDOWN d_fwd=0.57m scale=0.00 X0=1.43 X1=1.43 W1=0.586
+[python3-3] [WARN] [1786557255.296541705] [student_offboard]: ICP SLOWDOWN d_fwd=0.57m scale=0.00 X0=1.43 X1=1.43 W1=0.585
+[python3-3] [WARN] [1786557255.306350218] [student_offboard]: ICP SLOWDOWN d_fwd=0.57m scale=0.00 X0=1.43 X1=1.43 W1=0.584
+[python3-3] [WARN] [1786557255.316490925] [student_offboard]: ICP SLOWDOWN d_fwd=0.57m scale=0.00 X0=1.43 X1=1.43 W1=0.583
+[python3-3] [WARN] [1786557255.326514055] [student_offboard]: ICP SLOWDOWN d_fwd=0.57m scale=0.00 X0=1.43 X1=1.43 W1=0.582
+[python3-3] [WARN] [1786557255.336241375] [student_offboard]: ICP SLOWDOWN d_fwd=0.55m scale=0.00 X0=1.45 X1=1.45 W1=0.592
+[python3-3] [WARN] [1786557255.345907085] [student_offboard]: ICP SLOWDOWN d_fwd=0.55m scale=0.00 X0=1.45 X1=1.45 W1=0.591
+[python3-3] [WARN] [1786557255.356109954] [student_offboard]: ICP SLOWDOWN d_fwd=0.55m scale=0.00 X0=1.45 X1=1.45 W1=0.590
+[python3-3] [WARN] [1786557255.365932508] [student_offboard]: ICP SLOWDOWN d_fwd=0.55m scale=0.00 X0=1.45 X1=1.45 W1=0.589
+[python3-3] [WARN] [1786557255.376241210] [student_offboard]: ICP SLOWDOWN d_fwd=0.55m scale=0.00 X0=1.45 X1=1.45 W1=0.588
+[python3-3] [WARN] [1786557255.386300794] [student_offboard]: ICP SLOWDOWN d_fwd=0.55m scale=0.00 X0=1.45 X1=1.45 W1=0.587
+[python3-3] [WARN] [1786557255.397759586] [student_offboard]: ICP SLOWDOWN d_fwd=0.55m scale=0.00 X0=1.45 X1=1.45 W1=0.586
+[python3-3] [WARN] [1786557255.406331852] [student_offboard]: ICP SLOWDOWN d_fwd=0.52m scale=0.00 X0=1.48 X1=1.48 W1=0.596
+[python3-3] [WARN] [1786557255.416426329] [student_offboard]: ICP SLOWDOWN d_fwd=0.52m scale=0.00 X0=1.48 X1=1.48 W1=0.595
+[python3-3] [WARN] [1786557255.426513642] [student_offboard]: ICP SLOWDOWN d_fwd=0.52m scale=0.00 X0=1.48 X1=1.48 W1=0.594
+[python3-3] [WARN] [1786557255.436535279] [student_offboard]: ICP SLOWDOWN d_fwd=0.52m scale=0.00 X0=1.48 X1=1.48 W1=0.593
+[python3-3] [WARN] [1786557255.445930685] [student_offboard]: ICP SLOWDOWN d_fwd=0.52m scale=0.00 X0=1.48 X1=1.48 W1=0.592
+[python3-3] [WARN] [1786557255.456246546] [student_offboard]: ICP SLOWDOWN d_fwd=0.52m scale=0.00 X0=1.48 X1=1.48 W1=0.591
+[python3-3] [WARN] [1786557255.466342633] [student_offboard]: ICP SLOWDOWN d_fwd=0.52m scale=0.00 X0=1.48 X1=1.48 W1=0.590
+[python3-3] [WARN] [1786557255.476508939] [student_offboard]: ICP SLOWDOWN d_fwd=0.51m scale=0.00 X0=1.49 X1=1.49 W1=0.597
+[python3-3] [WARN] [1786557255.486313584] [student_offboard]: ICP SLOWDOWN d_fwd=0.51m scale=0.00 X0=1.49 X1=1.49 W1=0.596
+[python3-3] [WARN] [1786557255.497114265] [student_offboard]: ICP SLOWDOWN d_fwd=0.51m scale=0.00 X0=1.49 X1=1.49 W1=0.595
+[python3-3] [WARN] [1786557255.506325406] [student_offboard]: ICP SLOWDOWN d_fwd=0.51m scale=0.00 X0=1.49 X1=1.49 W1=0.594
+[python3-3] [WARN] [1786557255.516506730] [student_offboard]: ICP SLOWDOWN d_fwd=0.51m scale=0.00 X0=1.49 X1=1.49 W1=0.593
+[python3-3] [WARN] [1786557255.526281708] [student_offboard]: ICP SLOWDOWN d_fwd=0.51m scale=0.00 X0=1.49 X1=1.49 W1=0.592
+[python3-3] [WARN] [1786557255.536043275] [student_offboard]: ICP SLOWDOWN d_fwd=0.48m scale=0.00 X0=1.52 X1=1.52 W1=0.601
+[python3-3] [WARN] [1786557255.545971269] [student_offboard]: ICP SLOWDOWN d_fwd=0.48m scale=0.00 X0=1.52 X1=1.52 W1=0.600
+[python3-3] [WARN] [1786557255.556544809] [student_offboard]: ICP SLOWDOWN d_fwd=0.48m scale=0.00 X0=1.52 X1=1.52 W1=0.599
+[python3-3] [WARN] [1786557255.566345079] [student_offboard]: ICP SLOWDOWN d_fwd=0.48m scale=0.00 X0=1.52 X1=1.52 W1=0.598
+[python3-3] [WARN] [1786557255.576432345] [student_offboard]: ICP SLOWDOWN d_fwd=0.48m scale=0.00 X0=1.52 X1=1.52 W1=0.597
+[python3-3] [WARN] [1786557255.586552977] [student_offboard]: ICP SLOWDOWN d_fwd=0.48m scale=0.00 X0=1.52 X1=1.52 W1=0.596
+[python3-3] [WARN] [1786557255.596461382] [student_offboard]: ICP SLOWDOWN d_fwd=0.45m scale=0.00 X0=1.55 X1=1.55 W1=0.610
+[python3-3] [WARN] [1786557255.606272940] [student_offboard]: ICP SLOWDOWN d_fwd=0.45m scale=0.00 X0=1.55 X1=1.55 W1=0.609
+[python3-3] [WARN] [1786557255.616515344] [student_offboard]: ICP SLOWDOWN d_fwd=0.45m scale=0.00 X0=1.55 X1=1.55 W1=0.608
+[python3-3] [WARN] [1786557255.625853660] [student_offboard]: ICP SLOWDOWN d_fwd=0.45m scale=0.00 X0=1.55 X1=1.55 W1=0.607
+[python3-3] [WARN] [1786557255.636404803] [student_offboard]: ICP SLOWDOWN d_fwd=0.45m scale=0.00 X0=1.55 X1=1.55 W1=0.606
+[python3-3] [WARN] [1786557255.646463758] [student_offboard]: ICP SLOWDOWN d_fwd=0.45m scale=0.00 X0=1.55 X1=1.55 W1=0.605
+[python3-3] [WARN] [1786557255.656555847] [student_offboard]: ICP SLOWDOWN d_fwd=0.45m scale=0.00 X0=1.55 X1=1.55 W1=0.604
+[python3-3] [WARN] [1786557255.666351105] [student_offboard]: ICP SLOWDOWN d_fwd=0.45m scale=0.00 X0=1.55 X1=1.55 W1=0.603
+[python3-3] [INFO] [1786557255.667705303] [student_offboard]: [  4650] OFFBOARD | dist=4.13m | alt=2.34m(err=+0.16) | yaw=+95deg | act=[yaw=-0.01 vx=+0.55 vy=+0.22 vz=+0.04] | vel_NED=(+0.25,+0.02,-0.05) | ICP[fwd=0.45m spd=0.00 X0=1.55 W1=0.603] | beams=['0.83', '0.09', '0.09', '1.00', '0.43']
+[python3-3] [WARN] [1786557255.676736012] [student_offboard]: ICP SLOWDOWN d_fwd=0.41m scale=0.00 X0=1.59 X1=1.59 W1=0.620
+[python3-3] [WARN] [1786557255.686339231] [student_offboard]: ICP SLOWDOWN d_fwd=0.41m scale=0.00 X0=1.59 X1=1.59 W1=0.619
+[python3-3] [WARN] [1786557255.696438161] [student_offboard]: ICP SLOWDOWN d_fwd=0.41m scale=0.00 X0=1.59 X1=1.59 W1=0.618
+[python3-3] [WARN] [1786557255.706298393] [student_offboard]: ICP SLOWDOWN d_fwd=0.41m scale=0.00 X0=1.59 X1=1.59 W1=0.617
+[python3-3] [WARN] [1786557255.716744563] [student_offboard]: ICP SLOWDOWN d_fwd=0.41m scale=0.00 X0=1.59 X1=1.59 W1=0.616
+[python3-3] [WARN] [1786557255.727741462] [student_offboard]: ICP SLOWDOWN d_fwd=0.41m scale=0.00 X0=1.59 X1=1.59 W1=0.615
+[python3-3] [WARN] [1786557255.736429824] [student_offboard]: ICP SLOWDOWN d_fwd=0.40m scale=0.00 X0=1.60 X1=1.60 W1=0.617
+[python3-3] [WARN] [1786557255.747841163] [student_offboard]: ICP SLOWDOWN d_fwd=0.40m scale=0.00 X0=1.60 X1=1.60 W1=0.615
+[python3-3] [WARN] [1786557255.756053975] [student_offboard]: ICP SLOWDOWN d_fwd=0.40m scale=0.00 X0=1.60 X1=1.60 W1=0.615
+[python3-3] [WARN] [1786557255.766370345] [student_offboard]: ICP SLOWDOWN d_fwd=0.40m scale=0.00 X0=1.60 X1=1.60 W1=0.613
+[python3-3] [WARN] [1786557255.776544832] [student_offboard]: ICP SLOWDOWN d_fwd=0.40m scale=0.00 X0=1.60 X1=1.60 W1=0.612
+[python3-3] [WARN] [1786557255.786474038] [student_offboard]: ICP SLOWDOWN d_fwd=0.40m scale=0.00 X0=1.60 X1=1.60 W1=0.611
+[python3-3] [WARN] [1786557255.796513136] [student_offboard]: ICP SLOWDOWN d_fwd=0.40m scale=0.00 X0=1.60 X1=1.60 W1=0.610
+[python3-3] [WARN] [1786557255.806310373] [student_offboard]: ICP SLOWDOWN d_fwd=0.39m scale=0.00 X0=1.61 X1=1.61 W1=0.617
+[python3-3] [WARN] [1786557255.816448672] [student_offboard]: ICP SLOWDOWN d_fwd=0.39m scale=0.00 X0=1.61 X1=1.61 W1=0.616
+[python3-3] [WARN] [1786557255.826306008] [student_offboard]: ICP SLOWDOWN d_fwd=0.39m scale=0.00 X0=1.61 X1=1.61 W1=0.615
+[python3-3] [WARN] [1786557255.836514409] [student_offboard]: ICP SLOWDOWN d_fwd=0.39m scale=0.00 X0=1.61 X1=1.61 W1=0.614
+[python3-3] [WARN] [1786557255.846549362] [student_offboard]: ICP SLOWDOWN d_fwd=0.39m scale=0.00 X0=1.61 X1=1.61 W1=0.613
+[python3-3] [WARN] [1786557255.856590313] [student_offboard]: ICP SLOWDOWN d_fwd=0.39m scale=0.00 X0=1.61 X1=1.61 W1=0.612
+[python3-3] [WARN] [1786557255.866278612] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.617
+[python3-3] [WARN] [1786557255.876183263] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.616
+[python3-3] [WARN] [1786557255.886349711] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.615
+[python3-3] [WARN] [1786557255.896566551] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.614
+[python3-3] [WARN] [1786557255.906809528] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.613
+[python3-3] [WARN] [1786557255.916533264] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.612
+[python3-3] [WARN] [1786557255.926411625] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.611
+[python3-3] [WARN] [1786557255.936632252] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.611
+[python3-3] [WARN] [1786557255.946391500] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.610
+[python3-3] [WARN] [1786557255.956315088] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.609
+[python3-3] [WARN] [1786557255.966393857] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.608
+[python3-3] [WARN] [1786557255.979169530] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.606
+[python3-3] [WARN] [1786557255.986555051] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.606
+[python3-3] [WARN] [1786557255.996289056] [student_offboard]: ICP SLOWDOWN d_fwd=0.35m scale=0.00 X0=1.65 X1=1.65 W1=0.617
+[python3-3] [WARN] [1786557256.006438702] [student_offboard]: ICP SLOWDOWN d_fwd=0.35m scale=0.00 X0=1.65 X1=1.65 W1=0.616
+[python3-3] [WARN] [1786557256.016082918] [student_offboard]: ICP SLOWDOWN d_fwd=0.35m scale=0.00 X0=1.65 X1=1.65 W1=0.615
+[python3-3] [WARN] [1786557256.025914914] [student_offboard]: ICP SLOWDOWN d_fwd=0.35m scale=0.00 X0=1.65 X1=1.65 W1=0.614
+[python3-3] [WARN] [1786557256.036810859] [student_offboard]: ICP SLOWDOWN d_fwd=0.35m scale=0.00 X0=1.65 X1=1.65 W1=0.613
+[python3-3] [WARN] [1786557256.047208246] [student_offboard]: ICP SLOWDOWN d_fwd=0.35m scale=0.00 X0=1.65 X1=1.65 W1=0.612
+[python3-3] [WARN] [1786557256.058090304] [student_offboard]: ICP SLOWDOWN d_fwd=0.35m scale=0.00 X0=1.65 X1=1.65 W1=0.610
+[python3-3] [WARN] [1786557256.066017750] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.598
+[python3-3] [WARN] [1786557256.076582816] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.597
+[python3-3] [WARN] [1786557256.086296857] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.596
+[python3-3] [WARN] [1786557256.096619343] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.595
+[python3-3] [WARN] [1786557256.105944467] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.594
+[python3-3] [WARN] [1786557256.116373518] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.593
+[python3-3] [WARN] [1786557256.126434427] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.586
+[python3-3] [WARN] [1786557256.136537829] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.585
+[python3-3] [WARN] [1786557256.145937180] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.584
+[python3-3] [WARN] [1786557256.156267480] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.583
+[python3-3] [WARN] [1786557256.166367823] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.582
+[python3-3] [WARN] [1786557256.176461861] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.581
+[python3-3] [WARN] [1786557256.186524909] [student_offboard]: ICP SLOWDOWN d_fwd=0.38m scale=0.00 X0=1.62 X1=1.62 W1=0.580
+[python3-3] [WARN] [1786557256.196719434] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.584
+[python3-3] [WARN] [1786557256.206361106] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.583
+[python3-3] [WARN] [1786557256.216469211] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.582
+[python3-3] [WARN] [1786557256.226306492] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.581
+[python3-3] [WARN] [1786557256.236422833] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.580
+[python3-3] [WARN] [1786557256.246385876] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.579
+[python3-3] [WARN] [1786557256.256389481] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.577
+[python3-3] [WARN] [1786557256.265902676] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.576
+[python3-3] [WARN] [1786557256.276244897] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.575
+[python3-3] [WARN] [1786557256.285894861] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.574
+[python3-3] [WARN] [1786557256.296483411] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.573
+[python3-3] [WARN] [1786557256.306388495] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.572
+[python3-3] [WARN] [1786557256.316709707] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.571
+[python3-3] [WARN] [1786557256.326344604] [student_offboard]: ICP SLOWDOWN d_fwd=0.39m scale=0.00 X0=1.61 X1=1.61 W1=0.561
+[python3-3] [WARN] [1786557256.336456464] [student_offboard]: ICP SLOWDOWN d_fwd=0.39m scale=0.00 X0=1.61 X1=1.61 W1=0.560
+[python3-3] [WARN] [1786557256.346373513] [student_offboard]: ICP SLOWDOWN d_fwd=0.39m scale=0.00 X0=1.61 X1=1.61 W1=0.559
+[python3-3] [WARN] [1786557256.357250555] [student_offboard]: ICP SLOWDOWN d_fwd=0.39m scale=0.00 X0=1.61 X1=1.61 W1=0.558
+[python3-3] [WARN] [1786557256.366252185] [student_offboard]: ICP SLOWDOWN d_fwd=0.39m scale=0.00 X0=1.61 X1=1.61 W1=0.557
+[python3-3] [WARN] [1786557256.376840239] [student_offboard]: ICP SLOWDOWN d_fwd=0.39m scale=0.00 X0=1.61 X1=1.61 W1=0.556
+[python3-3] [WARN] [1786557256.386351122] [student_offboard]: ICP SLOWDOWN d_fwd=0.39m scale=0.00 X0=1.61 X1=1.61 W1=0.555
+[python3-3] [WARN] [1786557256.396599442] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.565
+[python3-3] [WARN] [1786557256.406391196] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.564
+[python3-3] [WARN] [1786557256.416363156] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.564
+[python3-3] [WARN] [1786557256.426332909] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.563
+[python3-3] [WARN] [1786557256.436504446] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.562
+[python3-3] [WARN] [1786557256.446337550] [student_offboard]: ICP SLOWDOWN d_fwd=0.37m scale=0.00 X0=1.63 X1=1.63 W1=0.561
+[python3-3] [WARN] [1786557256.456279458] [student_offboard]: ICP SLOWDOWN d_fwd=0.40m scale=0.00 X0=1.60 X1=1.60 W1=0.547
+[python3-3] [WARN] [1786557256.466030230] [student_offboard]: ICP SLOWDOWN d_fwd=0.40m scale=0.00 X0=1.60 X1=1.60 W1=0.547
+[python3-3] [WARN] [1786557256.476097965] [student_offboard]: ICP SLOWDOWN d_fwd=0.40m scale=0.00 X0=1.60 X1=1.60 W1=0.546
+[python3-3] [WARN] [1786557256.485972393] [student_offboard]: ICP SLOWDOWN d_fwd=0.40m scale=0.00 X0=1.60 X1=1.60 W1=0.545
+[python3-3] [WARN] [1786557256.496058974] [student_offboard]: ICP SLOWDOWN d_fwd=0.40m scale=0.00 X0=1.60 X1=1.60 W1=0.544
+[python3-3] [WARN] [1786557256.506021269] [student_offboard]: ICP SLOWDOWN d_fwd=0.40m scale=0.00 X0=1.60 X1=1.60 W1=0.543
+[python3-3] [WARN] [1786557256.520192279] [student_offboard]: ICP SLOWDOWN d_fwd=0.40m scale=0.00 X0=1.60 X1=1.60 W1=0.542
+[python3-3] [WARN] [1786557256.525920868] [student_offboard]: ICP SLOWDOWN d_fwd=0.43m scale=0.00 X0=1.57 X1=1.57 W1=0.527
+[python3-3] [WARN] [1786557256.536108201] [student_offboard]: ICP SLOWDOWN d_fwd=0.43m scale=0.00 X0=1.57 X1=1.57 W1=0.527
+[python3-3] [WARN] [1786557256.546313148] [student_offboard]: ICP SLOWDOWN d_fwd=0.43m scale=0.00 X0=1.57 X1=1.57 W1=0.526
+[python3-3] [WARN] [1786557256.556410996] [student_offboard]: ICP SLOWDOWN d_fwd=0.43m scale=0.00 X0=1.57 X1=1.57 W1=0.525
+[python3-3] [WARN] [1786557256.566302925] [student_offboard]: ICP SLOWDOWN d_fwd=0.43m scale=0.00 X0=1.57 X1=1.57 W1=0.524
+[python3-3] [WARN] [1786557256.576468409] [student_offboard]: ICP SLOWDOWN d_fwd=0.43m scale=0.00 X0=1.57 X1=1.57 W1=0.523
+[python3-3] [WARN] [1786557256.586136378] [student_offboard]: ICP SLOWDOWN d_fwd=0.43m scale=0.00 X0=1.57 X1=1.57 W1=0.523
+[python3-3] [WARN] [1786557256.596493651] [student_offboard]: ICP SLOWDOWN d_fwd=0.48m scale=0.00 X0=1.52 X1=1.52 W1=0.499
+[python3-3] [WARN] [1786557256.606276650] [student_offboard]: ICP SLOWDOWN d_fwd=0.48m scale=0.00 X0=1.52 X1=1.52 W1=0.498
+[python3-3] [WARN] [1786557256.616645994] [student_offboard]: ICP SLOWDOWN d_fwd=0.48m scale=0.00 X0=1.52 X1=1.52 W1=0.497
+[python3-3] [WARN] [1786557256.626587166] [student_offboard]: ICP SLOWDOWN d_fwd=0.48m scale=0.00 X0=1.52 X1=1.52 W1=0.496
+[python3-3] [WARN] [1786557256.637126224] [student_offboard]: ICP SLOWDOWN d_fwd=0.48m scale=0.00 X0=1.52 X1=1.52 W1=0.496
+[python3-3] [WARN] [1786557256.646306442] [student_offboard]: ICP SLOWDOWN d_fwd=0.48m scale=0.00 X0=1.52 X1=1.52 W1=0.495
+[python3-3] [WARN] [1786557256.786336131] [student_offboard]: ICP SLOWDOWN d_fwd=0.44m scale=0.00 X0=1.56 X1=1.56 W1=1.218
+[python3-3] [WARN] [1786557256.796445225] [student_offboard]: ICP SLOWDOWN d_fwd=0.44m scale=0.00 X0=1.56 X1=1.56 W1=1.214
+[python3-3] [WARN] [1786557256.806517027] [student_offboard]: ICP SLOWDOWN d_fwd=0.44m scale=0.00 X0=1.56 X1=1.56 W1=1.210
+[python3-3] [WARN] [1786557256.816539723] [student_offboard]: ICP SLOWDOWN d_fwd=0.44m scale=0.00 X0=1.56 X1=1.56 W1=1.205
+[python3-3] [WARN] [1786557256.826390984] [student_offboard]: ICP SLOWDOWN d_fwd=0.44m scale=0.00 X0=1.56 X1=1.56 W1=1.201
+[python3-3] [WARN] [1786557256.836662750] [student_offboard]: ICP SLOWDOWN d_fwd=0.44m scale=0.00 X0=1.56 X1=1.56 W1=1.197
+[python3-3] [WARN] [1786557256.846412407] [student_offboard]: ICP SLOWDOWN d_fwd=0.44m scale=0.00 X0=1.56 X1=1.56 W1=1.193
+[rviz2-7] [INFO] [1786557256.929537916] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 82.700 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557257.166447566] [student_offboard]: [  4800] OFFBOARD | dist=3.73m | alt=2.57m(err=-0.07) | yaw=+122deg | act=[yaw=-0.11 vx=+0.71 vy=+0.32 vz=+0.34] | vel_NED=(-0.11,+0.87,-0.39) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=1.089] | beams=['0.06', '0.06', '1.00', '1.00', '0.30']
+[python3-3] [INFO] [1786557258.667125976] [student_offboard]: [  4950] OFFBOARD | dist=2.70m | alt=2.93m(err=-0.43) | yaw=-176deg | act=[yaw=-0.15 vx=+0.27 vy=+0.83 vz=-0.82] | vel_NED=(-0.38,+0.91,+0.86) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.773] | beams=['0.14', '0.78', '1.00', '1.00', '1.00']
+[python3-3] [INFO] [1786557259.165663974] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[rviz2-7] [INFO] [1786557259.521126404] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 85.276 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557260.167150233] [student_offboard]: [  5100] OFFBOARD | dist=2.06m | alt=2.40m(err=+0.10) | yaw=-162deg | act=[yaw=-0.01 vx=-0.15 vy=+0.70 vz=-0.79] | vel_NED=(-0.09,+0.80,+0.15) | ICP[fwd=4.59m spd=1.00 X0=0.00 W1=0.599] | beams=['0.27', '0.85', '0.92', '1.00', '1.00']
+[python3-3] [INFO] [1786557261.667361743] [student_offboard]: [  5250] OFFBOARD | dist=1.44m | alt=2.19m(err=+0.31) | yaw=-159deg | act=[yaw=+0.02 vx=+0.12 vy=+0.49 vz=+0.12] | vel_NED=(-0.32,+0.47,-0.13) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.489] | beams=['0.43', '0.99', '1.00', '1.00', '1.00']
+[rviz2-7] [INFO] [1786557262.081680386] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 87.848 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557263.166507215] [student_offboard]: [  5400] OFFBOARD | dist=0.85m | alt=2.35m(err=+0.15) | yaw=-167deg | act=[yaw=-0.16 vx=+0.05 vy=+0.00 vz=+0.12] | vel_NED=(-0.06,-0.01,-0.14) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.413] | beams=['0.59', '1.00', '1.00', '1.00', '0.82']
+[python3-3] [INFO] [1786557264.165725974] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[rviz2-7] [INFO] [1786557264.641454104] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 90.424 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557264.667125392] [student_offboard]: [  5550] OFFBOARD | dist=0.99m | alt=2.35m(err=+0.15) | yaw=-109deg | act=[yaw=-0.26 vx=-0.13 vy=-0.22 vz=-0.18] | vel_NED=(+0.28,+0.06,+0.15) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.358] | beams=['0.77', '0.75', '1.00', '1.00', '1.00']
+[python3-3] [INFO] [1786557266.166453531] [student_offboard]: [  5700] OFFBOARD | dist=1.23m | alt=2.42m(err=+0.08) | yaw=-99deg | act=[yaw=-0.27 vx=-0.04 vy=-0.18 vz=-0.62] | vel_NED=(+0.21,+0.01,+0.15) | ICP[fwd=5.00m spd=1.00 X0=0.00 W1=0.315] | beams=['1.00', '0.85', '1.00', '1.00', '1.00']
+[rviz2-7] [INFO] [1786557267.169673938] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 92.932 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557267.666909146] [student_offboard]: [  5850] OFFBOARD | dist=1.37m | alt=2.37m(err=+0.13) | yaw=-88deg | act=[yaw=-0.10 vx=+0.09 vy=-0.03 vz=+0.18] | vel_NED=(+0.04,-0.10,-0.20) | ICP[fwd=4.47m spd=1.00 X0=0.00 W1=0.282] | beams=['1.00', '0.93', '0.89', '1.00', '1.00']
+[python3-3] [INFO] [1786557269.165684071] [student_offboard]: [diag] fsm=OFFBOARD flight_check=True arm_req=True nav=14 arm_st=2
+[python3-3] [INFO] [1786557269.167572090] [student_offboard]: [  6000] OFFBOARD | dist=1.55m | alt=2.35m(err=+0.15) | yaw=-83deg | act=[yaw=-0.06 vx=+0.14 vy=-0.13 vz=-0.02] | vel_NED=(+0.16,-0.14,+0.02) | ICP[fwd=4.68m spd=1.00 X0=0.00 W1=0.255] | beams=['1.00', '0.99', '0.94', '1.00', '1.00']
+[rviz2-7] [INFO] [1786557269.729508274] [rviz2]: Message Filter dropping message: frame 'agi_drone_depth_0/lidar_link/lidar' at time 95.504 for reason 'discarding message because the queue is full'
+[python3-3] [INFO] [1786557270.667056427] [student_offboard]: [  6150] OFFBOARD | dist=1.60m | alt=2.41m(err=+0.09) | yaw=-75deg | act=[yaw=+0.12 vx=+0.19 vy=-0.07 vz=+0.12] | vel_NED=(+0.14,-0.18,-0.13) | ICP[fwd=4.74m spd=1.00 X0=0.00 W1=0.233] | beams=['1.00', '1.00', '0.95', '1.00', '1.00']
+[rviz2-7] [INFO] [1786557271.167163034] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[static_transform_publisher-2] [INFO] [1786557271.167165943] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[parameter_bridge-1] [INFO] [1786557271.167191220] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[python3-6] Traceback (most recent call last):
+[python3-6]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_viz_markers.py", line 312, in main
+[python3-6]     rclpy.spin(node)
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[python3-6]     executor.spin_once()
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 808, in spin_once
+[python3-6]     self._spin_once_impl(timeout_sec)
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 797, in _spin_once_impl
+[python3-6]     handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 780, in wait_for_ready_callbacks
+[python3-6]     return next(self._cb_iter)
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 681, in _wait_for_ready_callbacks
+[python3-6]     raise ExternalShutdownException()
+[python3-6] rclpy.executors.ExternalShutdownException
+[python3-6] 
+[python3-6] During handling of the above exception, another exception occurred:
+[python3-6] 
+[python3-6] Traceback (most recent call last):
+[python3-6]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_viz_markers.py", line 321, in <module>
+[python3-6]     main()
+[python3-6]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_viz_markers.py", line 317, in main
+[python3-6]     rclpy.shutdown()
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+[python3-6]     _shutdown(context=context)
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+[python3-6]     return context.shutdown()
+[python3-6]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+[python3-6]     self.__context.shutdown()
+[python3-6] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241
+[python3-3] [INFO] Checkpoint  : /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/logs/dagger/student_latest.pth
+[python3-3] [INFO] Obs dim     : 16
+[python3-3] [INFO] Hidden dims : [256, 128]
+[python3-3] [INFO] DAgger iter : 199
+[python3-3] [INFO] Final beta  : 0.0500
+[python3-3] [INFO] Goal NED    : (0.0, 12.0, -2.5)  (N=0.0, E=12.0, alt=2.5m)
+[python3-3] [INFO] vel_scale   : 0.375  (max 1.1 m/s)
+[python3-3] [INFO] LiDAR topic : /scan
+[python3-3] [INFO] ICP speed   : d_ref=1.0m  d_pred=2.0m  W1_init=0.5  W1_max=5.0  γs=0.5  ks=0.5  (W1 halves in ~0s at rest)
+[python3-3] [crash_log] 500 rows → /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/results/quick_test/pa_trial_998_steps_last5s.csv
+[python3-3] Traceback (most recent call last):
+[python3-3]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/student_ros2_node_icp.py", line 1087, in main
+[python3-3]     rclpy.spin(node)
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[python3-3]     executor.spin_once()
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 808, in spin_once
+[python3-3]     self._spin_once_impl(timeout_sec)
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 797, in _spin_once_impl
+[python3-3]     handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 780, in wait_for_ready_callbacks
+[python3-3]     return next(self._cb_iter)
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 681, in _wait_for_ready_callbacks
+[python3-3]     raise ExternalShutdownException()
+[python3-3] rclpy.executors.ExternalShutdownException
+[python3-3] 
+[python3-3] During handling of the above exception, another exception occurred:
+[python3-3] 
+[python3-3] Traceback (most recent call last):
+[python3-3]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/student_ros2_node_icp.py", line 1097, in <module>
+[python3-3]     main()
+[python3-3]   File "/home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/student_ros2_node_icp.py", line 1092, in main
+[python3-3]     rclpy.shutdown()
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+[python3-3]     _shutdown(context=context)
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+[python3-3]     return context.shutdown()
+[python3-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+[python3-3]     self.__context.shutdown()
+[python3-3] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241
+[parameter_bridge-1] [INFO] [1786557271.212282025] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[parameter_bridge-1] [INFO] [1786557271.226356631] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[INFO] [parameter_bridge-1]: process has finished cleanly [pid 170352]
+[INFO] [static_transform_publisher-2]: process has finished cleanly [pid 170354]
+[ERROR] [python3-6]: process has died [pid 170362, exit code 1, cmd 'python3 /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/gz_viz_markers.py --goal_east 12.0 --goal_north 0.0 --goal_alt 2.5'].
+[INFO] [rviz2-7]: process has finished cleanly [pid 170364]
+[ERROR] [python3-3]: process has died [pid 170356, exit code 1, cmd 'python3 /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/scripts/rl_games/student_ros2_node_icp.py --checkpoint /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/logs/dagger/student_latest.pth --goal_north 0.0 --goal_east 12.0 --goal_alt 2.5 --takeoff_alt 2.5 --vel_scale 0.375 --d_reflexive 1.0 --d_predictive 2.0 --lidar_topic /scan --trial_log /home/jaramy/thesis_ws/IsaacLabExtensionTemplate/results/quick_test/pa_trial_998_steps.csv'].

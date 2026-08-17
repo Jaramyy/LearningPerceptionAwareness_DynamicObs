@@ -383,9 +383,10 @@ class AdaptiveSpeedController:
 class StudentOffboardNode(Node):
 
     def __init__(self, student: StudentPolicy, normalizer: RunningNormalizer,
-                 goal_ned: tuple, vel_scale: float, args):
+                 goal_ned: tuple, vel_scale: float, args, device: str = "cuda"):
         super().__init__("student_offboard")
 
+        self._device = device
         self._student = student
         self._normalizer = normalizer
         self._goal_ned = goal_ned          # (goal_N, goal_E, goal_D)
@@ -700,6 +701,8 @@ class StudentOffboardNode(Node):
         if obs is None:
             self._publish_zero()
             return
+
+        obs = obs.to(self._device)
 
         _t_inf0 = time.perf_counter()
         with torch.inference_mode():
@@ -1048,12 +1051,22 @@ def main():
     parser.add_argument("--trial_log", type=str, default="",
                         help="Optional path for per-step CSV log (e.g. results/pa_trial_0_steps.csv). "
                              "The last 5 s is always saved as <stem>_last5s.csv on shutdown.")
+    parser.add_argument("--device", type=str, default="cuda",
+                        help="Inference device: 'cuda' for Jetson/GPU (default), 'cpu' for fallback.")
     args = parser.parse_args()
+
+    # Resolve device — fall back to CPU if CUDA is unavailable
+    device = args.device
+    if device == "cuda" and not torch.cuda.is_available():
+        print("[WARN] CUDA not available — falling back to CPU.")
+        device = "cpu"
+    print(f"[INFO] Device      : {device}"
+          + (f" ({torch.cuda.get_device_name(0)})" if device == "cuda" else ""))
 
     # Load student checkpoint
     ckpt_path = os.path.abspath(args.checkpoint)
     print(f"[INFO] Checkpoint  : {ckpt_path}")
-    ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+    ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
 
     obs_dim = ckpt.get("student_obs_dim", STUDENT_OBS_DIM)
     action_dim = ckpt.get("action_dim", ACTION_DIM)
@@ -1064,8 +1077,8 @@ def main():
     print(f"[INFO] DAgger iter : {ckpt.get('dagger_iter', '?')}")
     print(f"[INFO] Final beta  : {ckpt.get('beta', float('nan')):.4f}")
 
-    student = StudentPolicy(obs_dim, action_dim, hidden_dims)
-    normalizer = RunningNormalizer(obs_dim)
+    student = StudentPolicy(obs_dim, action_dim, hidden_dims).to(device)
+    normalizer = RunningNormalizer(obs_dim).to(device)
     student.load_state_dict(ckpt["student"])
     normalizer.load_state_dict(ckpt["normalizer"])
     student.eval()
@@ -1082,7 +1095,8 @@ def main():
           f"(W1 halves in ~{t_half:.0f}s at rest)")
 
     rclpy.init()
-    node = StudentOffboardNode(student, normalizer, goal_ned, args.vel_scale, args)
+    node = StudentOffboardNode(student, normalizer, goal_ned, args.vel_scale, args,
+                               device=device)
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

@@ -38,3 +38,6 @@ _build
 
 **/*.npy
 *.npy
+
+# Large simulation logs (PX4/Gazebo can produce multi-GB logs)
+results/**/px4_*.log
